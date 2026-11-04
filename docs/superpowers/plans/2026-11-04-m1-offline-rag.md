@@ -29,15 +29,15 @@ Hash drift and manifest path escape; unsupported aspect with known device; inven
 Files: backend/src/saturn_ai/{domain,knowledge,providers,application,__main__}.py; backend/tests/integration/test_vertical_slice.py; fixtures/synthetic/.
 Interfaces: load_snapshot(Path) -> Snapshot; Consultant(snapshot, provider).answer(str) -> AnswerResult; FakeLLMProvider.generate(GenerationRequest) -> tuple[Claim, ...].
 
-- [ ] Write integration tests for fact/source provenance, document lookup, absent evidence, invented entity, user/document injection, INTERNAL isolation, hash/path rejection, forged claims, unsupported aspect, ambiguity, revocation and provider failure.
-- [ ] Run PYTHONPATH=backend/src python3 -m unittest discover -s backend/tests -v; observe missing implementation.
-- [ ] Implement strict synthetic loader, immutable in-memory index, deterministic gate, fake provider, extractive claim validation and backend citations.
-- [ ] Repeat tests; inspect CLI JSON for one answer and one refusal; commit code/tests/fixtures.
+- [x] Write integration tests for fact/source provenance, document lookup, absent evidence, invented entity, user/document injection, INTERNAL isolation, hash/path rejection, forged claims, unsupported aspect, ambiguity, revocation and provider failure.
+- [x] Run PYTHONPATH=backend/src python3 -m unittest discover -s backend/tests -v; observe missing implementation.
+- [x] Implement strict synthetic loader, immutable in-memory index, deterministic gate, fake provider, extractive claim validation and backend citations.
+- [x] Repeat tests; inspect CLI JSON for one answer and one refusal; commit code/tests/fixtures.
 
 ### Task 2: CI and durable handoff
 
 Files: .github/workflows/ci.yml, README.md, docs/{PROJECT_STATUS,HANDOFF}.md, docs/stages/2026-11-04-m1-offline-rag.md.
 
-- [ ] Add backend unittest command to existing CI; preserve previous checks.
-- [ ] Update status, decisions, limitations and exact verification commands; review diff.
+- [x] Add backend unittest command to existing CI; preserve previous checks.
+- [x] Update status, decisions, limitations and exact verification commands; review diff.
 - [ ] Push feature branch, create PR, inspect actual Actions results; record PR and CI evidence.

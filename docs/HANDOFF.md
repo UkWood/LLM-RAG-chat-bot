@@ -2,7 +2,15 @@
 
 Обновлено: 2026-11-04. Проект AI Technical Consultant для ООО «МНПП Сатурн».
 
-## Порядок восстановления
+## Актуальное продолжение после M1 (2026-11-04)
+
+Сначала прочитать [текущий статус](PROJECT_STATUS.md) и [отчёт M1](stages/2026-11-04-m1-offline-rag.md). Ниже сохранён исходный handoff как история состояния до M1; утверждения «код не написан» и «CI не прочитан» больше не актуальны.
+
+В feat/m1-offline-rag реализован synthetic-only CLI, FakeLLMProvider, source policy/hash, in-memory retrieval и extractive citations/refusal. Команды CLI в README; проверка backend: `PYTHONPATH=backend/src python3 -m unittest discover -s backend/tests -v`. Реальные источники остаются pending. Полная архитектура proposed; поручение владельца разрешало именно M1, не весь production rollout.
+
+GitHub API и git fetch теперь работают. Для exec сетевых git/gh команд нужен sandbox network grant, proxy сохранять. Прежние три CI success проверены по API. Актуальный PR/head/CI смотреть в отчёте и GitHub, не предполагать merge ветки в main. Следующий этап — M2 ingestion на синтетических fixtures либо явно допущенных exact revisions; не загружать реальные PDF автоматически.
+
+## Исходный порядок восстановления до M1
 
 1. Использовать checkout `UkWood/LLM-RAG-chat-bot`, проверить branch/HEAD/status и получить актуальный main без потери локальных изменений. Не предполагать сохранность /tmp и процессов предыдущей среды.
 2. Прочитать AGENTS.md, README.md, docs/PROJECT_STATUS.md, исходное ТЗ, roadmap, design и PUBLIC policy. Ссылки собраны в README.
