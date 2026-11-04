@@ -157,24 +157,27 @@ def parse_site(record: SourceRecord, content: bytes) -> Document:
     def flush():
         joined = '\n'.join(section).strip()
         if joined:
-            add(joined, 'body', tuple(headings))
+            add(joined, 'body', tuple(title for level, title in headings))
         section.clear()
 
     for line in body.splitlines():
-        marker = re.match(r'^\s*(`{3,}|~{3,})', line)
+        marker = re.match(r'^ {0,3}(`{3,}|~{3,})(.*)$', line)
         if marker:
             if fence is None:
-                fence = marker[1][0]
-            elif marker[1][0] == fence:
+                fence = (marker[1][0], len(marker[1]))
+            elif (marker[1][0] == fence[0] and len(marker[1]) >= fence[1]
+                  and not marker[2].strip()):
                 fence = None
             continue
-        if fence:
+        if fence or line.expandtabs(4).startswith('    '):
             continue
         heading = re.match(r'^(#{1,6})\s+(.+)$', line)
         if heading:
             flush()
             level = len(heading[1])
-            headings[:] = headings[:level-1] + [_string(heading[2])]
+            while headings and headings[-1][0] >= level:
+                headings.pop()
+            headings.append((level, _string(heading[2])))
         else:
             section.append(line)
     if fence:

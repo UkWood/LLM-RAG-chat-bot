@@ -63,6 +63,30 @@ class IngestionTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     parse_site(record_for(changed), changed)
 
+    def test_code_fence_lengths_and_indented_code_are_excluded(self):
+        front = DEVICE.read_bytes().split(b'\n---\n', 1)[0] + b'\n---\n'
+        for body in [b'Visible.\n\n    CANARY_CODE_NOT_EVIDENCE = 42\n',
+                     b'Visible.\n\n \tCANARY_CODE_NOT_EVIDENCE = 42\n',
+                     b'````python\n```\nCANARY_CODE_NOT_EVIDENCE\n```\n````\nVisible.\n',
+                     b'```python\n```not-a-close\nCANARY_CODE_NOT_EVIDENCE\n```\nVisible.\n']:
+            with self.subTest(body=body):
+                content = front + body
+                document = parse_site(record_for(content), content)
+                output = '\n'.join(c.text for c in document.chunks)
+                self.assertIn('Visible.', output)
+                self.assertNotIn('CANARY_CODE_NOT_EVIDENCE', output)
+
+    def test_heading_provenance_tracks_levels_not_list_length(self):
+        front = DEVICE.read_bytes().split(b'\n---\n', 1)[0] + b'\n---\n'
+        for body, expected in [
+                (b'## First\nOne.\n## Second\nTwo.\n', [('First',), ('Second',)]),
+                (b'# Root\n### First\nOne.\n### Second\nTwo.\n',
+                 [('Root', 'First'), ('Root', 'Second')])]:
+            with self.subTest(body=body):
+                content = front + body
+                document = parse_site(record_for(content), content)
+                self.assertEqual([c.heading_path for c in document.chunks if c.field_path == 'body'], expected)
+
     def test_parser_does_not_bypass_hash_and_policy(self):
         content = DEVICE.read_bytes()
         with self.assertRaises(ValueError):
