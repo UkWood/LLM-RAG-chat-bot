@@ -12,11 +12,20 @@ FIELDS = {'source_id', 'entity', 'title', 'url', 'path', 'approved_sha256',
 INTENTS = {'Интерфейсы': 'interfaces', 'Руководство': 'manual'}
 
 
+def _unique_object(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError('Duplicate manifest key')
+        result[key] = value
+    return result
+
+
 def load_snapshot(root: Path) -> Snapshot:
     root = root.resolve()
     raw = (root / 'manifest.json').read_bytes()
-    data = json.loads(raw)
-    if (set(data) != {'schema_version', 'test_only', 'sources'}
+    data = json.loads(raw, object_pairs_hook=_unique_object)
+    if (not isinstance(data, dict) or set(data) != {'schema_version', 'test_only', 'sources'}
             or type(data['schema_version']) is not int or data['schema_version'] != 1
             or data['test_only'] is not True or not isinstance(data['sources'], list)):
         raise ValueError('Expected synthetic manifest v1')
@@ -40,7 +49,7 @@ def load_snapshot(root: Path) -> Snapshot:
         if entry['approval_state'] not in {'approved', 'pending', 'revoked'}:
             raise ValueError('Invalid approval state')
         usage = entry['allowed_usage']
-        if (not isinstance(usage, list) or any(x not in {'local_index', 'local_generate'} for x in usage)
+        if (not isinstance(usage, list) or any(not isinstance(x, str) or x not in {'local_index', 'local_generate'} for x in usage)
                 or len(usage) != len(set(usage))):
             raise ValueError('Invalid synthetic usage')
         url = urlsplit(entry['url'])

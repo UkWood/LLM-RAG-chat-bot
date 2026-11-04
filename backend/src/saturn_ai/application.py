@@ -3,7 +3,7 @@ import re
 from .domain import AnswerResult, Citation, Claim, GenerationRequest, Snapshot
 from .providers import LLMProvider
 
-DESIGNATION = re.compile(r'\b(?:[a-zа-я][a-zа-я0-9]*(?:-[a-zа-я0-9]+)+|[a-zа-я]+\d+)\b', re.I)
+DESIGNATION = re.compile(r'\b(?:[a-zа-я][a-zа-я0-9]*(?:-[a-zа-я0-9]+)+(?:[./][a-zа-я0-9]+)*|[a-zа-я]+\d+)\b', re.I)
 
 
 class Consultant:
@@ -35,11 +35,14 @@ class Consultant:
             return stop('no_evidence')
         if len(entities) != 1:
             return stop('ambiguous_entity', 'clarification')
-        intents = set()
-        if 'интерфейс' in folded:
-            intents.add('interfaces')
-        if 'руководств' in folded:
-            intents.add('manual')
+        entity = re.escape(next(iter(entities)).casefold())
+        # Full question grammar prevents answering just one supported substring of
+        # a mixed or negated request. More natural phrasing is future evaluation work.
+        forms = {
+            'interfaces': rf'(?:какие\s+)?интерфейсы(?:\s+(?:у|поддерживает))?\s+{entity}[?!.]?',
+            'manual': rf'(?:найдите\s+)?руководство(?:\s+(?:для|на))?\s+{entity}[?!.]?',
+        }
+        intents = {intent for intent, form in forms.items() if re.fullmatch(form, folded.strip())}
         if len(intents) != 1:
             return stop('no_evidence')
         # Minimal lexical retrieval is deliberately limited to entity + explicit aspect.
