@@ -4,24 +4,25 @@
 
 ## Выполнено
 
-- Сохранены ТЗ, read-only discovery сайта по 084d759487bfab6e111549c9b5469711ac5fc13e, roadmap, архитектура v0.1 и proposed ADR-0001.
-- PUBLIC registry: 4 Markdown + 4 PDF кандидата; все pending/UNKNOWN, без допуска и cloud.
-- Реализован synthetic-only offline M1: ingestion с hash/policy → in-memory index → entity/aspect retrieval → FakeLLMProvider → extractive grounding → backend citations/refusal. CLI и тесты не требуют GPU/сети/ключей.
-- Проверки документации/реестра и backend suite включены в CI. Подробности и evidence: [отчёт M1](stages/2026-11-04-m1-offline-rag.md).
-- GitHub API теперь доступен; получен актуальный main/handoff. Все три прежних CI запуска success подтверждены по API.
+- ТЗ, read-only discovery по 084d759487bfab6e111549c9b5469711ac5fc13e, roadmap и proposed архитектура сохранены.
+- M1 synthetic offline RAG слит в main через [PR #1](https://github.com/UkWood/LLM-RAG-chat-bot/pull/1), merge 0cfe174; CI main [41798909615](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/41798909615) success. 20 M1 backend + 5 прежних тестов проходят.
+- Следующий offline шаг этапа 2: strict runtime registry, deny-before-read, site Markdown mapping/facts/units/relations, ограниченный local PDF worker с физическими pages, deterministic provenance и summary CLI.
+- 41 backend test PASS в чистом Python 3.12 venv с двумя hash-locked dependencies; прежние 5 тестов и document checks сохранены. [Отчёт этапа](stages/2026-11-04-offline-ingestion.md), [ADR-0003](decisions/0003-offline-ingestion.md).
 
 ## Текущая публикация
 
-Ветка feat/m1-offline-rag; [PR #1](https://github.com/UkWood/LLM-RAG-chat-bot/pull/1) открыт в main. Продуктовый commit fd0598b, review fixes 8300bb6, CI/память bd30ee6. Удалённый CI на bd30ee6 success: все шаги, включая 20 backend + 5 прежних тестов. Последний head/checks смотреть в PR. Merge не выполнялся. Изменения сайта отсутствуют.
+Ветка feat/offline-ingestion от 0cfe174. Commits 80da5bb (registry) и b20c364 (parsers/pipeline). Новый PR/head/CI фиксируются в отчёте после фактической проверки. Merge M1 подтверждён; новый этап ещё не слит.
 
-## Ограничения
+## Границы и ограничения
 
-- M1 разрешён поручением владельца продолжить synthetic/offline разработку; полная архитектура остаётся proposed. Полную приёмку Phase 0 и допуск real sample не объявлять.
-- Поддержаны два fixture intents с точным учебным обозначением; строгая грамматика фактов не заменяет реальный parser и quality evaluation.
-- Реальные PDF не загружены; backend HTTP/API/UI, реальные модели, Qdrant и deployment не реализованы.
+- Все 8 реальных кандидатов pending/UNKNOWN; разрешённых 0. Registry bytes неизменены; PDF не скачивались. Saturn-Main-Site только прочитан для pinned schema discovery, без изменений.
+- Новый runner принимает только synthetic approvals; его output не подключён к M1 provider. M1 продолжает отвечать только по своему узкому fixture profile.
+- Полная production architecture остаётся proposed. Полный milestone M2 = этапы 2–5, не объявляется завершённым этим шагом.
+- Нужны OS sandbox/egress и quality review перед real PDF; resource-limited процесс их не заменяет. Поддержан ограниченный набор site fields, сложные PDF tables/OCR не реализованы.
+- API/UI, Qdrant, embeddings/reranker, cloud/local реальная LLM и deployment не реализованы.
 
 ## Следующий шаг
 
-M2: ingestion сайта/PDF, runtime registry validation и provenance. Реальные exact revisions должны получить явный допуск. Без допуска продолжать только synthetic tests/adapters.
+Этап 3: immutable snapshot/index contracts и local retrieval baseline на synthetic fixtures. Real sample требует явного допуска exact revisions; генерация по новому parser output — после grounding/evidence gates.
 
-[Дорожная карта](superpowers/plans/2026-11-03-ai-consultant-roadmap.md), [архитектура](superpowers/specs/2026-11-03-ai-consultant-design.md), [план M1](superpowers/plans/2026-11-04-m1-offline-rag.md), [handoff](HANDOFF.md).
+[Roadmap](superpowers/plans/2026-11-03-ai-consultant-roadmap.md), [архитектура](superpowers/specs/2026-11-03-ai-consultant-design.md), [дизайн ingestion](superpowers/specs/2026-11-04-offline-ingestion-design.md), [handoff](HANDOFF.md).

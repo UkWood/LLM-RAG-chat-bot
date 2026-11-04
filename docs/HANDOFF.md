@@ -1,56 +1,30 @@
-# Передача контекста в новую сессию
+# Передача контекста
 
-Обновлено: 2026-11-04. Проект AI Technical Consultant для ООО «МНПП Сатурн».
+Обновлено: 2026-11-04 после M1 merge и synthetic offline ingestion.
 
-## Актуальное продолжение после M1 (2026-11-04)
+## Восстановление
 
-Сначала прочитать [текущий статус](PROJECT_STATUS.md) и [отчёт M1](stages/2026-11-04-m1-offline-rag.md). Ниже сохранён исходный handoff как история состояния до M1; утверждения «код не написан» и «CI не прочитан» больше не актуальны.
+1. Прочитать AGENTS.md, README.md, docs/PROJECT_STATUS.md и актуальные stage report/design/plan. Ветки и PR проверять по GitHub, не предполагать merge или сохранность work/venv и процессов.
+2. M1 слит в main: PR #1, merge 0cfe174, CI 41798909615 success. Текущая ветка feat/offline-ingestion содержит этап 2; её публикация/CI описываются в [отчёте](stages/2026-11-04-offline-ingestion.md).
+3. Проверки: python3 scripts/check_project.py; python3 -m unittest discover -s tests -v; затем backend suite в Python 3.12 venv с backend/requirements.lock. Установка с --require-hashes; команды в README. Lock пока Linux x86_64. После установки тесты offline, без моделей/ключей/GPU.
+4. Проверить актуальный GitHub API, main SHA и CI. exec git/gh требуют sandbox network grant, proxy сохранять. Прежняя проблема CONNECT/Forbidden устранена; не менять токены и не просить заново разрешать api.github.com без фактической диагностики.
 
-В feat/m1-offline-rag реализован synthetic-only CLI, FakeLLMProvider, source policy/hash, in-memory retrieval и extractive citations/refusal. Команды CLI в README; проверка backend: `PYTHONPATH=backend/src python3 -m unittest discover -s backend/tests -v`. Реальные источники остаются pending. Полная архитектура proposed; поручение владельца разрешало именно M1, не весь production rollout.
+## Реализовано
 
-GitHub API и git fetch теперь работают. Для exec сетевых git/gh команд нужен sandbox network grant, proxy сохранять. Прежние три CI success проверены по API. [PR #1](https://github.com/UkWood/LLM-RAG-chat-bot/pull/1) открыт; push CI на bd30ee6 success. Актуальный head/CI смотреть в отчёте и GitHub, не предполагать merge ветки в main. Следующий этап — M2 ingestion на синтетических fixtures либо явно допущенных exact revisions; не загружать реальные PDF автоматически.
+M1: узкий synthetic-only RAG с FakeLLMProvider, источниками и отказами. Новый ingestion: строгий registry v1 runtime loader, immutable records, deny-before-read/hash/commit/scopes, Markdown site adapter и ограниченный PDF worker. Синтетические карточки и PDF tests не являются продукцией/документацией Сатурна. 41 backend + 5 прежних тестов PASS на текущем шаге; удалённый CI смотреть в актуальном PR.
 
-## Исходный порядок восстановления до M1
+Ingestion output отдельно от M1 evidence: произвольный parsed text нельзя направлять provider как проверенный факт. Реальный registry содержит 8 pending/UNKNOWN, allowed sources 0. Изменять permissions от имени владельца без основания нельзя.
 
-1. Использовать checkout `UkWood/LLM-RAG-chat-bot`, проверить branch/HEAD/status и получить актуальный main без потери локальных изменений. Не предполагать сохранность /tmp и процессов предыдущей среды.
-2. Прочитать AGENTS.md, README.md, docs/PROJECT_STATUS.md, исходное ТЗ, roadmap, design и PUBLIC policy. Ссылки собраны в README.
-3. Запустить `python scripts/check_project.py` и `python -m unittest discover -s tests -v`. В предыдущей сессии обе команды прошли, 5 тестов; проверить заново.
-4. Проверить GitHub API и CI. При доступности API прочитать Actions runs и устранить реальные ошибки прежде, чем заявлять успех CI.
-5. Продолжить с M1 после учёта статуса дизайна: минимальный синтетический CPU/offline RAG с FakeLLMProvider, citations и refusal. Продуктовый код ещё не написан. Если для применяемого процесса требуется явное принятие дизайна, не подменять его полномочиями на GitHub; дать владельцу конкретную ссылку на готовый документ.
+## Следующий шаг и gates
 
-## Полномочия и жёсткие границы
+Этап 3 — immutable snapshot/index contracts и local retrieval baseline на synthetic fixtures. Milestone M2 включает этапы 2–5 и не завершён. Полная production architecture ADR-0001 proposed; bounded offline implementation decisions — ADR-0002/0003.
 
-Владелец дал полные права работы с `UkWood/LLM-RAG-chat-bot`, поручил хранить здесь важные решения и результаты каждого этапа, использовать CI/CD и другие необходимые механизмы GitHub. Это разрешает обычные изменения, commits/push и настройку GitHub в этом репозитории. Отчёты и статусы обновлять по факту.
+До real ingestion нужны exact revision approvals, OS parser sandbox/egress и quality review. Процессные limits не заменяют sandbox. Поддержан ограниченный набор site fields; PDF tables/OCR, модели, Qdrant, реальная LLM, API/UI и deployment не реализованы. Ссылки карточки не разрешают PDF автоматически, downloader отсутствует.
 
-`UkWood/Saturn-Main-Site` строго READ-ONLY: не менять файлы/CI/URL/assets, не делать commits/push. AI отдельный проект с отдельным UI; сайт остаётся статическим HTML/JS/CSS на Astro. Последующий перенос сайта на локальный сервер не меняет этих границ.
+## Полномочия
 
-## Состояние разработки
+Полные права UkWood/LLM-RAG-chat-bot сохраняются: обычные изменения, commits/push/PR и проверки выполнять без повторного запроса. Merge M1 явно поручен владельцем. Новые интеграции фиксировать по факту, не выдавать green CI за merge.
 
-- Сохранены ТЗ, discovery, roadmap, архитектура v0.1, proposed ADR-0001 и PUBLIC policy. Builder check: существенных пробелов для планирования не выявлено; это не одобрение владельцем.
-- Реестр содержит 4 Markdown-кандидата по commit сайта `084d759487bfab6e111549c9b5469711ac5fc13e` и 4 PDF-ссылки. Все pending/UNKNOWN, cloud_allowed=false. Ничего не разрешать автоматически. Реальные PDF не скачивались.
-- Backend/UI, реальная LLM, Qdrant и модели не реализованы/не установлены. Следующий milestone использует отдельный явно синтетический корпус; не выдавать его за техническую документацию Сатурна.
-- GitHub: main опубликован, коммиты `0b199b3` (база памяти/CI) и `b6be294` (отчёт публикации). Новый handoff фиксируется последующим коммитом; актуальный SHA смотреть в Git.
-- Workflow `.github/workflows/ci.yml` выполняет offline проверки документации и реестра. Есть 5 stdlib unittest. Удалённый результат CI пока не прочитан.
+UkWood/Saturn-Main-Site строго READ-ONLY. Не менять исходники, CI, URLs/assets, не делать commit/push. Pinned schema discovery: 084d759487bfab6e111549c9b5469711ac5fc13e. Не копировать служебные файлы/сайт в KB.
 
-## История блокировки GitHub API
-
-Git HTTPS fetch/push работал. `gh api repos/UkWood/LLM-RAG-chat-bot` возвращал Forbidden, а запрос без токена давал `CONNECT tunnel failed, response 403`, server envoy — блокировка прокси до GitHub, не доказательство недостаточных GitHub-прав.
-
-Владелец сообщил, что добавил и опубликовал `api.github.com` в разрешённых доменах. Последняя проверка старой работающей среды всё ещё показывала custom_hosts=[] и отсутствие api.github.com; черновик при этом содержал домен. Новая сессия нужна для проверки применения опубликованной версии, а не потому, что исправление уже доказано.
-
-Не просить повторно добавить домен или сменить токен до диагностики новой среды. Не выводить credential values и не запускать интерактивный login без основания. Проверять actual HTTP response и runtime policy. При отдельном GitHub 401/403 после успешного CONNECT диагностировать уже auth/scopes.
-
-Персональные настройки «Облачный компьютер → разрешения сайтов ChatGPT Work» относятся к облачному браузеру и не подтверждают egress CLI. Кнопка ползунков возле «Поделиться» — только сводка, меню «…» — действия чата. Предыдущие указания искать настройки среды там были ошибочными. Не повторять угадывание UI и не обещать, что перезапуск гарантированно решит проблему.
-
-## Проверка API в новой среде
-
-```bash
-gh api repos/UkWood/LLM-RAG-chat-bot --jq '{default_branch,permissions,private,html_url}'
-gh run list --repo UkWood/LLM-RAG-chat-bot --limit 5 --json databaseId,status,conclusion,headSha,url,name
-```
-
-Если сеть по-прежнему блокирует API, сохранить точный результат; не блокировать независимую разработку synthetic/offline RAG. PR/issues/branch protection зависят от фактических возможностей API; не заявлять настройку без проверки.
-
-## Что не переносится автоматически
-
-Диалог и скрытое состояние агента, /tmp копии сайта и attachments, запущенные процессы, незафиксированные файлы, runtime network/auth. Источником истины служат GitHub и сохранённые документы; секреты — только защищённые настройки среды. Оригинальный приложенный текст уже сохранён в docs/requirements/original-brief.ru.md, повторная загрузка не нужна.
+Историческая диагностика старой среды сохранена в Git-версии этого handoff до 0cfe174 и в предыдущих stage reports. Secrets — только защищённые настройки, не печатать environment/credential values. work/, /tmp и процессы не считаются долговременной памятью.
