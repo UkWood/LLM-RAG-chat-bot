@@ -32,4 +32,4 @@ Interfaces: build_fixture(root, registry, commit)->IngestionResult; parse_site(r
 Files: .github/workflows/ci.yml, README, docs/PROJECT_STATUS, HANDOFF, decisions and stage report.
 - [x] Add pinned dependency installation and parser suite to CI; preserve M1 and previous checks.
 - [x] Independent review, reproduce/fix findings through RED→GREEN, run full suite and CLI.
-- [ ] Record M1 merge 0cfe174 and CI success, new scoped results and remaining real-ingestion gates; push feature branch/PR and verify actual checks.
+- [x] Record M1 merge 0cfe174 and CI success, new scoped results and remaining real-ingestion gates; push feature branch/PR and verify actual checks.

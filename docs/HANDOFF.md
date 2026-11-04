@@ -5,7 +5,7 @@
 ## Восстановление
 
 1. Прочитать AGENTS.md, README.md, docs/PROJECT_STATUS.md и актуальные stage report/design/plan. Ветки и PR проверять по GitHub, не предполагать merge или сохранность work/venv и процессов.
-2. M1 слит в main: PR #1, merge 0cfe174, CI 41798909615 success. Текущая ветка feat/offline-ingestion содержит этап 2; её публикация/CI описываются в [отчёте](stages/2026-11-04-offline-ingestion.md).
+2. M1 слит в main: PR #1, merge 0cfe174, CI 41798909615 success. Текущая ветка feat/offline-ingestion содержит этап 2; [PR #2](https://github.com/UkWood/LLM-RAG-chat-bot/pull/2), push CI 41801220416 на 88c2924 success; её публикация/CI описываются в [отчёте](stages/2026-11-04-offline-ingestion.md).
 3. Проверки: python3 scripts/check_project.py; python3 -m unittest discover -s tests -v; затем backend suite в Python 3.12 venv с backend/requirements.lock. Установка с --require-hashes; команды в README. Lock пока Linux x86_64. После установки тесты offline, без моделей/ключей/GPU.
 4. Проверить актуальный GitHub API, main SHA и CI. exec git/gh требуют sandbox network grant, proxy сохранять. Прежняя проблема CONNECT/Forbidden устранена; не менять токены и не просить заново разрешать api.github.com без фактической диагностики.
 

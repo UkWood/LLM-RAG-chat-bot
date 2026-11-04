@@ -1,6 +1,6 @@
 # Этап 2: offline ingestion на синтетических данных
 
-Дата: 2026-11-04. Ветка feat/offline-ingestion. Статус: реализован и локально проверен synthetic profile; публикация/удалённый CI фиксируются ниже по факту.
+Дата: 2026-11-04. Ветка feat/offline-ingestion. Статус: synthetic profile реализован, опубликован в PR и проверен локально/в удалённом CI; real ingestion не разрешён.
 
 ## Основание и результат
 
@@ -48,6 +48,12 @@ PYTHONPATH=backend/src work/ingestion-venv/bin/python -m unittest discover -s ba
 Base 0cfe174; commit 80da5bb — runtime policy, b20c364 — parser/pipeline/fixtures/CI. Review fixes: c0df98e. Последующие документация и публикация видны в Git/PR. API и git работают с sandbox network grant, исходный proxy сохранён, credentials не выводились.
 
 Сайт прочитан только для проверки src/content.config.ts на pinned commit; его исходники, контент, CI, URL и assets не изменялись. Реестр config/knowledge/public-sources.json неизменён; SHA-256 raw registry 8441e6f5dad6f6f138e879960897f999da0f708dd8661abe02be2310effa229d. Учебный commit aaaa… и approval provenance явно вымышлены.
+
+## Публикация и удалённый CI
+
+[PR #2](https://github.com/UkWood/LLM-RAG-chat-bot/pull/2) создан в main, состояние при проверке OPEN. Commits: 80da5bb → b20c364 → c0df98e → 88c2924. Git push exit 0; PR API подтвердил head 88c29247a80638e64d1cd1fe740e73220b4defa1.
+
+Push CI [41801220416](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/41801220416) на 88c2924 завершён success. Jobs API подтвердил success каждого шага, включая hash-locked parser install, прежние 5 тестов и backend 41 tests. PR workflow [41801275165](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/41801275165) запускается отдельно. Эти наблюдения сохранены последующим documentation-only commit; фактические checks последнего head смотреть в PR. Merge нового этапа не выполнялся.
 
 ## Ограничения и следующий шаг
 
