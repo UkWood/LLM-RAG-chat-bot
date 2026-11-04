@@ -4,27 +4,24 @@
 
 ## Выполнено
 
-- Получено и сохранено исходное ТЗ.
-- Read-only discovery сайта по commit `084d759487bfab6e111549c9b5469711ac5fc13e`.
-- Подготовлены roadmap, архитектура v0.1 и proposed ADR-0001; независимый builder check не выявил важных пробелов для планирования.
-- Подготовлен реестр: четыре Markdown-кандидата и четыре PDF-ссылки. Все pending/UNKNOWN; разрешённых реальных источников нет.
-- Добавлены правила памяти проекта, журнал этапов, шаблоны GitHub и offline CI проверки документации/реестра.
+- Сохранены ТЗ, read-only discovery сайта по 084d759487bfab6e111549c9b5469711ac5fc13e, roadmap, архитектура v0.1 и proposed ADR-0001.
+- PUBLIC registry: 4 Markdown + 4 PDF кандидата; все pending/UNKNOWN, без допуска и cloud.
+- Реализован synthetic-only offline M1: ingestion с hash/policy → in-memory index → entity/aspect retrieval → FakeLLMProvider → extractive grounding → backend citations/refusal. CLI и тесты не требуют GPU/сети/ключей.
+- Проверки документации/реестра и backend suite включены в CI. Подробности и evidence: [отчёт M1](stages/2026-11-04-m1-offline-rag.md).
+- GitHub API теперь доступен; получен актуальный main/handoff. Все три прежних CI запуска success подтверждены по API.
 
-## Следующий продуктовый шаг
+## Текущая публикация
 
-Минимальный вертикальный RAG на синтетическом offline corpus с FakeLLMProvider: ingestion → index → retrieval → grounded answer → citations/refusal. Без frontend, GPU и реальной LLM. Прежде чем писать продуктовый код, учесть статус дизайна и требования принятия в roadmap; инструкция владельца про GitHub сама по себе не меняет допуск источников.
+Ветка feat/m1-offline-rag; [PR #1](https://github.com/UkWood/LLM-RAG-chat-bot/pull/1) открыт в main. Продуктовый commit fd0598b, review fixes 8300bb6, CI/память bd30ee6. Удалённый CI на bd30ee6 success: все шаги, включая 20 backend + 5 прежних тестов. Последний head/checks смотреть в PR. Merge не выполнялся. Изменения сайта отсутствуют.
 
-## Не выполнено / ограничения
+## Ограничения
 
-- Дизайн подготовлен, ADR proposed; нельзя обозначать полную приёмку Phase 0 как состоявшуюся.
-- Реальные PDF не загружены, актуальность и права не проверены.
-- Backend/UI, реальные модели, продуктовые тесты и deployment не реализованы.
-- Материалы опубликованы в main (первый commit `0b199b3`), Git push и remote SHA проверены. Workflow CI опубликован; его удалённый результат, PR/issues и branch protection не проверены/не настроены из-за GitHub API Forbidden. Смотреть отчёт этапа.
+- M1 разрешён поручением владельца продолжить synthetic/offline разработку; полная архитектура остаётся proposed. Полную приёмку Phase 0 и допуск real sample не объявлять.
+- Поддержаны два fixture intents с точным учебным обозначением; строгая грамматика фактов не заменяет реальный parser и quality evaluation.
+- Реальные PDF не загружены; backend HTTP/API/UI, реальные модели, Qdrant и deployment не реализованы.
 
-## Где продолжать
+## Следующий шаг
 
-[Дорожная карта](superpowers/plans/2026-11-03-ai-consultant-roadmap.md), [архитектура](superpowers/specs/2026-11-03-ai-consultant-design.md), [последний отчёт](stages/2026-11-03-project-memory.md).
+M2: ingestion сайта/PDF, runtime registry validation и provenance. Реальные exact revisions должны получить явный допуск. Без допуска продолжать только synthetic tests/adapters.
 
-## Продолжение в новой сессии
-
-[HANDOFF](HANDOFF.md) содержит порядок восстановления, полномочия, ограничения и диагностику API. Домен api.github.com сохранён, владелец сообщил о публикации, но последняя проверка старой среды всё ещё получила 403 от прокси. Применение новой конфигурации и результаты CI надо проверить заново.
+[Дорожная карта](superpowers/plans/2026-11-03-ai-consultant-roadmap.md), [архитектура](superpowers/specs/2026-11-03-ai-consultant-design.md), [план M1](superpowers/plans/2026-11-04-m1-offline-rag.md), [handoff](HANDOFF.md).

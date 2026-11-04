@@ -9,7 +9,7 @@ concurrency:
   group: checks-${{ github.ref }}
   cancel-in-progress: true
 jobs:
-  documentation-and-registry:
+  offline-checks:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -19,3 +19,5 @@ jobs:
           python-version: '3.12'
       - run: python scripts/check_project.py
       - run: python -m unittest discover -s tests -v
+      - name: Synthetic offline RAG
+        run: PYTHONPATH=backend/src python -m unittest discover -s backend/tests -v
