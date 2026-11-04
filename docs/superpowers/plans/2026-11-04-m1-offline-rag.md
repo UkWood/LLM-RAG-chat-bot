@@ -40,4 +40,4 @@ Files: .github/workflows/ci.yml, README.md, docs/{PROJECT_STATUS,HANDOFF}.md, do
 
 - [x] Add backend unittest command to existing CI; preserve previous checks.
 - [x] Update status, decisions, limitations and exact verification commands; review diff.
-- [ ] Push feature branch, create PR, inspect actual Actions results; record PR and CI evidence.
+- [x] Push feature branch, create PR, inspect actual Actions results; record PR and CI evidence.

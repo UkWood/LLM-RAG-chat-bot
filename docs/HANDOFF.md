@@ -8,7 +8,7 @@
 
 В feat/m1-offline-rag реализован synthetic-only CLI, FakeLLMProvider, source policy/hash, in-memory retrieval и extractive citations/refusal. Команды CLI в README; проверка backend: `PYTHONPATH=backend/src python3 -m unittest discover -s backend/tests -v`. Реальные источники остаются pending. Полная архитектура proposed; поручение владельца разрешало именно M1, не весь production rollout.
 
-GitHub API и git fetch теперь работают. Для exec сетевых git/gh команд нужен sandbox network grant, proxy сохранять. Прежние три CI success проверены по API. Актуальный PR/head/CI смотреть в отчёте и GitHub, не предполагать merge ветки в main. Следующий этап — M2 ingestion на синтетических fixtures либо явно допущенных exact revisions; не загружать реальные PDF автоматически.
+GitHub API и git fetch теперь работают. Для exec сетевых git/gh команд нужен sandbox network grant, proxy сохранять. Прежние три CI success проверены по API. [PR #1](https://github.com/UkWood/LLM-RAG-chat-bot/pull/1) открыт; push CI на bd30ee6 success. Актуальный head/CI смотреть в отчёте и GitHub, не предполагать merge ветки в main. Следующий этап — M2 ingestion на синтетических fixtures либо явно допущенных exact revisions; не загружать реальные PDF автоматически.
 
 ## Исходный порядок восстановления до M1
 

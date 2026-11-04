@@ -39,7 +39,9 @@ GitHub connector API доступен, права admin/push подтвержд�
 - [41708009193](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/41708009193), b6be294.
 - [41792968340](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/41792968340), 7aa59e4.
 
-PR и результаты CI новой ветки будут записаны после фактической публикации. Branch protection/CD не настраивались и не заявляются активными.
+Публикация: [PR #1](https://github.com/UkWood/LLM-RAG-chat-bot/pull/1), OPEN, base main; ветка feat/m1-offline-rag. Commits fd0598b (реализация), 8300bb6 (review fixes), bd30ee6 (CI/память). Push завершился exit 0, GitHub PR API подтвердил head bd30ee6a59df0380102e9a695808954370522bea.
+
+Удалённый push CI [41794385236](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/41794385236) на bd30ee6 завершён success. Через jobs API проверены success всех шагов, включая documentation/registry, 5 прежних тестов и 20 backend тестов. PR CI [41794430268](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/41794430268) также проверяется отдельно. Последующий documentation-only commit сохраняет эти наблюдения; его head/result читать из PR checks, не переносить success на ещё не завершённый запуск. PR оставлен открытым; merge в main не выполнялся. Branch protection/CD не настраивались и не заявляются активными.
 
 ## Ограничения и следующий шаг
 

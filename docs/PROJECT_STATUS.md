@@ -12,7 +12,7 @@
 
 ## Текущая публикация
 
-Ветка feat/m1-offline-rag; первый продуктовый commit fd0598b. Финальный PR/CI фиксируется в отчёте после проверки. Изменения сайта отсутствуют.
+Ветка feat/m1-offline-rag; [PR #1](https://github.com/UkWood/LLM-RAG-chat-bot/pull/1) открыт в main. Продуктовый commit fd0598b, review fixes 8300bb6, CI/память bd30ee6. Удалённый CI на bd30ee6 success: все шаги, включая 20 backend + 5 прежних тестов. Последний head/checks смотреть в PR. Merge не выполнялся. Изменения сайта отсутствуют.
 
 ## Ограничения
 
