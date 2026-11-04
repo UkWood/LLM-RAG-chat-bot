@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "registry_status": "synthetic_test_only",
+  "default_policy": "deny",
+  "source_snapshot": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "entries": [
+    {
+      "source_id": "synthetic:products/demo-300",
+      "source_kind": "site_content",
+      "title": "DEMO-300",
+      "observed_content_sha256": "d5938cc2979fb83a326b623bd6471bcef65efd60efccb82bd6bd9ca1bdf22baa",
+      "approved_content_sha256": "d5938cc2979fb83a326b623bd6471bcef65efd60efccb82bd6bd9ca1bdf22baa",
+      "visibility": "PUBLIC",
+      "approval_state": "approved",
+      "approval_id": "synthetic-fixture-only",
+      "approved_by": "synthetic-test-author-not-owner",
+      "approved_at": "2026-11-04T00:00:00Z",
+      "publication_verified": true,
+      "cloud_allowed": false,
+      "allowed_usage": [
+        "local_index",
+        "local_generate"
+      ],
+      "reason": "Authored synthetic fixture, not a real owner approval",
+      "repository": "UkWood/Saturn-Main-Site",
+      "source_commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "path": "src/content/products/demo-300.md",
+      "entity_type": "Device",
+      "canonical_path": "/products/demo-300/"
+    },
+    {
+      "source_id": "synthetic:products/demo-soft",
+      "source_kind": "site_content",
+      "title": "DEMO-SOFT",
+      "observed_content_sha256": "306c5ab402e94b8714517b4d49f69a5ac171c26dc6b286d4f61e224f46586d2a",
+      "approved_content_sha256": "306c5ab402e94b8714517b4d49f69a5ac171c26dc6b286d4f61e224f46586d2a",
+      "visibility": "PUBLIC",
+      "approval_state": "approved",
+      "approval_id": "synthetic-fixture-only",
+      "approved_by": "synthetic-test-author-not-owner",
+      "approved_at": "2026-11-04T00:00:00Z",
+      "publication_verified": true,
+      "cloud_allowed": false,
+      "allowed_usage": [
+        "local_index",
+        "local_generate"
+      ],
+      "reason": "Authored synthetic fixture, not a real owner approval",
+      "repository": "UkWood/Saturn-Main-Site",
+      "source_commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "path": "src/content/products/demo-soft.md",
+      "entity_type": "Software",
+      "canonical_path": "/products/demo-soft/"
+    },
+    {
+      "source_id": "synthetic:systems/demo-category",
+      "source_kind": "site_content",
+      "title": "Учебная категория",
+      "observed_content_sha256": "619792d9dfca87903bbbdd5151f31c676c883350df80938a31d3d2e4d07970d6",
+      "approved_content_sha256": "619792d9dfca87903bbbdd5151f31c676c883350df80938a31d3d2e4d07970d6",
+      "visibility": "PUBLIC",
+      "approval_state": "approved",
+      "approval_id": "synthetic-fixture-only",
+      "approved_by": "synthetic-test-author-not-owner",
+      "approved_at": "2026-11-04T00:00:00Z",
+      "publication_verified": true,
+      "cloud_allowed": false,
+      "allowed_usage": [
+        "local_index",
+        "local_generate"
+      ],
+      "reason": "Authored synthetic fixture, not a real owner approval",
+      "repository": "UkWood/Saturn-Main-Site",
+      "source_commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "path": "src/content/systems/demo-category.md",
+      "entity_type": "Category",
+      "canonical_path": "/systems/demo-category/"
+    }
+  ]
+}
