@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "test_only": true,
+  "sources": [
+    {
+      "source_id": "demo-100",
+      "entity": "DEMO-100",
+      "title": "DEMO-100 — синтетическая карточка",
+      "url": "https://example.invalid/synthetic/demo-100",
+      "path": "demo-100.md",
+      "approved_sha256": "b789bc75aa1e4858ba22df160eade1d285d2b2ffa5ba4210846258d47b9cd540",
+      "visibility": "PUBLIC",
+      "approval_state": "approved",
+      "allowed_usage": [
+        "local_index",
+        "local_generate"
+      ],
+      "test_only": true,
+      "cloud_allowed": false
+    },
+    {
+      "source_id": "demo-200",
+      "entity": "DEMO-200",
+      "title": "DEMO-200 — синтетическая карточка",
+      "url": "https://example.invalid/synthetic/demo-200",
+      "path": "demo-200.md",
+      "approved_sha256": "62999939c8fdabec10ac969287eb9ff622734a8c7b69d8202e7ef4ae054d0a5b",
+      "visibility": "PUBLIC",
+      "approval_state": "approved",
+      "allowed_usage": [
+        "local_index",
+        "local_generate"
+      ],
+      "test_only": true,
+      "cloud_allowed": false
+    },
+    {
+      "source_id": "secret-900",
+      "entity": "SECRET-900",
+      "title": "SECRET-900 — синтетическая карточка",
+      "url": "https://example.invalid/synthetic/secret-900",
+      "path": "secret-900.md",
+      "approved_sha256": "37bb581ddaafa3f26ef80692fc4736962b193954616bf5f591f7de8b167c5d17",
+      "visibility": "INTERNAL",
+      "approval_state": "pending",
+      "allowed_usage": [],
+      "test_only": true,
+      "cloud_allowed": false
+    }
+  ]
+}
