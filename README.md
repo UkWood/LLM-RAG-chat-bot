@@ -2,7 +2,7 @@
 
 Отдельный технический консультант: ответы только по разрешённым материалам с источниками и отказом при недостатке доказательств. Статический интерфейс Astro, отдельный FastAPI backend, локальная KB и сменный LLM provider.
 
-**Стадия:** M1 слит в main; добавлен следующий offline шаг — runtime registry и ingestion синтетических карточек/PDF. Реальные источники пока не допущены к индексации/облачной отправке. Полная production-архитектура остаётся proposed.
+**Стадия:** M1 и offline ingestion слиты в main; подготовлены snapshot-контракты и synthetic baseline (10 документов /30 вопросов). Retrieval quality пока не измерена. Реальные источники пока не допущены к индексации/облачной отправке. Полная production-архитектура остаётся proposed.
 
 ## Память проекта
 
@@ -24,11 +24,9 @@
 ## Проверка текущего этапа
 
 ```bash
-python3 scripts/check_project.py
-python3 -m unittest discover -s tests -v
 python3 -m venv work/venv
 work/venv/bin/python -m pip install --require-hashes -r backend/requirements.lock
-PYTHONPATH=backend/src work/venv/bin/python -m unittest discover -s backend/tests -v
+work/venv/bin/python scripts/verify_offline.py
 ```
 
 Тесты выполняются на CPU без сети, ключей и моделей после установки закреплённых parser dependencies (PyYAML/pypdf). Lock с wheel hashes рассчитан на Python 3.12/Linux x86_64; установка требует package registry либо локального wheel cache. M1 CLI и прежние проверки остаются stdlib-only. CI устанавливает эти dependencies и запускает все проверки на push/PR.
@@ -61,3 +59,15 @@ PYTHONPATH=backend/src work/venv/bin/python -m saturn_ai.ingestion --registry fi
 PDF-проверки генерируют отдельные authored файлы в памяти, проверяют физические страницы, ошибки и лимиты. Parser output не подключён к M1 ответам; качество произвольных таблиц/PDF и инженерных консультаций не заявляется. Процессные лимиты не заменяют OS sandbox для недоверенных файлов; real ingestion выключен.
 
 [Дизайн](docs/superpowers/specs/2026-11-04-offline-ingestion-design.md), [план](docs/superpowers/plans/2026-11-04-offline-ingestion.md), [ADR-0003](docs/decisions/0003-offline-ingestion.md), [отчёт](docs/stages/2026-11-04-offline-ingestion.md).
+
+## Snapshot и evaluation baseline
+
+```bash
+work/venv/bin/python scripts/verify_offline.py --report evaluation/reports/2026-11-05-baseline-preflight.json
+```
+
+После отдельного locked install команда выполняет все project/backend tests и проверяет corpus/snapshot/gold labels. Это текущая единая offline проверка, а не полная приёмка качества прототипа. Результат: 10 вымышленных документов, 44 chunks, 30 размеченных вопросов; retrieval/reranking/grounding имеют not_run, source_hit_at_5=null.
+
+Snapshot хранит явные policy metadata, проверяет original bytes и полный canonical parser output; in-memory catalog отделяет corpus rollback от runtime revocations. Декларации dense/lexical coverage не являются готовыми индексами. Нет persistence/multi-worker или модели поиска; новые данные не подключены к M1 ответам.
+
+[Dataset и ограничения](evaluation/README.md), [authored fixtures](fixtures/evaluation/README.md), [ADR-0005](docs/decisions/0005-snapshot-baseline.md), [отчёт этапа 3a](docs/stages/2026-11-05-snapshot-baseline.md).

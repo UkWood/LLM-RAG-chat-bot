@@ -8,3 +8,5 @@
 - [2026-11-04 — этап 2, offline ingestion](2026-11-04-offline-ingestion.md)
 
 - [2026-11-05 — согласование критериев прототипа](2026-11-05-prototype-acceptance.md)
+
+- [2026-11-05 — snapshot contracts и synthetic baseline](2026-11-05-snapshot-baseline.md)

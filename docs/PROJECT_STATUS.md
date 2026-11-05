@@ -1,32 +1,29 @@
 # Состояние проекта
 
-Обновлено: 2026-11-05. Репозиторий: UkWood/LLM-RAG-chat-bot.
+Обновлено: 2026-11-05. Репозиторий UkWood/LLM-RAG-chat-bot.
 
 ## Выполнено
 
-- ТЗ, read-only discovery по 084d759487bfab6e111549c9b5469711ac5fc13e, roadmap и proposed архитектура сохранены.
-- M1 synthetic offline RAG слит в main через [PR #1](https://github.com/UkWood/LLM-RAG-chat-bot/pull/1), merge 0cfe174; CI main [41798909615](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/41798909615) success. 20 M1 backend + 5 прежних тестов проходят.
-- Следующий offline шаг этапа 2: strict runtime registry, deny-before-read, site Markdown mapping/facts/units/relations, ограниченный local PDF worker с физическими pages, deterministic provenance и summary CLI.
-- 41 backend test PASS в чистом Python 3.12 venv с двумя hash-locked dependencies; прежние 5 тестов и document checks сохранены. [Отчёт этапа](stages/2026-11-04-offline-ingestion.md), [ADR-0003](decisions/0003-offline-ingestion.md).
+- M1 synthetic offline RAG слит через PR #1, merge 0cfe174; CI success.
+- Offline ingestion + согласованные prototype criteria слиты через [PR #2](https://github.com/UkWood/LLM-RAG-chat-bot/pull/2): merge 909072f, [main CI 42062413579](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42062413579) success. 46 прежних code tests сохранены.
+- Новый этап 3a: immutable snapshot/policy payloads, source-byte/canonical extraction binding, dense/lexical descriptor coverage и process-local catalog с независимыми current policy/revocations.
+- Подготовлены 10 authored synthetic документов (8 MD +2 PDF), 44 chunks и 30 gold-label questions; calibration 20/held_out 10. Отдельные expectations answered20/refused8/clarification2; реальные retrieval/answer outcomes ещё не измерены.
+- Единая команда проверки: scripts/verify_offline.py. 5 прежних +60 backend tests PASS, preflight labels PASS; [безопасный отчёт](../evaluation/reports/2026-11-05-baseline-preflight.json). [Результаты этапа](stages/2026-11-05-snapshot-baseline.md), [ADR-0005](decisions/0005-snapshot-baseline.md).
 
-## Согласованные критерии прототипа
+## Согласованная приёмка и границы
 
-2026-11-05 владелец согласовал [дополнение к roadmap](acceptance/prototype-v1.md): отдельные профили A synthetic offline и B допущенный real sample. [ADR-0004](decisions/0004-prototype-acceptance.md) фиксирует согласование и границы. Это критерии будущей приёмки, не заявление о её прохождении. 46 code tests не заменяют ~30 evaluation вопросов; полноценный прототип шире M1. Real source/cloud approvals не изменены.
+[Prototype v1](acceptance/prototype-v1.md), ADR-0004 accepted: A synthetic offline / B отдельно допущенный реальный sample. M1 и code tests не равны полной приёмке. Dataset подготовлен, но metrics retrieval/reranking/grounding=not_run; source_hit_at_5=null. Полный M2 (этапы 2–5) не завершён.
+
+Все 8 реальных кандидатов pending/UNKNOWN; разрешённых 0. Real registry bytes неизменны, PDF не загружались. Saturn-Main-Site read-only и не изменялся. Source receipts нового snapshot содержат только synthetic approved bytes в памяти; произвольный parsed text не подключён к M1 provider.
+
+Полный ADR-0001 proposed. Persistence/multi-worker snapshots, реальные indexes/embeddings/reranker, scored retrieval, генерация по новому output, cloud/API/UI/deployment и OS parser sandbox для real corpus остаются будущими задачами.
 
 ## Текущая публикация
 
-Ветка feat/offline-ingestion от 0cfe174; [PR #2](https://github.com/UkWood/LLM-RAG-chat-bot/pull/2). Commits 80da5bb (registry), b20c364 (parsers/pipeline), c0df98e (review fixes), 88c2924 (память). Push CI на 88c2924 success, проверены все шаги. Последний head/checks смотреть в PR и [отчёте](stages/2026-11-04-offline-ingestion.md). Merge M1 подтверждён; новый этап на момент публикации не слит. 2026-11-05 commit decb98b добавил согласованные критерии; push/PR CI на нём success, 46 code tests проходят. Результаты сохранены в [отчёте согласования](stages/2026-11-05-prototype-acceptance.md).
-
-## Границы и ограничения
-
-- Все 8 реальных кандидатов pending/UNKNOWN; разрешённых 0. Registry bytes неизменены; PDF не скачивались. Saturn-Main-Site только прочитан для pinned schema discovery, без изменений.
-- Новый runner принимает только synthetic approvals; его output не подключён к M1 provider. M1 продолжает отвечать только по своему узкому fixture profile.
-- Полная production architecture остаётся proposed. Полный milestone M2 = этапы 2–5, не объявляется завершённым этим шагом.
-- Нужны OS sandbox/egress и quality review перед real PDF; resource-limited процесс их не заменяет. Поддержан ограниченный набор site fields, сложные PDF tables/OCR не реализованы.
-- API/UI, Qdrant, embeddings/reranker, cloud/local реальная LLM и deployment не реализованы.
+Ветка feat/snapshot-evaluation-baseline от main 909072f. Основные commits 7dead21, 80d5dc4, 1788198; fixes f4d22ea. [PR #3](https://github.com/UkWood/LLM-RAG-chat-bot/pull/3) открыт в main. Push CI на 29422fe success, locked install и unified verification подтверждены jobs API. Последний head/checks — в PR и отчёте этапа. PR #2 уже merged; новый этап не сливался.
 
 ## Следующий шаг
 
-Этап 3: immutable snapshot/index contracts с access-policy metadata и local retrieval baseline на synthetic fixtures. До оценки качества подготовить baseline ~10 authored документов / ~30 размеченных вопросов, local diagnostics и план общей команды приёмки согласно согласованным критериям. Real sample требует явного допуска exact revisions; генерация по новому parser output — после grounding/evidence gates.
+Local index adapters и реальный retrieval baseline на synthetic dataset. Затем fusion/reranking и evidence/grounding. Считать Top-5 по фактическим результатам; держать held_out отдельно от calibration. Real sample/cloud требуют явного допуска exact revisions и отдельных quality/privacy gates.
 
-[Roadmap](superpowers/plans/2026-11-03-ai-consultant-roadmap.md), [архитектура](superpowers/specs/2026-11-03-ai-consultant-design.md), [дизайн ingestion](superpowers/specs/2026-11-04-offline-ingestion-design.md), [handoff](HANDOFF.md).
+[Roadmap](superpowers/plans/2026-11-03-ai-consultant-roadmap.md), [snapshot design](superpowers/specs/2026-11-05-snapshot-baseline-design.md), [handoff](HANDOFF.md).

@@ -1,0 +1,149 @@
+%PDF-1.3
+%‚„œ”
+1 0 obj
+<<
+/Producer (pypdf)
+>>
+endobj
+2 0 obj
+<<
+/Type /Pages
+/Count 3
+/Kids [ 4 0 R 7 0 R 10 0 R ]
+>>
+endobj
+3 0 obj
+<<
+/Type /Catalog
+/Pages 2 0 R
+>>
+endobj
+4 0 obj
+<<
+/Type /Page
+/Resources <<
+/Font <<
+/F1 5 0 R
+>>
+>>
+/MediaBox [ 0.0 0.0 595 842 ]
+/Parent 2 0 R
+/Contents 6 0 R
+>>
+endobj
+5 0 obj
+<<
+/Type /Font
+/Subtype /Type1
+/BaseFont /Helvetica
+>>
+endobj
+6 0 obj
+<<
+/Length 342
+>>
+stream
+BT /F1 11 Tf 40 780 Td 20 TL
+(EDU-420 SYNTHETIC MANUAL - revision 1) Tj
+T* (Fictional teaching gateway. Not Saturn equipment.) Tj
+T* (Supply: 12 V DC. Network interface: Ethernet.) Tj
+T* (Application protocol: Modbus TCP.) Tj
+T* (This example has no wireless module.) Tj
+T* (The example is a teaching document, not real product advice.) Tj
+ET
+endstream
+endobj
+7 0 obj
+<<
+/Type /Page
+/Resources <<
+/Font <<
+/F1 8 0 R
+>>
+>>
+/MediaBox [ 0.0 0.0 595 842 ]
+/Parent 2 0 R
+/Contents 9 0 R
+>>
+endobj
+8 0 obj
+<<
+/Type /Font
+/Subtype /Type1
+/BaseFont /Helvetica
+>>
+endobj
+9 0 obj
+<<
+/Length 335
+>>
+stream
+BT /F1 11 Tf 40 780 Td 20 TL
+(EDU-420 - Network configuration) Tj
+T* (Default IPv4 address: 192.0.2.42.) Tj
+T* (Modbus TCP port: 502.) Tj
+T* (The address belongs to the documentation-only TEST-NET range.) Tj
+T* (Connect the isolated classroom network before the test.) Tj
+T* (Do not connect this example to a production network.) Tj
+ET
+endstream
+endobj
+10 0 obj
+<<
+/Type /Page
+/Resources <<
+/Font <<
+/F1 11 0 R
+>>
+>>
+/MediaBox [ 0.0 0.0 595 842 ]
+/Parent 2 0 R
+/Contents 12 0 R
+>>
+endobj
+11 0 obj
+<<
+/Type /Font
+/Subtype /Type1
+/BaseFont /Helvetica
+>>
+endobj
+12 0 obj
+<<
+/Length 364
+>>
+stream
+BT /F1 11 Tf 40 780 Td 20 TL
+(EDU-420 - Troubleshooting) Tj
+T* (If Ethernet is unavailable, check link and 12 V supply.) Tj
+T* (Then check the configured IPv4 address and TCP port 502.) Tj
+T* (No BACnet behavior is implemented in this synthetic manual.) Tj
+T* (Restore the classroom configuration after testing.) Tj
+T* (End of the authored fictional manual.) Tj
+ET
+endstream
+endobj
+xref
+0 13
+0000000000 65535 f 
+0000000015 00000 n 
+0000000054 00000 n 
+0000000126 00000 n 
+0000000175 00000 n 
+0000000307 00000 n 
+0000000377 00000 n 
+0000000770 00000 n 
+0000000902 00000 n 
+0000000972 00000 n 
+0000001358 00000 n 
+0000001493 00000 n 
+0000001564 00000 n 
+trailer
+<<
+/Size 13
+/Root 3 0 R
+/Info 1 0 R
+>>
+startxref
+1980
+%%EOF

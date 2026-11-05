@@ -1,13 +1,13 @@
 """Synthetic offline orchestration; production ingestion is intentionally disabled."""
 from hashlib import sha256
 from pathlib import Path
-from .contracts import IngestionResult, identifier
+from .contracts import IngestionResult, SourceBlob, identifier
 from .registry import Registry
 from .site import parse_site
 
 
 def build_fixture(root: Path, registry: Registry, commit: str) -> IngestionResult:
-    documents, skipped = [], []
+    documents, skipped, blobs = [], [], []
     for record in registry.entries:
         # Policy decision uses pinned expected hash first; denied bytes are never read.
         if not record.permits('local_index', record.approved_content_sha256, record.source_commit):
@@ -38,5 +38,6 @@ def build_fixture(root: Path, registry: Registry, commit: str) -> IngestionResul
             from .pdf import parse_pdf
             document = parse_pdf(record, content)
         documents.append(document)
+        blobs.append(SourceBlob(record.source_id, content))
     return IngestionResult(identifier(registry.revision, tuple(d.document_id for d in documents)),
-                           registry.revision, tuple(documents), tuple(skipped))
+                           registry.revision, tuple(documents), tuple(skipped), source_blobs=tuple(blobs))

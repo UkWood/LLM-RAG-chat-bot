@@ -1,36 +1,28 @@
 # Передача контекста
 
-Обновлено: 2026-11-05 после согласования критериев прототипа.
+Обновлено: 2026-11-05, snapshot contracts и synthetic baseline.
 
 ## Восстановление
 
-1. Прочитать AGENTS.md, README.md, docs/PROJECT_STATUS.md и актуальные stage report/design/plan. Ветки и PR проверять по GitHub, не предполагать merge или сохранность work/venv и процессов.
-2. M1 слит в main: PR #1, merge 0cfe174, CI 41798909615 success. Текущая ветка feat/offline-ingestion содержит этап 2; [PR #2](https://github.com/UkWood/LLM-RAG-chat-bot/pull/2), push CI 41801220416 на 88c2924 success; её публикация/CI описываются в [отчёте](stages/2026-11-04-offline-ingestion.md).
-3. Проверки: python3 scripts/check_project.py; python3 -m unittest discover -s tests -v; затем backend suite в Python 3.12 venv с backend/requirements.lock. Установка с --require-hashes; команды в README. Lock пока Linux x86_64. После установки тесты offline, без моделей/ключей/GPU.
-4. Проверить актуальный GitHub API, main SHA и CI. exec git/gh требуют sandbox network grant, proxy сохранять. Прежняя проблема CONNECT/Forbidden устранена; не менять токены и не просить заново разрешать api.github.com без фактической диагностики.
+1. Прочитать AGENTS.md, README, PROJECT_STATUS, [согласованные критерии](acceptance/prototype-v1.md), [snapshot design](superpowers/specs/2026-11-05-snapshot-baseline-design.md) и [отчёт](stages/2026-11-05-snapshot-baseline.md).
+2. PR #1 и #2 merged. Актуальная база main 909072fe928f004729e6db95482bb5342f0e6e63, CI 42062413579 success. Текущая ветка feat/snapshot-evaluation-baseline содержит новый этап 3a, [PR #3](https://github.com/UkWood/LLM-RAG-chat-bot/pull/3); push CI 42065607521 на 29422fe success. Последний head/checks смотреть в GitHub и отчёте, не предполагать merge.
+3. Python 3.12 Linux x86_64 venv + pip install --require-hashes -r backend/requirements.lock, затем одна команда: work/venv/bin/python scripts/verify_offline.py. Включены document checks, 5 прежних +60 backend tests и baseline-preflight. --report сохраняет только малый отчёт labels/revisions/counts. Без сети после install, без ключей/GPU/моделей. work/venv может отсутствовать после snapshot.
+4. Git/gh exec требуют sandbox network grant, proxy сохранять. GitHub merge API при PR #2 вернул 500; обычный local merge/non-force push был успешен, GitHub подтвердил merged=true. Не считать API failure доказательством нехватки прав и не менять credentials. При будущей интеграции проверять фактический PR/head/main/CI.
 
-## Реализовано
+## Что реализовано и что это доказывает
 
-M1: узкий synthetic-only RAG с FakeLLMProvider, источниками и отказами. Новый ingestion: строгий registry v1 runtime loader, immutable records, deny-before-read/hash/commit/scopes, Markdown site adapter и ограниченный PDF worker. Синтетические карточки и PDF tests не являются продукцией/документацией Сатурна. 41 backend + 5 прежних тестов PASS на текущем шаге; удалённый CI смотреть в актуальном PR.
+M1 остаётся узким FakeLLMProvider fixture profile. Ingestion отделён от generation. Snapshot проверяет exact raw registry bytes и разрешённые SourceBlob receipts повторным canonical parsing: self-consistent forged/omitted chunks и stale policy revision не проходят. IndexedChunk содержит explicit visibility/scopes/hash/policy metadata.
 
-Ingestion output отдельно от M1 evidence: произвольный parsed text нельзя направлять provider как проверенный факт. Реальный registry содержит 8 pending/UNKNOWN, allowed sources 0. Изменять permissions от имени владельца без основания нельзя.
+Catalog только process-local atomic pointer; dense/lexical descriptors — metadata declarations, не настоящие index artifacts. Current policy и append-only revocations не откатываются вместе с corpus. Перед egress/result нужен новый policy check даже для старого capture. Raw receipts не экспортировать provider/report/index dumps. Отсутствие persistence/multi-worker и reparse cost — известные ограничения, не production-ready сервис.
 
-## Согласование владельца 2026-11-05
+Dataset: fixtures/evaluation/ + evaluation/datasets/synthetic-v1.json, 10 fictional docs/44 chunks/30 cases, 20 calibration и10 held_out. PDF fixtures воспроизводятся из manuals.json; English/ASCII PDF не проверяет Cyrillic extraction. Gold labels содержат ожидаемые facts/source/field/page, не ответы retriever. Preflight проверяет labels; retrieval/reranking/grounding=not_run, source_hit_at_5=null. Не объявлять Top-5/grounding пройденными по этому отчёту.
 
-[Критерии prototype v1](acceptance/prototype-v1.md) согласованы как дополнение к roadmap; [ADR-0004](decisions/0004-prototype-acceptance.md). Два профиля: A synthetic offline и B допущенный real sample. Исходник сохранён отдельно без изменения bytes. Критерии не означают допуск реальных материалов/cloud, приёмку полного прототипа или принятие всего ADR-0001. M1/code tests не заменяют semantic quality evaluation.
+## Следующий шаг
 
-Следующая реализация должна учитывать baseline ~10 документов / ~30 вопросов, visibility/policy metadata индекса, Top-5 для каждого synthetic must_answer, local opt-in diagnostics и одну команду полной проверки. PDF-ответы требуют физических pages; OpenAI-compatible HTTP adapter проверяется отдельно mock endpoint, без обязательного cloud вызова.
+Продолжить этап 3: настоящие local index adapters (Qdrant/embeddings/BM25) и retrieval evaluation на готовом dataset. Потом этапы 4/5 RRF/reranking/grounding, отдельный mock HTTP provider contract этапа 6. Held_out не использовать для калибровки. Полная prototype acceptance/M2 не завершена, ADR-0001 proposed; bounded решения в ADR-0002…0005.
 
-## Следующий шаг и gates
+## Полномочия и sources
 
-Этап 3 — immutable snapshot/index contracts и local retrieval baseline на synthetic fixtures. Milestone M2 включает этапы 2–5 и не завершён. Полная production architecture ADR-0001 proposed; bounded offline implementation decisions — ADR-0002/0003.
+Полные права на UkWood/LLM-RAG-chat-bot сохраняются; обычные изменения/commits/push/PR выполнять без повторного запроса. Merge PR #1/#2 явно поручен пользователем; новые PR не считать merged по green CI.
 
-До real ingestion нужны exact revision approvals, OS parser sandbox/egress и quality review. Процессные limits не заменяют sandbox. Поддержан ограниченный набор site fields; PDF tables/OCR, модели, Qdrant, реальная LLM, API/UI и deployment не реализованы. Ссылки карточки не разрешают PDF автоматически, downloader отсутствует.
-
-## Полномочия
-
-Полные права UkWood/LLM-RAG-chat-bot сохраняются: обычные изменения, commits/push/PR и проверки выполнять без повторного запроса. Merge M1 явно поручен владельцем. Новые интеграции фиксировать по факту, не выдавать green CI за merge.
-
-UkWood/Saturn-Main-Site строго READ-ONLY. Не менять исходники, CI, URLs/assets, не делать commit/push. Pinned schema discovery: 084d759487bfab6e111549c9b5469711ac5fc13e. Не копировать служебные файлы/сайт в KB.
-
-Историческая диагностика старой среды сохранена в Git-версии этого handoff до 0cfe174 и в предыдущих stage reports. Secrets — только защищённые настройки, не печатать environment/credential values. work/, /tmp и процессы не считаются долговременной памятью.
+UkWood/Saturn-Main-Site строго READ-ONLY: без changes/commits/push/CI/URL/assets. Real registry содержит 8 pending/UNKNOWN, allowed0. Ни prototype acceptance, ни synthetic fixture approvals не разрешают реальные источники/cloud. До real ingestion нужны exact approvals, OS sandbox/egress и quality review; до cloud — privacy и endpoint/условия. Secrets не выводить, work/ и процессы не считать долговременной памятью.

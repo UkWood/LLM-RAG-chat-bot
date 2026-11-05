@@ -1,0 +1,149 @@
+%PDF-1.3
+%‚„œ”
+1 0 obj
+<<
+/Producer (pypdf)
+>>
+endobj
+2 0 obj
+<<
+/Type /Pages
+/Count 3
+/Kids [ 4 0 R 7 0 R 10 0 R ]
+>>
+endobj
+3 0 obj
+<<
+/Type /Catalog
+/Pages 2 0 R
+>>
+endobj
+4 0 obj
+<<
+/Type /Page
+/Resources <<
+/Font <<
+/F1 5 0 R
+>>
+>>
+/MediaBox [ 0.0 0.0 595 842 ]
+/Parent 2 0 R
+/Contents 6 0 R
+>>
+endobj
+5 0 obj
+<<
+/Type /Font
+/Subtype /Type1
+/BaseFont /Helvetica
+>>
+endobj
+6 0 obj
+<<
+/Length 372
+>>
+stream
+BT /F1 11 Tf 40 780 Td 20 TL
+(EDU-410 SYNTHETIC MANUAL - revision 1) Tj
+T* (Fictional teaching controller. Not Saturn equipment.) Tj
+T* (Purpose: collect sensor values in a classroom test stand.) Tj
+T* (Supply: 24 V DC. Disconnect supply before wiring.) Tj
+T* (Digital inputs: 4. Analog inputs: 2.) Tj
+T* (Do not use these invented values in an engineering project.) Tj
+ET
+endstream
+endobj
+7 0 obj
+<<
+/Type /Page
+/Resources <<
+/Font <<
+/F1 8 0 R
+>>
+>>
+/MediaBox [ 0.0 0.0 595 842 ]
+/Parent 2 0 R
+/Contents 9 0 R
+>>
+endobj
+8 0 obj
+<<
+/Type /Font
+/Subtype /Type1
+/BaseFont /Helvetica
+>>
+endobj
+9 0 obj
+<<
+/Length 330
+>>
+stream
+BT /F1 11 Tf 40 780 Td 20 TL
+(EDU-410 - Wiring and configuration) Tj
+T* (RS-485 terminals: A, B and signal reference.) Tj
+T* (USB is reserved for local configuration using EDU-CONFIG.) Tj
+T* (Default Modbus address: 7.) Tj
+T* (Serial configuration: 9600 bit/s, 8N1.) Tj
+T* (Do not connect the classroom bus to a live plant.) Tj
+ET
+endstream
+endobj
+10 0 obj
+<<
+/Type /Page
+/Resources <<
+/Font <<
+/F1 11 0 R
+>>
+>>
+/MediaBox [ 0.0 0.0 595 842 ]
+/Parent 2 0 R
+/Contents 12 0 R
+>>
+endobj
+11 0 obj
+<<
+/Type /Font
+/Subtype /Type1
+/BaseFont /Helvetica
+>>
+endobj
+12 0 obj
+<<
+/Length 384
+>>
+stream
+BT /F1 11 Tf 40 780 Td 20 TL
+(EDU-410 - Diagnostic procedure) Tj
+T* (If the controller does not reply, check the 24 V supply.) Tj
+T* (Then check the Modbus address and A/B polarity.) Tj
+T* (A status LED flashes once per second in the synthetic test.) Tj
+T* (No wireless interface is specified in this manual.) Tj
+T* (Contact a teacher if the fictional test cannot be completed.) Tj
+ET
+endstream
+endobj
+xref
+0 13
+0000000000 65535 f 
+0000000015 00000 n 
+0000000054 00000 n 
+0000000126 00000 n 
+0000000175 00000 n 
+0000000307 00000 n 
+0000000377 00000 n 
+0000000800 00000 n 
+0000000932 00000 n 
+0000001002 00000 n 
+0000001383 00000 n 
+0000001518 00000 n 
+0000001589 00000 n 
+trailer
+<<
+/Size 13
+/Root 3 0 R
+/Info 1 0 R
+>>
+startxref
+2025
+%%EOF
