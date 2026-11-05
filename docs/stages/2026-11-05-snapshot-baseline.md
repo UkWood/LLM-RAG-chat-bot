@@ -45,3 +45,7 @@ Base 909072f; commits 7dead21 (snapshot contracts), 80d5dc4 (corpus/dataset/vali
 ## Проверка перед merge PR #3
 
 По поручению владельца проверен PR head b3f32c2: comments/reviews отсутствуют, mergeable CLEAN, оба CI success. Единая локальная проверка повторена. Git diff --check первоначально интерпретировал ASCII PDF fixtures как текст и отметил пробелы в обязательных PDF xref entries. Добавлена .gitattributes с *.pdf binary; PDF bytes/hashes не менялись. Повторный diff check проходит. Это исправление классификации Git, не изменение corpus/labels или parser behavior. Финальный head и CI проверяются после публикации; факт merge подтверждается отдельно по GitHub/main.
+
+## Последующее событие: merge PR #3
+
+По поручению владельца PR #3 проверен и слит: be71efde2b7a3f572d790d416bf642f3a9798017, main CI42089988455 success, 65 code tests и preflight PASS. Сведения об открытом PR выше относятся к моменту публикации.

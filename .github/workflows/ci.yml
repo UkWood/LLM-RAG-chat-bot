@@ -19,5 +19,18 @@ jobs:
           python-version: '3.12'
       - name: Install locked offline-parser dependencies
         run: python -m pip install --require-hashes -r backend/requirements.lock
-      - name: Offline tests and synthetic snapshot baseline
+      - name: Offline tests and measured lexical baseline
         run: python scripts/verify_offline.py
+
+  onnx-contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install locked optional ONNX runtime
+        run: python -m pip install --require-hashes -r backend/requirements-onnx.lock
+      - name: Real CPU runtime contracts (authored numeric graphs, no language model)
+        run: PYTHONPATH=backend/src python -m unittest discover -s backend/tests -p test_embeddings.py -v

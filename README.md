@@ -2,7 +2,7 @@
 
 Отдельный технический консультант: ответы только по разрешённым материалам с источниками и отказом при недостатке доказательств. Статический интерфейс Astro, отдельный FastAPI backend, локальная KB и сменный LLM provider.
 
-**Стадия:** M1 и offline ingestion слиты в main; подготовлены snapshot-контракты и synthetic baseline (10 документов /30 вопросов). Retrieval quality пока не измерена. Реальные источники пока не допущены к индексации/облачной отправке. Полная production-архитектура остаётся proposed.
+**Стадия:** M1/ingestion/snapshot baseline слиты в main. Добавлены local indexes и measured BM25: Top-5 source hit17/20=85%; цель100% пока не пройдена, neural quality без checkpoint не измерена. Реальные источники пока не допущены к индексации/облачной отправке. Полная production-архитектура остаётся proposed.
 
 ## Память проекта
 
@@ -71,3 +71,18 @@ work/venv/bin/python scripts/verify_offline.py --report evaluation/reports/2026-
 Snapshot хранит явные policy metadata, проверяет original bytes и полный canonical parser output; in-memory catalog отделяет corpus rollback от runtime revocations. Декларации dense/lexical coverage не являются готовыми индексами. Нет persistence/multi-worker или модели поиска; новые данные не подключены к M1 ответам.
 
 [Dataset и ограничения](evaluation/README.md), [authored fixtures](fixtures/evaluation/README.md), [ADR-0005](docs/decisions/0005-snapshot-baseline.md), [отчёт этапа 3a](docs/stages/2026-11-05-snapshot-baseline.md).
+
+## Локальный поиск и измеренная проверка
+
+Обновите окружение через `pip install --require-hashes -r backend/requirements.lock` (Python3.12). Единая команда по-прежнему `work/venv/bin/python scripts/verify_offline.py`: code tests + preflight + actual lexical evaluation. Кодовая проверка и quality gate различаются: `--require-source-hit-target` возвращает nonzero при недостижении100%.
+
+```bash
+PYTHONPATH=backend/src work/venv/bin/python -m saturn_ai.retrieval --corpus fixtures/evaluation --query 'Какие интерфейсы у EDU-410?' --mode lexical
+PYTHONPATH=backend/src work/venv/bin/python -m saturn_ai.evaluation --stage retrieval --mode lexical --corpus fixtures/evaluation --dataset evaluation/datasets/synthetic-v1.json
+```
+
+Qdrant SDK local CPU memory/path проверен с контрольными vectors; это не semantic benchmark. Optional `backend/requirements-onnx.lock` и local single-file checkpoint позволяют отдельный dense/hybrid run, но checkpoint сейчас отсутствует. Auto downloads нет. Runtime contracts на numeric ONNX graph проверяются отдельным CI job.
+
+[Измеренный report](evaluation/reports/2026-11-05-lexical-retrieval.json): source-hit17/20, calibration14/14, held_out3/6; corpus/labels/aliases не подгонялись после результата. Dense/hybrid/reranking/grounding/refusal not_run. Диагностика показывает IDs/ranks/scores, `--show-text` включает approved synthetic snippets только локально. Ожидания dataset не используются как ответы.
+
+[Evaluation/модельный manifest и команды](evaluation/README.md), [пример manifest](config/embeddings/local-onnx.example.json), [ADR-0006](docs/decisions/0006-local-retrieval.md), [отчёт этапа3b](docs/stages/2026-11-05-local-retrieval.md).
