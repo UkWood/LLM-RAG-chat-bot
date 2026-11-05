@@ -1,0 +1,221 @@
+{
+  "report_kind": "synthetic_baseline_preflight",
+  "schema_version": 1,
+  "test_only": true,
+  "registry_revision": "9d1502c38c1557c680cfafd2a717b5aaa325f7bde07b28ef1d296a56393b8cf8",
+  "snapshot_id": "10008b8ae775668184ec702a3702901b715b252d02ebfd78a49069add46f7a50",
+  "dataset_revision": "a50e5efaf8784607816ebef75d41987b6ffb342ebcee2e5669cb42ac8b0929ce",
+  "document_count": 10,
+  "pdf_document_count": 2,
+  "chunk_count": 44,
+  "case_count": 30,
+  "category_distribution": {
+    "exact_spec": 5,
+    "exact_entity": 4,
+    "paraphrase": 4,
+    "multi_doc": 3,
+    "document_lookup": 3,
+    "typo": 2,
+    "no_answer": 3,
+    "unknown_entity": 2,
+    "injection": 2,
+    "out_of_domain": 2
+  },
+  "split_distribution": {
+    "calibration": 20,
+    "held_out": 10
+  },
+  "parser_versions": [
+    "pdf-v1",
+    "site-v1"
+  ],
+  "snapshot_contract_version": 1,
+  "quality_evaluation": {
+    "retrieval": "not_run",
+    "reranking": "not_run",
+    "grounding": "not_run",
+    "source_hit_at_5": null
+  },
+  "case_labels": [
+    {
+      "id": "q001",
+      "split": "calibration",
+      "expected_status": "answered",
+      "label_support": "validated"
+    },
+    {
+      "id": "q002",
+      "split": "calibration",
+      "expected_status": "answered",
+      "label_support": "validated"
+    },
+    {
+      "id": "q003",
+      "split": "calibration",
+      "expected_status": "answered",
+      "label_support": "validated"
+    },
+    {
+      "id": "q004",
+      "split": "calibration",
+      "expected_status": "answered",
+      "label_support": "validated"
+    },
+    {
+      "id": "q005",
+      "split": "held_out",
+      "expected_status": "answered",
+      "label_support": "validated"
+    },
+    {
+      "id": "q006",
+      "split": "calibration",
+      "expected_status": "answered",
+      "label_support": "validated"
+    },
+    {
+      "id": "q007",
+      "split": "calibration",
+      "expected_status": "answered",
+      "label_support": "validated"
+    },
+    {
+      "id": "q008",
+      "split": "calibration",
+      "expected_status": "answered",
+      "label_support": "validated"
+    },
+    {
+      "id": "q009",
+      "split": "held_out",
+      "expected_status": "answered",
+      "label_support": "validated"
+    },
+    {
+      "id": "q010",
+      "split": "calibration",
+      "expected_status": "answered",
+      "label_support": "validated"
+    },
+    {
+      "id": "q011",
+      "split": "calibration",
+      "expected_status": "answered",
+      "label_support": "validated"
+    },
+    {
+      "id": "q012",
+      "split": "calibration",
+      "expected_status": "answered",
+      "label_support": "validated"
+    },
+    {
+      "id": "q013",
+      "split": "held_out",
+      "expected_status": "answered",
+      "label_support": "validated"
+    },
+    {
+      "id": "q014",
+      "split": "calibration",
+      "expected_status": "answered",
+      "label_support": "validated"
+    },
+    {
+      "id": "q015",
+      "split": "calibration",
+      "expected_status": "answered",
+      "label_support": "validated"
+    },
+    {
+      "id": "q016",
+      "split": "held_out",
+      "expected_status": "answered",
+      "label_support": "validated"
+    },
+    {
+      "id": "q017",
+      "split": "calibration",
+      "expected_status": "answered",
+      "label_support": "validated"
+    },
+    {
+      "id": "q018",
+      "split": "calibration",
+      "expected_status": "answered",
+      "label_support": "validated"
+    },
+    {
+      "id": "q019",
+      "split": "held_out",
+      "expected_status": "answered",
+      "label_support": "validated"
+    },
+    {
+      "id": "q020",
+      "split": "calibration",
+      "expected_status": "clarification",
+      "label_support": "validated"
+    },
+    {
+      "id": "q021",
+      "split": "held_out",
+      "expected_status": "clarification",
+      "label_support": "validated"
+    },
+    {
+      "id": "q022",
+      "split": "calibration",
+      "expected_status": "refused",
+      "label_support": "validated"
+    },
+    {
+      "id": "q023",
+      "split": "calibration",
+      "expected_status": "refused",
+      "label_support": "validated"
+    },
+    {
+      "id": "q024",
+      "split": "held_out",
+      "expected_status": "refused",
+      "label_support": "validated"
+    },
+    {
+      "id": "q025",
+      "split": "calibration",
+      "expected_status": "refused",
+      "label_support": "validated"
+    },
+    {
+      "id": "q026",
+      "split": "held_out",
+      "expected_status": "refused",
+      "label_support": "validated"
+    },
+    {
+      "id": "q027",
+      "split": "calibration",
+      "expected_status": "refused",
+      "label_support": "validated"
+    },
+    {
+      "id": "q028",
+      "split": "held_out",
+      "expected_status": "answered",
+      "label_support": "validated"
+    },
+    {
+      "id": "q029",
+      "split": "calibration",
+      "expected_status": "refused",
+      "label_support": "validated"
+    },
+    {
+      "id": "q030",
+      "split": "held_out",
+      "expected_status": "refused",
+      "label_support": "validated"
+    }
+  ]
+}
