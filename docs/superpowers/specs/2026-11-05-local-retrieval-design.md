@@ -14,7 +14,7 @@ Qdrant хранит vectors + проверяемые metadata snapshot/chunk/sou
 
 ## Embedding boundary
 
-Сменный Encoder protocol encode_documents/encode_query и identity/config revision/dimensions. CI test encoder не участвует в semantic quality report. Опциональный local ONNX adapter принимает только локальный каталог с model.onnx/tokenizer.json и manifest hashes, CPU execution, bounded batches/sequence length, configured query/passage prefixes, pooling и normalization. Никакого remote code или provider-specific API; файлы модели доверенные owner-provisioned artifacts, не пользовательские uploads. Реальная модель не выбрана и не проверена, benchmark/license/model-card остаются gate перед её использованием на real data.
+Сменный Encoder protocol encode_documents/encode_query и identity/config revision/dimensions. CI test encoder не участвует в semantic quality report. Опциональный local ONNX adapter принимает только локальный каталог с model.onnx/tokenizer.json и manifest hashes, CPU execution, bounded batches/sequence length, configured query/passage prefixes, pooling и normalization. Никакого remote code или provider-specific API; файлы модели доверенные owner-provisioned artifacts, не пользовательские uploads. External-data tensors запрещаются recursively до ORT; runtime/tokenizer получают exact immutable verified bytes. Optional CI включает actual authored numeric graph, sidecar и file-swap regression, не semantic model. Реальная модель не выбрана и не проверена, benchmark/license/model-card остаются gate перед её использованием на real data.
 
 ## Evaluation и diagnostic mode
 

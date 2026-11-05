@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "model_id": "owner-selected-mean-pooling-model",
+  "revision": "exact-model-revision",
+  "dimensions": 384,
+  "max_length": 512,
+  "query_prefix": "query: ",
+  "passage_prefix": "passage: ",
+  "pad_id": 0,
+  "output_name": "last_hidden_state",
+  "pooling": "mean",
+  "model_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "tokenizer_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+}
