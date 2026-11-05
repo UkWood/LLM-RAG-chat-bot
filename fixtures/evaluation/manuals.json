@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "test_only": true,
+  "manuals": [
+    {
+      "slug": "edu-410-manual",
+      "title": "EDU-410 synthetic manual",
+      "pages": [
+        ["EDU-410 SYNTHETIC MANUAL - revision 1", "Fictional teaching controller. Not Saturn equipment.", "Purpose: collect sensor values in a classroom test stand.", "Supply: 24 V DC. Disconnect supply before wiring.", "Digital inputs: 4. Analog inputs: 2.", "Do not use these invented values in an engineering project."],
+        ["EDU-410 - Wiring and configuration", "RS-485 terminals: A, B and signal reference.", "USB is reserved for local configuration using EDU-CONFIG.", "Default Modbus address: 7.", "Serial configuration: 9600 bit/s, 8N1.", "Do not connect the classroom bus to a live plant."],
+        ["EDU-410 - Diagnostic procedure", "If the controller does not reply, check the 24 V supply.", "Then check the Modbus address and A/B polarity.", "A status LED flashes once per second in the synthetic test.", "No wireless interface is specified in this manual.", "Contact a teacher if the fictional test cannot be completed."]
+      ]
+    },
+    {
+      "slug": "edu-420-manual",
+      "title": "EDU-420 synthetic manual",
+      "pages": [
+        ["EDU-420 SYNTHETIC MANUAL - revision 1", "Fictional teaching gateway. Not Saturn equipment.", "Supply: 12 V DC. Network interface: Ethernet.", "Application protocol: Modbus TCP.", "This example has no wireless module.", "The example is a teaching document, not real product advice."],
+        ["EDU-420 - Network configuration", "Default IPv4 address: 192.0.2.42.", "Modbus TCP port: 502.", "The address belongs to the documentation-only TEST-NET range.", "Connect the isolated classroom network before the test.", "Do not connect this example to a production network."],
+        ["EDU-420 - Troubleshooting", "If Ethernet is unavailable, check link and 12 V supply.", "Then check the configured IPv4 address and TCP port 502.", "No BACnet behavior is implemented in this synthetic manual.", "Restore the classroom configuration after testing.", "End of the authored fictional manual."]
+      ]
+    }
+  ]
+}
