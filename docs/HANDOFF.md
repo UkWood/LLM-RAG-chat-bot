@@ -1,6 +1,6 @@
 # Передача контекста
 
-Обновлено: 2026-11-04 после M1 merge и synthetic offline ingestion.
+Обновлено: 2026-11-05 после согласования критериев прототипа.
 
 ## Восстановление
 
@@ -14,6 +14,12 @@
 M1: узкий synthetic-only RAG с FakeLLMProvider, источниками и отказами. Новый ingestion: строгий registry v1 runtime loader, immutable records, deny-before-read/hash/commit/scopes, Markdown site adapter и ограниченный PDF worker. Синтетические карточки и PDF tests не являются продукцией/документацией Сатурна. 41 backend + 5 прежних тестов PASS на текущем шаге; удалённый CI смотреть в актуальном PR.
 
 Ingestion output отдельно от M1 evidence: произвольный parsed text нельзя направлять provider как проверенный факт. Реальный registry содержит 8 pending/UNKNOWN, allowed sources 0. Изменять permissions от имени владельца без основания нельзя.
+
+## Согласование владельца 2026-11-05
+
+[Критерии prototype v1](acceptance/prototype-v1.md) согласованы как дополнение к roadmap; [ADR-0004](decisions/0004-prototype-acceptance.md). Два профиля: A synthetic offline и B допущенный real sample. Исходник сохранён отдельно без изменения bytes. Критерии не означают допуск реальных материалов/cloud, приёмку полного прототипа или принятие всего ADR-0001. M1/code tests не заменяют semantic quality evaluation.
+
+Следующая реализация должна учитывать baseline ~10 документов / ~30 вопросов, visibility/policy metadata индекса, Top-5 для каждого synthetic must_answer, local opt-in diagnostics и одну команду полной проверки. PDF-ответы требуют физических pages; OpenAI-compatible HTTP adapter проверяется отдельно mock endpoint, без обязательного cloud вызова.
 
 ## Следующий шаг и gates
 

@@ -9,6 +9,7 @@
 - [Продолжение в новой сессии](docs/HANDOFF.md)
 
 - [Текущее состояние и следующий шаг](docs/PROJECT_STATUS.md)
+- [Согласованные критерии прототипа: offline / real sample](docs/acceptance/prototype-v1.md)
 - [Дорожная карта](docs/superpowers/plans/2026-11-03-ai-consultant-roadmap.md)
 - [Архитектура](docs/superpowers/specs/2026-11-03-ai-consultant-design.md)
 - [Решения ADR](docs/decisions/0001-rag-boundaries.md)

@@ -1,6 +1,6 @@
 # Состояние проекта
 
-Обновлено: 2026-11-04. Репозиторий: UkWood/LLM-RAG-chat-bot.
+Обновлено: 2026-11-05. Репозиторий: UkWood/LLM-RAG-chat-bot.
 
 ## Выполнено
 
@@ -8,6 +8,10 @@
 - M1 synthetic offline RAG слит в main через [PR #1](https://github.com/UkWood/LLM-RAG-chat-bot/pull/1), merge 0cfe174; CI main [41798909615](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/41798909615) success. 20 M1 backend + 5 прежних тестов проходят.
 - Следующий offline шаг этапа 2: strict runtime registry, deny-before-read, site Markdown mapping/facts/units/relations, ограниченный local PDF worker с физическими pages, deterministic provenance и summary CLI.
 - 41 backend test PASS в чистом Python 3.12 venv с двумя hash-locked dependencies; прежние 5 тестов и document checks сохранены. [Отчёт этапа](stages/2026-11-04-offline-ingestion.md), [ADR-0003](decisions/0003-offline-ingestion.md).
+
+## Согласованные критерии прототипа
+
+2026-11-05 владелец согласовал [дополнение к roadmap](acceptance/prototype-v1.md): отдельные профили A synthetic offline и B допущенный real sample. [ADR-0004](decisions/0004-prototype-acceptance.md) фиксирует согласование и границы. Это критерии будущей приёмки, не заявление о её прохождении. 46 code tests не заменяют ~30 evaluation вопросов; полноценный прототип шире M1. Real source/cloud approvals не изменены.
 
 ## Текущая публикация
 
@@ -23,6 +27,6 @@
 
 ## Следующий шаг
 
-Этап 3: immutable snapshot/index contracts и local retrieval baseline на synthetic fixtures. Real sample требует явного допуска exact revisions; генерация по новому parser output — после grounding/evidence gates.
+Этап 3: immutable snapshot/index contracts с access-policy metadata и local retrieval baseline на synthetic fixtures. До оценки качества подготовить baseline ~10 authored документов / ~30 размеченных вопросов, local diagnostics и план общей команды приёмки согласно согласованным критериям. Real sample требует явного допуска exact revisions; генерация по новому parser output — после grounding/evidence gates.
 
 [Roadmap](superpowers/plans/2026-11-03-ai-consultant-roadmap.md), [архитектура](superpowers/specs/2026-11-03-ai-consultant-design.md), [дизайн ingestion](superpowers/specs/2026-11-04-offline-ingestion-design.md), [handoff](HANDOFF.md).
