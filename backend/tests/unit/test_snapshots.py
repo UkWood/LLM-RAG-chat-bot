@@ -6,7 +6,7 @@ import shutil
 import tempfile
 import unittest
 
-from saturn_ai.ingestion.contracts import identifier
+from saturn_ai.ingestion.contracts import identifier, make_chunk
 from saturn_ai.ingestion.pipeline import build_fixture
 from saturn_ai.ingestion.registry import load_registry
 from saturn_ai.snapshots import build_snapshot, IndexDescriptor, SnapshotBundle, SnapshotCatalog
@@ -76,6 +76,37 @@ class SnapshotTests(unittest.TestCase):
             changed_doc = replace(first, chunks=(bad,)+first.chunks[1:])
             changed = replace(self.ingestion, documents=(changed_doc,)+self.ingestion.documents[1:])
             with self.subTest(bad=bad.chunk_id):
+                with self.assertRaises(ValueError):
+                    build_snapshot(changed, self.registry)
+
+    def test_recomputed_forged_chunk_and_missing_chunks_are_rejected(self):
+        first = self.ingestion.documents[0]
+        original = first.chunks[0]
+        forged = make_chunk(first.document_id, first.source_id, 'Invented BACnet support.',
+                            original.heading_path, original.field_path, original.page_start)
+        for chunks in [(forged,)+first.chunks[1:], first.chunks[:-1]]:
+            changed = replace(self.ingestion, documents=(replace(first, chunks=chunks),)
+                              + self.ingestion.documents[1:])
+            with self.subTest(chunk_count=len(chunks)):
+                with self.assertRaises(ValueError):
+                    build_snapshot(changed, self.registry)
+
+    def test_registry_contents_and_revision_cannot_be_changed_independently(self):
+        changed = replace(self.registry, entries=(replace(self.registry.entries[0],
+                          allowed_usage=('local_index',)),)+self.registry.entries[1:])
+        with self.assertRaises(ValueError):
+            build_snapshot(self.ingestion, changed)
+        with self.assertRaises(ValueError):
+            SnapshotCatalog(changed)
+        with self.assertRaises(ValueError):
+            SnapshotCatalog(replace(self.registry, revision='0'*64))
+
+    def test_source_receipts_are_required_and_exact(self):
+        blobs = self.ingestion.source_blobs
+        for changed in [replace(self.ingestion, source_blobs=()),
+                        replace(self.ingestion, source_blobs=(replace(blobs[0], content=b'changed'),)+blobs[1:]),
+                        replace(self.ingestion, source_blobs=blobs+blobs[:1])]:
+            with self.subTest(count=len(changed.source_blobs)):
                 with self.assertRaises(ValueError):
                     build_snapshot(changed, self.registry)
 

@@ -53,12 +53,19 @@ class Document:
 
 
 @dataclass(frozen=True)
+class SourceBlob:
+    source_id: str
+    content: bytes
+
+
+@dataclass(frozen=True)
 class IngestionResult:
     snapshot_id: str
     registry_revision: str
     documents: tuple[Document, ...]
     skipped_source_ids: tuple[str, ...]
     test_only: bool = True
+    source_blobs: tuple[SourceBlob, ...] = ()
 
 
 def identifier(*parts):

@@ -5,27 +5,15 @@ import json
 from pathlib import PurePosixPath
 from threading import RLock
 
-from .ingestion.contracts import Document, IngestedChunk, IngestionResult, identifier
-from .ingestion.registry import COMMON, SITE, EXTERNAL, Registry, load_registry, _hash
+from .ingestion.contracts import Document, IngestedChunk, IngestionResult, SourceBlob, identifier
+from .ingestion.registry import Registry, load_registry, _hash
 
 
 def _checked_registry(registry):
-    if (not isinstance(registry, Registry) or not _hash(registry.revision)
-            or type(registry.entries) is not tuple):
-        raise ValueError('Invalid registry contract')
-    entries = []
-    for record in registry.entries:
-        item = asdict(record)
-        fields = COMMON | (SITE if record.source_kind == 'site_content' else EXTERNAL)
-        if any(value is not None for key, value in item.items() if key not in fields):
-            raise ValueError('Source-kind metadata mismatch')
-        item = {key: value for key, value in item.items() if key in fields}
-        item['allowed_usage'] = list(record.allowed_usage)
-        entries.append(item)
-    canonical = load_registry(json.dumps(dict(schema_version=1, registry_status=registry.registry_status,
-        default_policy='deny', source_snapshot=registry.source_snapshot, entries=entries)).encode())
-    if canonical.entries != registry.entries:
-        raise ValueError('Mutable or malformed source records')
+    if (not isinstance(registry, Registry) or type(registry.raw_bytes) is not bytes
+            or not registry.raw_bytes or type(registry.entries) is not tuple
+            or registry != load_registry(registry.raw_bytes)):
+        raise ValueError('Registry fields/revision do not match original JSON bytes')
     return registry
 
 
@@ -82,6 +70,13 @@ def build_snapshot(ingestion: IngestionResult, registry: Registry) -> KnowledgeS
             or ingestion.snapshot_id != identifier(registry.revision,
                                                   tuple(d.document_id for d in ingestion.documents))):
         raise ValueError('Missing/duplicate/extra documents or inconsistent ingestion identity')
+    if (type(ingestion.source_blobs) is not tuple
+            or any(not isinstance(blob, SourceBlob) or type(blob.content) is not bytes
+                   or len(blob.content) > 1_000_000 for blob in ingestion.source_blobs)):
+        raise ValueError('Missing or malformed source-byte receipts')
+    blobs = {blob.source_id: blob.content for blob in ingestion.source_blobs}
+    if len(blobs) != len(ingestion.source_blobs) or set(blobs) != allowed:
+        raise ValueError('Missing/extra/duplicate source-byte receipts')
     seen_chunks = set()
     for document in ingestion.documents:
         record = records[document.source_id]
@@ -99,6 +94,19 @@ def build_snapshot(ingestion: IngestionResult, registry: Registry) -> KnowledgeS
                 or type(document.chunks) is not tuple or not document.chunks
                 or type(document.relationships) is not tuple or type(document.document_links) is not tuple):
             raise ValueError('Document provenance mismatch')
+        content = blobs[record.source_id]
+        if sha256(content).hexdigest() != document.content_hash:
+            raise ValueError('Source-byte receipt hash mismatch')
+        # Caller-supplied hashes alone cannot attest derived text. Reparse approved
+        # original bytes and compare the complete canonical extraction.
+        if site:
+            from .ingestion.site import parse_site
+            canonical = parse_site(record, content)
+        else:
+            from .ingestion.pdf import parse_pdf
+            canonical = parse_pdf(record, content)
+        if document != canonical:
+            raise ValueError('Document/chunks differ from approved-byte parser output')
         for chunk in document.chunks:
             if (not isinstance(chunk, IngestedChunk) or chunk.source_id != record.source_id
                     or chunk.document_id != document.document_id or not isinstance(chunk.text, str)
@@ -122,8 +130,9 @@ def build_snapshot(ingestion: IngestionResult, registry: Registry) -> KnowledgeS
             raise ValueError('Document approval cannot be inherited')
     documents = tuple(sorted(ingestion.documents, key=lambda d: d.source_id))
     normalized = replace(ingestion, documents=documents, skipped_source_ids=tuple(sorted(ingestion.skipped_source_ids)),
-                         snapshot_id=identifier(registry.revision, tuple(d.document_id for d in documents)))
-    sid = identifier('knowledge-snapshot-v1', asdict(registry), [asdict(d) for d in documents])
+                         snapshot_id=identifier(registry.revision, tuple(d.document_id for d in documents)),
+                         source_blobs=tuple(sorted(ingestion.source_blobs, key=lambda b: b.source_id)))
+    sid = identifier('knowledge-snapshot-v1', registry.revision, [asdict(d) for d in documents])
     indexed = tuple(IndexedChunk(chunk, sid, registry.revision, doc.content_hash, doc.source_commit,
                                 doc.locator, doc.title, records[doc.source_id].visibility,
                                 records[doc.source_id].approval_state, records[doc.source_id].allowed_usage)

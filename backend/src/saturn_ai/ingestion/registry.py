@@ -99,6 +99,7 @@ class Registry:
     registry_status: str
     source_snapshot: str
     entries: tuple[SourceRecord, ...]
+    raw_bytes: bytes = b''
 
 
 def load_registry(raw: bytes) -> Registry:
@@ -174,4 +175,4 @@ def load_registry(raw: bytes) -> Registry:
                     or (item['approval_state'] == 'approved' and item['fetch_state'] != 'fetched')):
                 raise ValueError('Invalid external document state')
         records.append(SourceRecord(**dict(item, allowed_usage=tuple(usage))))
-    return Registry(sha256(raw).hexdigest(), data['registry_status'], data['source_snapshot'], tuple(records))
+    return Registry(sha256(raw).hexdigest(), data['registry_status'], data['source_snapshot'], tuple(records), raw)
