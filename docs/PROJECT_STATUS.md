@@ -20,7 +20,7 @@
 
 ## Текущая публикация
 
-Ветка feat/snapshot-evaluation-baseline от main 909072f. Основные commits 7dead21, 80d5dc4, 1788198; fixes f4d22ea. Новый PR/head/CI фиксируются в отчёте после фактической проверки. PR #2 уже merged; новый этап не сливался.
+Ветка feat/snapshot-evaluation-baseline от main 909072f. Основные commits 7dead21, 80d5dc4, 1788198; fixes f4d22ea. [PR #3](https://github.com/UkWood/LLM-RAG-chat-bot/pull/3) открыт в main. Push CI на 29422fe success, locked install и unified verification подтверждены jobs API. Последний head/checks — в PR и отчёте этапа. PR #2 уже merged; новый этап не сливался.
 
 ## Следующий шаг
 

@@ -34,4 +34,4 @@ Files: scripts/verify_offline.py, .github/workflows/ci.yml, README, ADR/stage/st
 - [x] One documented command runs project checks + tests + preflight after separate dependency install.
 - [x] Independent review; reproduce/fix important findings RED→GREEN, run full verification.
 - [x] Record PR #2 merge 909072f and CI 42062413579 success; update scoped results, report and next step.
-- [ ] Push feature PR, inspect actual CI and preserve evidence. No automatic merge.
+- [x] Push feature PR, inspect actual CI and preserve evidence. No automatic merge.

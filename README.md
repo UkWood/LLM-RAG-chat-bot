@@ -24,8 +24,6 @@
 ## Проверка текущего этапа
 
 ```bash
-python3 scripts/check_project.py
-python3 -m unittest discover -s tests -v
 python3 -m venv work/venv
 work/venv/bin/python -m pip install --require-hashes -r backend/requirements.lock
 work/venv/bin/python scripts/verify_offline.py

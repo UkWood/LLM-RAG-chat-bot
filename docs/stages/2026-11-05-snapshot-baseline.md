@@ -34,7 +34,7 @@ work/venv/bin/python scripts/verify_offline.py --report evaluation/reports/2026-
 
 ## Публикация
 
-Base 909072f; commits 7dead21 (snapshot contracts), 80d5dc4 (corpus/dataset/validator), 1788198 (unified command/CI/report), f4d22ea (review fixes). GitHub PR/CI новой ветки записываются после фактической публикации. Автоматический merge не предусмотрен.
+Base 909072f; commits 7dead21 (snapshot contracts), 80d5dc4 (corpus/dataset/validator), 1788198 (unified command/CI/report), f4d22ea (review fixes). [PR #3](https://github.com/UkWood/LLM-RAG-chat-bot/pull/3) открыт в main. Git push exit 0; API подтвердил head 29422fe60543095847daa6b8d07a6d37c66f6ec4 (публикация документации). Push [CI 42065607521](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42065607521) на этом head success; jobs API подтвердил success locked install и unified tests/preflight. PR [CI 42065691981](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42065691981) запускается независимо. Эти наблюдения сохраняются последующим documentation-only commit; актуальные checks последнего head читать в PR. Автоматический merge не предусмотрен, состояние при публикации OPEN.
 
 ## Ограничения и следующий шаг
 

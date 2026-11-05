@@ -5,7 +5,7 @@
 ## Восстановление
 
 1. Прочитать AGENTS.md, README, PROJECT_STATUS, [согласованные критерии](acceptance/prototype-v1.md), [snapshot design](superpowers/specs/2026-11-05-snapshot-baseline-design.md) и [отчёт](stages/2026-11-05-snapshot-baseline.md).
-2. PR #1 и #2 merged. Актуальная база main 909072fe928f004729e6db95482bb5342f0e6e63, CI 42062413579 success. Текущая ветка feat/snapshot-evaluation-baseline содержит новый этап 3a; PR/checks смотреть в GitHub и отчёте, не предполагать merge.
+2. PR #1 и #2 merged. Актуальная база main 909072fe928f004729e6db95482bb5342f0e6e63, CI 42062413579 success. Текущая ветка feat/snapshot-evaluation-baseline содержит новый этап 3a, [PR #3](https://github.com/UkWood/LLM-RAG-chat-bot/pull/3); push CI 42065607521 на 29422fe success. Последний head/checks смотреть в GitHub и отчёте, не предполагать merge.
 3. Python 3.12 Linux x86_64 venv + pip install --require-hashes -r backend/requirements.lock, затем одна команда: work/venv/bin/python scripts/verify_offline.py. Включены document checks, 5 прежних +60 backend tests и baseline-preflight. --report сохраняет только малый отчёт labels/revisions/counts. Без сети после install, без ключей/GPU/моделей. work/venv может отсутствовать после snapshot.
 4. Git/gh exec требуют sandbox network grant, proxy сохранять. GitHub merge API при PR #2 вернул 500; обычный local merge/non-force push был успешен, GitHub подтвердил merged=true. Не считать API failure доказательством нехватки прав и не менять credentials. При будущей интеграции проверять фактический PR/head/main/CI.
 
