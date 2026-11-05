@@ -30,4 +30,4 @@ Files: backend/src/saturn_ai/evaluation/retrieval.py, CLI, backend/tests/unit/te
 
 - [x] Unified offline verification includes index tests + measured lexical report; model download not required.
 - [x] Independent review, reproduce/fix important findings RED→GREEN; full suite PASS.
-- [ ] Update ADR/stage/status/handoff, record PR #3 merge be71efd and main CI 42089988455 success; publish PR/check actual CI. No auto merge.
+- [x] Update ADR/stage/status/handoff, record PR #3 merge be71efd and main CI 42089988455 success; publish PR/check actual CI. No auto merge.

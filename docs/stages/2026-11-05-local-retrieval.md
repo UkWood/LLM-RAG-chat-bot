@@ -51,7 +51,7 @@ Source-hit target1.0 **не достигнут**. Dense/hybrid/reranking/groundi
 
 ## Публикация и память
 
-Base be71efd;15197e7 — adapters/deps;5c1f2f2 — measured evaluation/diagnostics;812a2d2 — single-file ONNX fix. Финальные docs/PR/head/CI записываются после фактической публикации. Автоматический merge не выполняется. Raw model weights, index dumps, raw user logs и secrets не коммитились. Real registry и M1 app/provider неизменны; сайт не читался/не изменялся на этом шаге.
+Base be71efd;15197e7 — adapters/deps;5c1f2f2 — measured evaluation/diagnostics;812a2d2 — single-file ONNX fix. [PR #4](https://github.com/UkWood/LLM-RAG-chat-bot/pull/4) открыт в main. Git push exit0, API подтвердил head95eb0b0b5a731d2b395c799f8f09f9ec125d539f. Push [CI42094770037](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42094770037) success; оба jobs offline-checks и onnx-contracts success, включая locked install. PR [CI42094859912](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42094859912) проверяется отдельно. Эти наблюдения сохраняются последующим documentation-only commit; актуальные checks последнего head смотреть в PR. Автоматический merge не выполняется. Raw model weights, index dumps, raw user logs и secrets не коммитились. Real registry и M1 app/provider неизменны; сайт не читался/не изменялся на этом шаге.
 
 ## Что остаётся
 

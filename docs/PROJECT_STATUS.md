@@ -18,7 +18,7 @@
 
 ## Текущая публикация
 
-Ветка feat/local-retrieval-baseline от be71efd. Commits15197e7,5c1f2f2,812a2d2. Новый PR/head/CI фиксируются в [отчёте этапа](stages/2026-11-05-local-retrieval.md). Новый этап не слит.
+Ветка feat/local-retrieval-baseline от be71efd. Commits15197e7,5c1f2f2,812a2d2. [PR #4](https://github.com/UkWood/LLM-RAG-chat-bot/pull/4) открыт, push CI42094770037 на95eb0b0 success в обоих jobs (основной+optional ONNX). Последний head/checks и evidence в [отчёте этапа](stages/2026-11-05-local-retrieval.md). Новый этап не слит.
 
 ## Следующий шаг
 

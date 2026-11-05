@@ -4,7 +4,7 @@
 
 ## Восстановление
 
-Прочитать AGENTS.md, README, PROJECT_STATUS, [retrieval design](superpowers/specs/2026-11-05-local-retrieval-design.md), [report](stages/2026-11-05-local-retrieval.md), [prototype acceptance](acceptance/prototype-v1.md). PR #1/#2/#3 merged; база be71efde2b7a3f572d790d416bf642f3a9798017, main CI42089988455 success. Текущая ветка feat/local-retrieval-baseline; её фактические PR/head/CI смотреть в GitHub и отчёте.
+Прочитать AGENTS.md, README, PROJECT_STATUS, [retrieval design](superpowers/specs/2026-11-05-local-retrieval-design.md), [report](stages/2026-11-05-local-retrieval.md), [prototype acceptance](acceptance/prototype-v1.md). PR #1/#2/#3 merged; база be71efde2b7a3f572d790d416bf642f3a9798017, main CI42089988455 success. Текущая ветка feat/local-retrieval-baseline, [PR #4](https://github.com/UkWood/LLM-RAG-chat-bot/pull/4); push CI42094770037 на95eb0b0 success в обоих jobs. Последние head/checks смотреть в GitHub и отчёте, не предполагать merge.
 
 Python3.12: установить hash-locked backend/requirements.lock в work/venv, затем work/venv/bin/python scripts/verify_offline.py. Для optional runtime отдельный requirements-onnx.lock. После install всё CPU/offline, без ключей/GPU/языковой модели. work/venv и процессы не гарантируются после snapshot. Git/gh exec требуют sandbox network grant, proxy/credentials сохранять; не выводить секреты.
 
