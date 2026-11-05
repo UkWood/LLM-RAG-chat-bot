@@ -2,3 +2,4 @@
 -c requirements.lock
 onnxruntime==1.31.1
 tokenizers==0.23.3
+onnx==1.23.2

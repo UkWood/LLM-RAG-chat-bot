@@ -62,3 +62,64 @@ class EmbeddingTests(unittest.TestCase):
                 self.assertEqual(len(encoder.encode_query('q')),2)
                 self.assertEqual(tokenizer.received,['passage: a','passage: b','query: q'])
                 self.assertEqual(encoder.identity['kind'],'local_onnx')
+
+# Optional CI job installs the runtime profile; no checkpoint/model downloads.
+import importlib.util
+HAS_ONNX_RUNTIME = all(importlib.util.find_spec(name) is not None for name in ('onnx','onnxruntime','tokenizers'))
+
+
+@unittest.skipUnless(HAS_ONNX_RUNTIME, 'requires hash-locked optional ONNX runtime profile')
+class ActualONNXContractTests(unittest.TestCase):
+    def write_checkpoint(self, root, *, external=False, absolute=False):
+        import onnx
+        from onnx import helper,TensorProto,numpy_helper
+        from tokenizers import Tokenizer,models,pre_tokenizers
+        tokenizer=Tokenizer(models.WordLevel({'[PAD]':0,'[UNK]':1,'one':2,'two':3},unk_token='[UNK]'))
+        tokenizer.pre_tokenizer=pre_tokenizers.Whitespace()
+        (root/'tokenizer.json').write_text(tokenizer.to_str())
+        values=np.array([[[1.,0.],[1.,0.]]],dtype=np.float32)
+        if external:
+            (root/'weights.bin').write_bytes(values.tobytes())
+            tensor=TensorProto(name='weights',data_type=TensorProto.FLOAT,dims=[1,2,2],data_location=TensorProto.EXTERNAL)
+            tensor.external_data.add(key='location',value=str(root/'weights.bin') if absolute else 'weights.bin')
+            tensor.external_data.add(key='length',value='16')
+        else:
+            tensor=numpy_helper.from_array(values,name='weights')
+        inputs=[helper.make_tensor_value_info(name,TensorProto.INT64,[1,2]) for name in ('input_ids','attention_mask')]
+        output=helper.make_tensor_value_info('last_hidden_state',TensorProto.FLOAT,[1,2,2])
+        graph=helper.make_graph([helper.make_node('Identity',['weights'],['last_hidden_state'])],
+                                'synthetic-runtime-contract',inputs,[output],[tensor])
+        model=helper.make_model(graph,opset_imports=[helper.make_operatorsetid('',13)],ir_version=8)
+        (root/'model.onnx').write_bytes(model.SerializeToString())
+        manifest=dict(schema_version=1,model_id='synthetic-numeric-graph-not-embedding-model',revision='test-only',
+                      dimensions=2,max_length=128,query_prefix='',passage_prefix='',pad_id=0,
+                      output_name='last_hidden_state',pooling='mean',
+                      model_sha256=sha256((root/'model.onnx').read_bytes()).hexdigest(),
+                      tokenizer_sha256=sha256((root/'tokenizer.json').read_bytes()).hexdigest())
+        (root/'manifest.json').write_text(json.dumps(manifest))
+
+    def test_external_sidecar_graph_rejected_even_when_manifest_hashes_match(self):
+        for absolute in (False,True):
+            with tempfile.TemporaryDirectory() as temp:
+                root=Path(temp);self.write_checkpoint(root,external=True,absolute=absolute)
+                with self.subTest(absolute=absolute):
+                    with self.assertRaises(ValueError):LocalONNXEncoder(root)
+
+    def test_actual_runtime_accepts_embedded_numeric_graph(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp);self.write_checkpoint(root)
+            encoder=LocalONNXEncoder(root)
+            self.assertTrue(np.allclose(encoder.encode_query('one two'),[1,0]))
+
+    def test_runtime_uses_verified_bytes_if_files_change_after_hashing(self):
+        from saturn_ai.retrieval import embeddings
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp);self.write_checkpoint(root)
+            original=embeddings._load_runtime
+            def swapping_files(*args):
+                (root/'model.onnx').write_bytes(b'replaced-after-verification')
+                (root/'tokenizer.json').write_text('{}')
+                return original(*args)
+            with patch.object(embeddings,'_load_runtime',new=swapping_files):
+                encoder=LocalONNXEncoder(root)
+                self.assertTrue(np.allclose(encoder.encode_query('one two'),[1,0]))

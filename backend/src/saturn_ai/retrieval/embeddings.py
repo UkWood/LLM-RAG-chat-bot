@@ -24,23 +24,47 @@ def pool_embeddings(hidden, mask, *, dimensions):
     return [list(normalized(vector, dimensions)) for vector in pooled]
 
 
-def _load_runtime(directory, manifest):
+def _load_runtime(model_bytes, tokenizer_bytes, manifest):
     try:
-        import onnxruntime as ort
+        import onnx
         from tokenizers import Tokenizer
     except ImportError:
         raise ValueError('Install requirements-onnx.lock for local neural inference') from None
+    try:
+        graph=onnx.load_model_from_string(model_bytes)
+    except Exception:
+        raise ValueError('Invalid single-file ONNX graph') from None
+    visited=0
+    def reject_external(message, depth=0):
+        nonlocal visited
+        visited+=1
+        if depth>128 or visited>1_000_000:
+            raise ValueError('ONNX graph structure limit')
+        if isinstance(message,onnx.TensorProto) and (message.external_data or message.data_location==onnx.TensorProto.EXTERNAL):
+            raise ValueError('External-data tensors are forbidden in single-file checkpoint')
+        for field,value in message.ListFields():
+            if field.type==field.TYPE_MESSAGE:
+                for child in value if field.is_repeated else (value,):
+                    reject_external(child,depth+1)
+    reject_external(graph)
+    try:
+        import onnxruntime as ort
+    except ImportError:
+        raise ValueError('Install requirements-onnx.lock for local neural inference') from None
     ort.disable_telemetry_events()
-    tokenizer = Tokenizer.from_file(str(directory/'tokenizer.json'))
-    tokenizer.enable_truncation(max_length=manifest['max_length'])
-    tokenizer.enable_padding(pad_id=manifest['pad_id'])
-    options = ort.SessionOptions()
-    options.intra_op_num_threads = 1
-    options.inter_op_num_threads = 1
-    session = ort.InferenceSession(str(directory/'model.onnx'), sess_options=options, providers=['CPUExecutionProvider'])
+    try:
+        tokenizer=Tokenizer.from_str(tokenizer_bytes.decode('utf-8'))
+        tokenizer.enable_truncation(max_length=manifest['max_length'])
+        tokenizer.enable_padding(pad_id=manifest['pad_id'])
+        options=ort.SessionOptions();options.intra_op_num_threads=1;options.inter_op_num_threads=1
+        # Load the exact immutable bytes that were hashed. No file-name reload or
+        # unpinned sidecar can change the model after verification.
+        session=ort.InferenceSession(model_bytes,sess_options=options,providers=['CPUExecutionProvider'])
+    except Exception:
+        raise ValueError('Local tokenizer/ONNX runtime rejected the pinned artifacts') from None
     if manifest['output_name'] not in {o.name for o in session.get_outputs()}:
         raise ValueError('Configured output absent from local ONNX graph')
-    return tokenizer, session
+    return tokenizer,session
 
 
 class LocalONNXEncoder:
@@ -61,21 +85,21 @@ class LocalONNXEncoder:
                 or any(not isinstance(manifest[k], str) for k in ('model_id','revision','query_prefix','passage_prefix','output_name'))
                 or any(not manifest[k].strip() for k in ('model_id','revision','output_name'))):
             raise ValueError('Invalid local ONNX configuration')
+        artifacts={}
         for filename, field, maximum in [('model.onnx','model_sha256',2_000_000_000),
                                           ('tokenizer.json','tokenizer_sha256',20_000_000)]:
             path = (directory/filename).resolve()
             if not path.is_relative_to(directory) or not path.is_file() or path.stat().st_size > maximum or not _hash(manifest[field]):
                 raise ValueError('Invalid or escaping local artifact')
-            digest = sha256()
             with path.open('rb') as file:
-                for block in iter(lambda: file.read(1024*1024), b''):
-                    digest.update(block)
-            if digest.hexdigest() != manifest[field]:
-                raise ValueError('Local model/tokenizer hash drift')
+                content=file.read(maximum+1)
+            if len(content)>maximum or sha256(content).hexdigest()!=manifest[field]:
+                raise ValueError('Local model/tokenizer hash drift or size limit')
+            artifacts[filename]=content
         self.dimensions = manifest['dimensions']
         self.identity = dict(kind='local_onnx', **manifest)
         self._manifest = manifest
-        self._tokenizer, self._session = _load_runtime(directory, manifest)
+        self._tokenizer, self._session = _load_runtime(artifacts['model.onnx'],artifacts['tokenizer.json'],manifest)
         if not {i.name for i in self._session.get_inputs()} <= {'input_ids','attention_mask','token_type_ids'}:
             raise ValueError('Unsupported model input contract')
 
