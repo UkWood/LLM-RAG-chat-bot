@@ -60,3 +60,7 @@ Push CI [41801220416](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/41
 Этап 2 подготовлен и проверен только на синтетических данных. Реальные ingestion/quality acceptance требуют exact source approvals, OS parser sandbox/egress и проверки корпуса инженером. Процессные resource limits не являются OS security sandbox. Сложные PDF tables/OCR и проверка актуальности источника не реализованы. Поддержан ограниченный набор content fields, не вся Astro schema; входы/выходы/сертификаты и словари требуют следующих adapters. JSON Schema artifact ещё не опубликован; strict validation реализована runtime кодом.
 
 Следующий независимый шаг: согласованный immutable snapshot/index interface и локальный retrieval baseline (этап 3), продолжая synthetic profile. Подключение к генерации требует evidence/grounding этапа 5; реальный sample остаётся отдельным gate. UI/API, модели, cloud, Qdrant и deployment не реализованы.
+
+## Последующее событие: merge PR #2
+
+По поручению владельца PR #2 проверен и слит: 909072fe928f004729e6db95482bb5342f0e6e63, main CI 42062413579 success, 46 code tests PASS. GitHub merge API вернул 500; обычный merge/non-force push прошёл, API подтвердил merged=true. Сведения об открытом PR выше относятся к моменту исходной публикации.
