@@ -123,6 +123,32 @@ class RetrievalTests(unittest.TestCase):
         self.assertFalse(any(c.source_id == target for c in service.search('RS-485').final))
         self.assertFalse(any(c.source_id == target for c in service.search('RS-485').lexical))
 
+    def test_mid_query_filter_restarts_surviving_ranks(self):
+        catalog=SnapshotCatalog(self.registry);index=BM25Index(self.snapshot)
+        service=RetrievalService(catalog);service.publish(IndexSet(self.snapshot,index))
+        query='учебная учебное учебный'
+        initial=service.search(query)
+        target=initial.final[0].source_id
+        original=index.search
+        def revoking(query,allowed,limit):
+            result=original(query,allowed,limit);catalog.revoke(target);return result
+        index.search=revoking
+        trace=service.search(query)
+        self.assertTrue(trace.final)
+        self.assertEqual([c.rank for c in trace.lexical],list(range(1,len(trace.lexical)+1)))
+        self.assertEqual([c.rank for c in trace.final],list(range(1,len(trace.final)+1)))
+
+    def test_failed_other_snapshot_promotion_keeps_previous_active_index(self):
+        import json
+        from unit.test_snapshots import FIXTURES
+        catalog=SnapshotCatalog(self.registry);service=RetrievalService(catalog)
+        current=IndexSet(self.snapshot,BM25Index(self.snapshot));service.publish(current)
+        data=json.loads((FIXTURES/'registry.json').read_text());data['entries'].pop()
+        registry,ingestion=prepared(data);other=build_snapshot(ingestion,registry)
+        with self.assertRaises(ValueError):service.publish(IndexSet(self.snapshot,BM25Index(other)))
+        self.assertIs(service.capture(),current)
+        self.assertTrue(service.search('RS-485').final)
+
     def test_rrf_uses_ranks_and_is_deterministic(self):
         lexical = BM25Index(self.snapshot)
         dense = QdrantIndex(self.snapshot, TestEncoder())

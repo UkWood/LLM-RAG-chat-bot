@@ -1,5 +1,5 @@
 """Publish real index instances atomically, then query with current policy gates."""
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from threading import RLock
 from ..snapshots import KnowledgeSnapshot, SnapshotCatalog, SnapshotBundle, _checked_bundle, build_snapshot
 from .contracts import Candidate, SearchTrace
@@ -51,8 +51,8 @@ class RetrievalService:
         dense = indexes.dense.search(query, allowed, 40) if mode != 'lexical' else ()
         # Re-check after queries: a source may have been revoked while an adapter ran.
         current = frozenset(c.chunk_id for c in self.catalog.eligible_snapshot_chunks(indexes.snapshot, 'local_index'))
-        lexical = tuple(c for c in lexical if c.chunk_id in current)
-        dense = tuple(c for c in dense if c.chunk_id in current)
+        lexical = tuple(replace(c,rank=rank) for rank,c in enumerate((c for c in lexical if c.chunk_id in current),1))
+        dense = tuple(replace(c,rank=rank) for rank,c in enumerate((c for c in dense if c.chunk_id in current),1))
         if mode == 'hybrid':
             fused, by_id = {}, {}
             for candidates in (lexical, dense):

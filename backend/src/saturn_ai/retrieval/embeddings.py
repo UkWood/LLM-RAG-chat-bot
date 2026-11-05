@@ -30,6 +30,7 @@ def _load_runtime(directory, manifest):
         from tokenizers import Tokenizer
     except ImportError:
         raise ValueError('Install requirements-onnx.lock for local neural inference') from None
+    ort.disable_telemetry_events()
     tokenizer = Tokenizer.from_file(str(directory/'tokenizer.json'))
     tokenizer.enable_truncation(max_length=manifest['max_length'])
     tokenizer.enable_padding(pad_id=manifest['pad_id'])
