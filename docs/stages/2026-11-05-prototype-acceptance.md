@@ -21,7 +21,9 @@
 - git diff --check: PASS.
 - Runtime code, tests, workflow, locked dependencies и config/knowledge/public-sources.json не менялись этим documentation шагом. Новые code tests не требуются; CI существующего PR проверит имеющиеся suites.
 
-Удалённый CI нового head проверяется после push. До получения результата нельзя переносить success прежнего head на новый. При записи результата наблюдаемый SHA/CI остаётся историческим evidence; актуальные checks доступны в PR.
+Commit decb98b1ab44049caa2981bf28857572792067cd опубликован в PR #2. Оба запуска на этом head завершились success: [push 42061360085](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42061360085) и [PR 42061371658](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42061371658). Все 46 существующих code tests и document checks прошли в CI. PR metadata обновлены через GitHub connector; gh pr edit столкнулся с deprecated Projects classic GraphQL field, что не потребовало изменений permissions/credentials.
+
+Эти результаты сохраняются последующим documentation-only commit как историческое evidence. Актуальные checks последнего head доступны в PR; merge не выполнялся.
 
 ## Следующий шаг
 

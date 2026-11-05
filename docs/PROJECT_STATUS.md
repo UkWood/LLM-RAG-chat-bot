@@ -15,7 +15,7 @@
 
 ## Текущая публикация
 
-Ветка feat/offline-ingestion от 0cfe174; [PR #2](https://github.com/UkWood/LLM-RAG-chat-bot/pull/2). Commits 80da5bb (registry), b20c364 (parsers/pipeline), c0df98e (review fixes), 88c2924 (память). Push CI на 88c2924 success, проверены все шаги. Последний head/checks смотреть в PR и [отчёте](stages/2026-11-04-offline-ingestion.md). Merge M1 подтверждён; новый этап на момент публикации не слит.
+Ветка feat/offline-ingestion от 0cfe174; [PR #2](https://github.com/UkWood/LLM-RAG-chat-bot/pull/2). Commits 80da5bb (registry), b20c364 (parsers/pipeline), c0df98e (review fixes), 88c2924 (память). Push CI на 88c2924 success, проверены все шаги. Последний head/checks смотреть в PR и [отчёте](stages/2026-11-04-offline-ingestion.md). Merge M1 подтверждён; новый этап на момент публикации не слит. 2026-11-05 commit decb98b добавил согласованные критерии; push/PR CI на нём success, 46 code tests проходят. Результаты сохранены в [отчёте согласования](stages/2026-11-05-prototype-acceptance.md).
 
 ## Границы и ограничения
 
