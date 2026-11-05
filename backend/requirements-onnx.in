@@ -1,0 +1,4 @@
+-r requirements.in
+-c requirements.lock
+onnxruntime==1.31.1
+tokenizers==0.23.3

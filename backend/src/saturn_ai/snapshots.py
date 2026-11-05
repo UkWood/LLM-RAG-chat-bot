@@ -208,11 +208,19 @@ class SnapshotCatalog:
 
     def eligible_chunks(self, bundle: SnapshotBundle, usage: str) -> tuple[IndexedChunk, ...]:
         _checked_bundle(bundle)
+        return self._eligible_validated(bundle.snapshot, usage)
+
+    def eligible_snapshot_chunks(self, snapshot: KnowledgeSnapshot, usage: str) -> tuple[IndexedChunk, ...]:
+        if snapshot != build_snapshot(snapshot.ingestion, snapshot.registry):
+            raise ValueError('Invalid snapshot')
+        return self._eligible_validated(snapshot, usage)
+
+    def _eligible_validated(self, snapshot, usage):
         if not isinstance(usage, str):
             raise ValueError('Invalid scope')
         with self._lock:
             records = {r.source_id: r for r in self._registry.entries}
-            return tuple(c for c in bundle.snapshot.chunks
+            return tuple(c for c in snapshot.chunks
                          if c.source_id in records and c.source_id not in self._revoked
                          and records[c.source_id].permits(usage, c.source_hash, c.source_commit)
                          and (records[c.source_id].path or records[c.source_id].url) == c.source_locator
