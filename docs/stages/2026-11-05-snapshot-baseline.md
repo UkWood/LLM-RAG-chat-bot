@@ -41,3 +41,7 @@ Base 909072f; commits 7dead21 (snapshot contracts), 80d5dc4 (corpus/dataset/vali
 Это bounded этап 3a, не весь этап 3 и не приёмка полноценного прототипа/M2. SnapshotCatalog process-local, без persistent/multi-worker recovery; index descriptors не проверяют настоящие vectors/BM25 artifacts. Canonical reparse увеличивает CPU cost; performance не измерялась. Receipts с approved bytes только в памяти, не передаются provider и не экспортируются.
 
 Следующий PR: настоящие local index adapters (Qdrant/embeddings/BM25) и измеряемый retrieval baseline, используя подготовленные snapshot/dataset. Дальше RRF/reranking и grounding. Для Top-5 должны быть реальные результаты по всем must_answer; label preflight нельзя выдавать за source-hit@5=100%. Held_out не использовать для подбора порогов. Real sample/cloud требуют отдельного допуска, нынешний PR их не разрешает.
+
+## Проверка перед merge PR #3
+
+По поручению владельца проверен PR head b3f32c2: comments/reviews отсутствуют, mergeable CLEAN, оба CI success. Единая локальная проверка повторена. Git diff --check первоначально интерпретировал ASCII PDF fixtures как текст и отметил пробелы в обязательных PDF xref entries. Добавлена .gitattributes с *.pdf binary; PDF bytes/hashes не менялись. Повторный diff check проходит. Это исправление классификации Git, не изменение corpus/labels или parser behavior. Финальный head и CI проверяются после публикации; факт merge подтверждается отдельно по GitHub/main.
