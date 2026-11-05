@@ -48,3 +48,7 @@ GitHub connector API доступен, права admin/push подтвержд�
 Это M1 fixture profile с точным entity matching и двумя intents, без dense/BM25/reranker, PDF, сервера/API/UI, privacy classifier и реальной LLM. Fictional fixtures не показывают качество русского поиска или инженерных консультаций. Ссылки example.invalid намеренно не ведут к реальным документам. Stream, sessions и request IDs относятся к будущему API-контракту.
 
 Следующий продуктовый этап: ingestion adapter сайта/PDF и runtime PUBLIC registry enforcement; реальный sample — только после явного допуска exact revisions. До него можно расширять parser/policy на синтетических fixtures. Cloud/production по-прежнему закрыты.
+
+## Последующее событие: merge M1
+
+По явному поручению владельца PR #1 слит в main: 0cfe1748ca9c59ac44b8d04c538996bd9a65008b. Main CI 41798909615 success; 25 тестов после merge PASS. Предыдущие сведения об открытом PR описывают момент исходной публикации.

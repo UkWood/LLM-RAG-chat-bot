@@ -16,7 +16,7 @@
 
 У Git-источника дополнительно проверяются commit/path/hash и отсутствие draft. У external_document hash получают только после отдельно разрешённой загрузки, безопасного parsing и ручной проверки. PDF пока имеют `fetch_state=not_fetched` и не могут быть approved без hash. У каждого source — отдельный допуск; карточка не разрешает автоматически все её вложения.
 
-Registry schema v1 описана здесь и в design document; исполняемый validator и JSON Schema — часть следующей реализации. До её появления этот JSON не используется как production access-control механизм. При реализации добавить strict schema: неизвестные поля/enum отклоняются, ID уникальны, hash 64 hex, даты валидны, source-kind поля согласованы.
+Registry v1 проверяется runtime loader в backend/src/saturn_ai/ingestion/registry.py: неизвестные поля/enum отклоняются, типы строгие, ID уникальны, hash 64 hex, даты UTC валидны, source-kind поля согласованы, duplicate JSON keys запрещены. Отдельная JSON Schema и production integration остаются будущими задачами. Fixture runner блокирует реальные approvals; текущий реестр не стал действующим production access-control сервисом.
 
 ## Порядок работы
 
@@ -34,4 +34,4 @@ Registry schema v1 описана здесь и в design document; исполн
 
 ## Проверка этой версии реестра
 
-Проверены существование четырёх content paths в указанном read-only snapshot, их SHA-256, уникальность восьми source IDs и запрет всех pending entries. Содержимое PDF не проверялось. Hash drift, invalid approval и runtime enforcement будут проверяться тестами будущей реализации.
+Проверены существование четырёх content paths в указанном read-only snapshot, их SHA-256, уникальность восьми source IDs и запрет всех pending entries. Содержимое PDF не проверялось. Hash/commit drift, invalid approval, scopes и deny-before-read проверяются runtime unit tests. Результат: все 8 существующих кандидатов запрещены, без чтения/загрузки content. Реальные approvals не добавлялись.
