@@ -14,7 +14,14 @@ def main():
     parser.add_argument('--report', type=Path, help='Optional small preflight report, not a corpus/index export')
     parser.add_argument('--retrieval-report', type=Path, help='Optional measured lexical retrieval report')
     parser.add_argument('--require-source-hit-target', action='store_true', help='Fail if lexical source-hit@5 is below1.0')
+    parser.add_argument('--grounding-report',type=Path)
+    parser.add_argument('--model-dir',type=Path)
+    parser.add_argument('--reranker-dir',type=Path)
+    parser.add_argument('--require-grounding-target',action='store_true')
     args = parser.parse_args()
+    run_grounding=any((args.grounding_report,args.model_dir,args.reranker_dir,args.require_grounding_target))
+    if run_grounding and (args.model_dir is None or args.reranker_dir is None):
+        parser.error('Grounding requires both prepared local model and reranker directories')
     env = dict(os.environ, PYTHONPATH=str(ROOT/'backend/src'))
     for command in ([sys.executable, 'scripts/check_project.py'],
                     [sys.executable, '-m', 'unittest', 'discover', '-s', 'tests', '-v'],
@@ -44,6 +51,15 @@ def main():
     print(json.dumps(dict(report_kind=measured['report_kind'],mode=measured['mode'],
                          metrics=measured['metrics'],source_hit_target_met=measured['source_hit_target_met'],
                          quality_evaluation=measured['quality_evaluation']),ensure_ascii=False))
+    if run_grounding:
+        from saturn_ai.evaluation.grounding import run_grounding_evaluation
+        measured_grounding=run_grounding_evaluation(ROOT/'fixtures/evaluation',ROOT/'evaluation/datasets/synthetic-v1.json',args.model_dir,args.reranker_dir)
+        if args.grounding_report:
+            path=args.grounding_report if args.grounding_report.is_absolute() else ROOT/args.grounding_report
+            path.parent.mkdir(parents=True,exist_ok=True)
+            path.write_text(json.dumps(measured_grounding,ensure_ascii=False,indent=2)+'\n')
+        print(json.dumps(dict(report_kind=measured_grounding['report_kind'],metrics=measured_grounding['metrics'],grounding_target_met=measured_grounding['grounding_target_met']),ensure_ascii=False))
+        if args.require_grounding_target and not measured_grounding['grounding_target_met']:return 1
     return 1 if args.require_source_hit_target and not measured['source_hit_target_met'] else 0
 
 

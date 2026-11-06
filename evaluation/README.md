@@ -69,3 +69,17 @@ The importer publishes only to a new destination atomically; errors preserve exi
 [Measured reranking report](reports/2026-11-06-reranking.json): source-hit20/20, all-source/evidence recall1.0, MRR.916667, binary evidence nDCG.867586; baseline hybrid17/20, nDCG.629721. nDCG uses binary canonical source/field/page/text relevance; ideal DCG counts all relevant chunks in snapshot, not only pool hits. Pool source coverage@30=1.0. Calibration14/14 and held_out6/6 passed source-hit, with no tuning or label leakage. Negatives remain unscored for refusal. `--require-source-hit-target` is available for the reranking stage; the default unified verifier still checks the unchanged lexical baseline17/20 and does not claim full prototype acceptance.
 
 Pretrained weights/tokenizer/card/bundles remain in ignored work/; restore them explicitly after environment replacement. CI exercises authored numeric graphs only. Full grounding/refusal/engineering-answer quality is NOT_RUN. See [stage report](../docs/stages/2026-11-06-local-reranking.md) for provenance, review, commands and limitations.
+
+## Grounded pipeline (bounded stage5)
+
+The local offline application connects a captured snapshot/reranker to a strict field/manual evidence gate, FakeLLMProvider and exact canonical claim/citation validation. It supports one entity/one structured aspect or manual lookup; mixed/free-text/multi-entity questions may refuse or clarify. This is deliberately conservative and not full prototype acceptance.
+
+```bash
+PYTHONPATH=backend/src work/venv/bin/python -m saturn_ai.grounding --corpus fixtures/evaluation --model-dir work/multilingual-e5-small --reranker-dir work/mmarco-reranker --query 'Какие интерфейсы у EDU-410?'
+PYTHONPATH=backend/src work/venv/bin/python -m saturn_ai.evaluation --stage grounding --mode hybrid --model-dir work/multilingual-e5-small --reranker-dir work/mmarco-reranker --corpus fixtures/evaluation --dataset evaluation/datasets/synthetic-v1.json
+work/venv/bin/python scripts/verify_offline.py --model-dir work/multilingual-e5-small --reranker-dir work/mmarco-reranker --grounding-report work/grounding.json --require-grounding-target
+```
+
+The final command runs all code checks + unchanged lexical evaluation + actual grounded quality, after explicit locked optional install and local artifact preparation. It returns1 when the grounded target is unmet; this is a measured quality failure even if code tests pass. Default verifier still needs no pretrained models/network after install. Stage CLI `--require-grounding-target` provides the same explicit quality gate; do not combine it with lexical `--require-source-hit-target` to hide differing criteria.
+
+[Actual report](reports/2026-11-06-grounding.json):8/20 positives answered, proper refusal8/8, clarification2/2, overall status accuracy.6, expected-evidence recall.3. Held_out positive answer0/6; false-refusal/false-clarification rates.5/.1 overall. Emitted claims have exact canonical quote support and citations valid1.0 (separate denominators, absent claims are not scored as perfect). No grammar/labels/corpus changes after this result. Report stores IDs/reasons/metrics/pages, no raw question/context/answer logs. Free-language entailment/engineering consultation/real sample NOT_RUN. [Stage report](../docs/stages/2026-11-06-evidence-gate.md) and [ADR0008](../docs/decisions/0008-evidence-gate.md) state remaining limits.

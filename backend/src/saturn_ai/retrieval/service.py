@@ -87,8 +87,10 @@ class RetrievalService:
         return SearchTrace(indexes.snapshot.snapshot_id, mode, lexical, dense, final)
 
     def rerank(self, query, reranker, *, mode='hybrid'):
+        return self._rerank(self.capture(),query,reranker,mode=mode)
+
+    def _rerank(self, indexes, query, reranker, *, mode='hybrid'):
         validate_pairs(query,[])
-        indexes=self.capture()
         trace=self._search(indexes,query,mode=mode,top_k=30)
         mapping={c.chunk_id:c for c in indexes.snapshot.chunks}
         seen=set()

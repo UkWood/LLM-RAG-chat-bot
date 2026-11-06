@@ -1,5 +1,12 @@
 # Передача контекста
 
+## Текущий этап5: evidence gate — 2026-11-06
+
+PR #7 MERGED в main861871b609f76ecad065e4b635e86ec3638b2cc8 после проверки clean head/all CI success; дальнейший merge нового PR не разрешён автоматически. Реализован bounded canonical evidence gate + Fake provider + exact claim/citation validation. [Design](superpowers/specs/2026-11-06-evidence-gate-design.md), [plan](superpowers/plans/2026-11-06-evidence-gate.md), [ADR0008](decisions/0008-evidence-gate.md), [stage report](stages/2026-11-06-evidence-gate.md).
+
+Actual frozen dataset:8/20 positive answers, refusal8/8,clarification2/2,status accuracy.6,evidence recall.3; emitted claims/citations1.0,unsupported0. Held_out positives0/6. Grounding target NOT met, full prototype NOT accepted. Strict one-entity schema/manual grammar misses broader questions; keep failures, no held_out tuning. Source-hit20/20 prior retrieval remains valid but is not answer coverage. Next: separately designed/calibration-tested planner expansion before claiming full stage5/prototype acceptance; cloud/real sources still disabled. No new dependencies, Saturn-Main-Site READ-ONLY. Verification/review/PR evidence in stage report. Older sections below historical.
+
+
 ## Актуально: local reranking implementation — 2026-11-06
 
 Owner approved design PR #6 and implementation. New bounded stage4 implemented after main92e7022: separate CPU pair scorer, canonical/policy-safe captured rerank and explicit atomic local preparation. Official mmarco-MiniLM revision1427fd652930e4ba29e8149678df786c240d8825 experiment: source-hit20/20, all-source/gold evidence1.0, MRR.916667,nDCG.867586; baseline hybrid17/20,nDCG.629721. Frozen data/settings; no held_out tuning. Retrieval target passes this small synthetic set only. Grounding/refusal/answer quality NOT_RUN, full prototype NOT accepted.
@@ -78,3 +85,9 @@ Commit b653014162b72b589eebd543a370a637f1dba92c опубликован в feat/e
 CI при публикации: push42168512725 и PR42168537774 на2463ab0 in_progress; это наблюдение, не заявление success. Проверять текущий head/actual checks в PR перед merge; новый docs commit проверяется отдельно. No automatic merge. Следующий отдельный stage5 — evidence gate/grounded pipeline, с собственным design/plan/quality gates.
 
 Verified remote CI: [push42168613444](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42168613444) на d03a95d74535822f800b9cf02918eee7a7a863fe завершился SUCCESS, offline-checks и onnx-contracts (включая новые actual CPU pair contracts) оба success. Это CI реализации; данная запись — отдельный docs commit, его status проверять по текущему head PR #7. PR остаётся open/unmerged.
+
+## Публикация
+
+[PR #8](https://github.com/UkWood/LLM-RAG-chat-bot/pull/8), branch feat/evidence-gate, implementation commitf01ca77. PR открыт, НЕ слит; предыдущий PR7 merged861871b и main CI42169517262 SUCCESS. Текущие actual push/PR checks доступны в PR8; не выводить CI success из локальных тестов и не считать green CI quality acceptance.
+
+Финальный actual replay после атомарного policy fix совпал с saved report по metrics/cases/model/snapshot/dataset identities. Единая optional команда завершилась strict_grounding_exit=1 именно из-за targetFalse, после133PASS backend tests; base verifier exit0. Ограниченная grammar/held_out0/6/false refusals не скрываются. Реальные source approvals/cloud/Saturn-Main-Site не менялись.
