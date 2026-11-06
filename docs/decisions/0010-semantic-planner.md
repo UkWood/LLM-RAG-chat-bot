@@ -1,0 +1,9 @@
+# ADR-0010: bounded semantic predicate proposal — proposed
+
+Status: proposed detailed design. Owner selected the existing-local-reranker approach, not yet the concrete implementation contracts. [Design](../superpowers/specs/2026-11-06-semantic-planner-design.md), [stage](../stages/2026-11-06-semantic-planner-design.md).
+
+Keep deterministic roles/entity/source/qualifier constraints; use existing mmarco only to propose a schema predicate with calibrated abstention. Scores cannot prove semantics/evidence. Retrieve per resolved need and select a bounded canonical complete-group cover before a V3 gate that validates the exact pinned group/reference bindings while preserving all current all-needs/current-policy invariants. V2 public behavior remains unchanged. Preserve V1 default and explicit opt-in modes, no automatic fallback or generative/new-model dependency.
+
+Require new independently authored/reviewed blinded data before candidate tuning, separate non-independent calibration, exact code/config/model freeze and a single consumed attempt. Stop before blind if calibration feasibility fails; never tune on consumed cases or manufacture acceptance from correct citations alone. New quality gate remains24/24positive+16/16negative/ambiguity. Existing frozen experiment is historical only; corrected V2 independent quality NOT_RUN. No implementation or new source/cloud permission implied by this proposed ADR.
+
+Builder-check decisions: target-specific implicit relationships remain unsupported until an explicit binding schema exists; no uncharged hidden needs. V3 gets an explicit versioned plan/selection validator because the current V2 gate may choose bindings independently. General grammar/catalogue/code may iterate on calibration only, with identities/outcomes recorded; threshold grid and resource caps remain fixed, and blind data stays hidden until final freeze/START. These are implementer proposals, not owner approval of the detailed design.

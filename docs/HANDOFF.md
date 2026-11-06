@@ -1,5 +1,12 @@
 # Передача контекста
 
+## After PR10 merge: semantic planning proposal — 2026-11-06
+
+PR10 MERGED in mainbb16530e5b9a4943abae5c1b0f526cb218f46b2d; mainCI42256501265 SUCCESS verified. Corrected V2 rejects dropped negation/protocol qualification/modification intent;168backend tests, V1 default unchanged. Independent quality for corrected runtime NOT_RUN; old8/24+14/16 is historical frozen7bc6f11 only.
+
+Owner requested continuing and selected existing-local-reranker approach. [Detailed semantic planner design](superpowers/specs/2026-11-06-semantic-planner-design.md) and [ADR0010](decisions/0010-semantic-planner.md) are PROPOSED, not yet approved for implementation; [stage](stages/2026-11-06-semantic-planner-design.md). Role-bound predicate proposals, per-need search, bounded complete evidence cover and fresh blind protocol; no code/new data/model inference yet. After approval write detailed implementation plan. Real sources/cloud unchanged, Saturn-Main-Site READ-ONLY. Earlier pending merge entries below are historical.
+
+
 ## Planner V2 corrective revision — 2026-11-06
 
 Owner requested continuing after PR10 merge review found two Important blockers: discarded `нет` and protocol qualifiers. Corrections reject negation, unsupported Modbus/TCP/RTU qualification and modification requests outside supported lookup bindings before generation; unqualified protocol queries remain supported, V1 default unchanged. [Corrective report](stages/2026-11-06-planner-v2-corrections.md), [plan addendum](superpowers/plans/2026-11-06-typed-planner-v2.md). Final local verification5project+168backend PASS in both environments (base11optional skips/optional0), calibration14/14 positives20/20statuses without V1-positive regression; independent review fix pass complete. Current-head remote CI/merge outcome must be checked in PR10.
