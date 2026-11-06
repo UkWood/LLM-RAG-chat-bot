@@ -97,3 +97,7 @@ Verified remote CI: [push42168613444](https://github.com/UkWood/LLM-RAG-chat-bot
 Финальный actual replay после атомарного policy fix совпал с saved report по metrics/cases/model/snapshot/dataset identities. Единая optional команда завершилась strict_grounding_exit=1 именно из-за targetFalse, после133PASS backend tests; base verifier exit0. Ограниченная grammar/held_out0/6/false refusals не скрываются. Реальные source approvals/cloud/Saturn-Main-Site не менялись.
 
 Публикация: [PR #9](https://github.com/UkWood/LLM-RAG-chat-bot/pull/9), feat/planner-expansion-design, initial commit1b14fb9. Design proposed, PR open/unmerged. До принятия владельцем код/new dataset не создавать. Актуальный CI смотреть на текущем head PR9; локальные doc checks не заменяют remote CI и не являются benchmark quality.
+
+## Publication
+
+[Implementation PR #10](https://github.com/UkWood/LLM-RAG-chat-bot/pull/10), branch feat/typed-planner-v2. PR open/unmerged; implementation freeze7bc6f11, first-result/report commitc0f0f3f. Docs-only PR9 superseded by this implementation including its owner-accepted design. Actual remote checks are available on the current head in PR10; local PASS is not a remote-CI claim or quality acceptance. The24/24+16/16 quality target remains FAILED. No runtime/config/grader change after freeze.
