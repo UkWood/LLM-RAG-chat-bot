@@ -68,3 +68,11 @@ Process-local/local SDK до10000chunks, не server-Qdrant/multi-worker/durable
 Commit b653014162b72b589eebd543a370a637f1dba92c опубликован в feat/embedding-model-preparation. [PR #5](https://github.com/UkWood/LLM-RAG-chat-bot/pull/5) открыт, не слит. [Push CI42165522960](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42165522960) на b653014 завершился success в обоих jobs, включая actual numeric preparation/swap tests. PR-event CI42165549055 на момент фиксации ещё in_progress; не считать его проверенным. Эта запись — отдельный docs commit, его CI следует проверять отдельно.
 
 Публикация дизайна: [PR #6](https://github.com/UkWood/LLM-RAG-chat-bot/pull/6), branch feat/local-reranking-design, исходный commit55958ed. PR открыт, не принят/не слит; implementation не начата. CI проверять на текущем head PR, не выводить success из статуса предыдущих запусков.
+
+## Публикация stage4
+
+[PR #7](https://github.com/UkWood/LLM-RAG-chat-bot/pull/7), feat/local-reranking, implementation/fix commit2463ab0. PR открыт, НЕ слит. Design PR #6 закрыт как superseded: его accepted design и документация включены в #7; это не merge #6.
+
+После review fix официальный pretrained benchmark повторён: metrics/baseline_metrics, все per-case ranks/raw scores и pinned identities точно совпали с committed report. Первоначальные timing measurements сохранены, повтор не используется для tuning. Full final base5+112PASS(skips11),optional5+112PASS(0 skips). Независимый review завершён, Important defect исправлен RED→GREEN, deferred product minors нет.
+
+CI при публикации: push42168512725 и PR42168537774 на2463ab0 in_progress; это наблюдение, не заявление success. Проверять текущий head/actual checks в PR перед merge; новый docs commit проверяется отдельно. No automatic merge. Следующий отдельный stage5 — evidence gate/grounded pipeline, с собственным design/plan/quality gates.

@@ -64,3 +64,11 @@ Reviewer did not judge legal clearance, production language quality, grounded-an
 Implementation ruling: ledger tracked manually under ignored work/local-reranking/ because cloud skill helper scripts are not locally installed; cost is absence of helper automation, compensated by saved command logs/commits. Existing verified-byte single-file graph loader reused without changing embedding pooling or global refactor. No new dependency or hidden model fallback.
 
 После review fix полный verifier повторён: base5project+112backend PASS (11optional skips), optional5+112PASS без skips, lexical17/20 unchanged. Targeted orchestration9PASS. Модельный replay после fix проверяется отдельно; исходные report metrics independently recomputed reviewer. Полная validation проверяет текущий code tree, а не выводится из предыдущего green run.
+
+## Публикация stage4
+
+[PR #7](https://github.com/UkWood/LLM-RAG-chat-bot/pull/7), feat/local-reranking, implementation/fix commit2463ab0. PR открыт, НЕ слит. Design PR #6 закрыт как superseded: его accepted design и документация включены в #7; это не merge #6.
+
+После review fix официальный pretrained benchmark повторён: metrics/baseline_metrics, все per-case ranks/raw scores и pinned identities точно совпали с committed report. Первоначальные timing measurements сохранены, повтор не используется для tuning. Full final base5+112PASS(skips11),optional5+112PASS(0 skips). Независимый review завершён, Important defect исправлен RED→GREEN, deferred product minors нет.
+
+CI при публикации: push42168512725 и PR42168537774 на2463ab0 in_progress; это наблюдение, не заявление success. Проверять текущий head/actual checks в PR перед merge; новый docs commit проверяется отдельно. No automatic merge. Следующий отдельный stage5 — evidence gate/grounded pipeline, с собственным design/plan/quality gates.

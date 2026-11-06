@@ -53,6 +53,6 @@ Interfaces: evidence_ndcg(case,snapshot,final)->float|None; run_reranking_evalua
 
 ### Task 4: review, verify, publish
 
-- [ ] Run base+optional `scripts/verify_offline.py`; expected project/backend tests PASS, lexical17/20. All new targeted tests pass in optional profile.
-- [ ] Independent whole-branch review against main92e7022, including inherited design docs; fix Important/Critical via RED→GREEN and full suite. Keep review rulings in ledger.
-- [ ] Check diff/no artifacts; push feature PR, inspect actual CI. Do not merge automatically. Update durable report with actual results/limitations/next stage.
+- [x] Run base+optional `scripts/verify_offline.py`; expected project/backend tests PASS, lexical17/20. All new targeted tests pass in optional profile.
+- [x] Independent whole-branch review against main92e7022, including inherited design docs; fix Important/Critical via RED→GREEN and full suite. Keep review rulings in ledger.
+- [x] Check diff/no artifacts; push feature PR, inspect actual CI. Do not merge automatically. Update durable report with actual results/limitations/next stage.
