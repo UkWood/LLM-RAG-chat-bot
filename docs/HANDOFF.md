@@ -46,3 +46,7 @@ Process-local/local SDK до10000chunks, не server-Qdrant/multi-worker/durable
 Обеспечить локальный embedding artifact и провести dense/hybrid quality benchmark; далее reranking и evidence/grounding. Tune только calibration, не чинить held_out частными правилами. --require-source-hit-target даёт exit1 при85%; обычный code verification сохраняет измеренный failure, не объявляет prototype acceptance.
 
 Полные права LLM-RAG-chat-bot сохраняются; обычные commits/push/PR без повторного запроса. Новые PR не считаются merged по green CI. Saturn-Main-Site строго READ-ONLY. Real registry8pending/UNKNOWN,allowed0; ничего не разрешать от имени владельца. До real ingestion нужны exact source approvals и OS parser sandbox/quality review; до cloud privacy/endpoint gates. ADR-0001 proposed, bounded decisions ADR-0002…0006.
+
+## Публикация 2026-11-06
+
+Commit b653014162b72b589eebd543a370a637f1dba92c опубликован в feat/embedding-model-preparation. [PR #5](https://github.com/UkWood/LLM-RAG-chat-bot/pull/5) открыт, не слит. [Push CI42165522960](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42165522960) на b653014 завершился success в обоих jobs, включая actual numeric preparation/swap tests. PR-event CI42165549055 на момент фиксации ещё in_progress; не считать его проверенным. Эта запись — отдельный docs commit, его CI следует проверять отдельно.

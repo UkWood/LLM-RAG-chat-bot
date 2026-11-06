@@ -38,3 +38,7 @@ PR #4 слит в main a1093fb, CI42097546595 success. Ветка feat/embedding
 Получить/подготовить trusted local embedding checkpoint с exact hashes/manifest и корректным pooling/prefixes по model card; выполнить actual dense/hybrid benchmark на текущем corpus. Затем reranking/grounding. Пока модели нет, можно развивать проверяемые adapters/контракты и evaluation, не заявляя semantic quality и не подгоняя held_out.
 
 [Roadmap](superpowers/plans/2026-11-03-ai-consultant-roadmap.md), [local retrieval design](superpowers/specs/2026-11-05-local-retrieval-design.md), [ADR-0006](decisions/0006-local-retrieval.md), [handoff](HANDOFF.md).
+
+## Публикация 2026-11-06
+
+Commit b653014162b72b589eebd543a370a637f1dba92c опубликован в feat/embedding-model-preparation. [PR #5](https://github.com/UkWood/LLM-RAG-chat-bot/pull/5) открыт, не слит. [Push CI42165522960](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42165522960) на b653014 завершился success в обоих jobs, включая actual numeric preparation/swap tests. PR-event CI42165549055 на момент фиксации ещё in_progress; не считать его проверенным. Эта запись — отдельный docs commit, его CI следует проверять отдельно.

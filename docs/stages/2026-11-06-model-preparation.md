@@ -57,3 +57,7 @@ Reviewer проверил весь branch от a1093fb; important: полная 
 Rulings: raw URL должен точно совпадать с canonical URL (нормализация URL-парсером не является provenance). License metadata допускает только данный local candidate experiment, не legal clearance. Ledger ведётся вручную в work/ вместо недоступных helper scripts. Стоимость ошибочных решений: ложный отказ нестандартному URL, непроверенные redistribution rights, отсутствие helper enforcement соответственно.
 
 Review ruling: противоречащая opening status README оценена как important для достоверности текущего статуса, исправлена на actual18/20 dense и17/20 hybrid. Deferred minors нет.
+
+## Публикация 2026-11-06
+
+Commit b653014162b72b589eebd543a370a637f1dba92c опубликован в feat/embedding-model-preparation. [PR #5](https://github.com/UkWood/LLM-RAG-chat-bot/pull/5) открыт, не слит. [Push CI42165522960](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42165522960) на b653014 завершился success в обоих jobs, включая actual numeric preparation/swap tests. PR-event CI42165549055 на момент фиксации ещё in_progress; не считать его проверенным. Эта запись — отдельный docs commit, его CI следует проверять отдельно.
