@@ -1,5 +1,12 @@
 # Передача контекста
 
+## Актуально: после merge PR8, planner design — 2026-11-06
+
+PR8 MERGED в maine0e44e54996b9f9e713899f7949746f27e33485b; main CI42209130861 SUCCESS проверен. Предыдущие open/unmerged сведения ниже исторические. Grounding quality остаётся8/20 positives, targetFalse; source-hit20/20 не означает answer20/20.
+
+Подготовлен [proposed typed planner/projection design](superpowers/specs/2026-11-06-planner-expansion-design.md), [design report](stages/2026-11-06-planner-expansion-design.md). Код/новый dataset/benchmark НЕ создавались. Требуется принятие дизайна перед implementation. Рекомендация: compositional typed requirements, complete canonical fact groups, separate backend references, fresh independent blind set; semantic/generative router отдельно. Старые30cases сохранять как regression, tuning только calibration, не использовать exposed held_out как независимое доказательство. Новый proposed quality gate:24/24 positives +16/16 negative/ambiguity outcomes; меньший результат не является приёмкой. Saturn-Main-Site READ-ONLY, real sources/cloud по-прежнему закрыты.
+
+
 ## Текущий этап5: evidence gate — 2026-11-06
 
 PR #7 MERGED в main861871b609f76ecad065e4b635e86ec3638b2cc8 после проверки clean head/all CI success; дальнейший merge нового PR не разрешён автоматически. Реализован bounded canonical evidence gate + Fake provider + exact claim/citation validation. [Design](superpowers/specs/2026-11-06-evidence-gate-design.md), [plan](superpowers/plans/2026-11-06-evidence-gate.md), [ADR0008](decisions/0008-evidence-gate.md), [stage report](stages/2026-11-06-evidence-gate.md).
