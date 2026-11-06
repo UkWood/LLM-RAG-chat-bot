@@ -18,3 +18,5 @@
 - [2026-11-06: proposed local reranking design](2026-11-06-local-reranking-design.md)
 
 - [2026-11-06: local reranking implementation and measurement](2026-11-06-local-reranking.md)
+
+- [2026-11-06: bounded evidence gate and measured grounded pipeline](2026-11-06-evidence-gate.md)

@@ -215,13 +215,25 @@ class SnapshotCatalog:
             raise ValueError('Invalid snapshot')
         return self._eligible_validated(snapshot, usage)
 
+    def eligible_snapshot_chunks_for_usages(self, snapshot, usages):
+        """Intersect scopes within ONE current policy/revocation read, never two revisions."""
+        if (not isinstance(usages,tuple) or not 1<=len(usages)<=3
+                or any(not isinstance(u,str) or u not in ('local_index','local_generate','cloud_generate') for u in usages)):
+            raise ValueError('Expected explicit bounded usage scopes')
+        if snapshot != build_snapshot(snapshot.ingestion, snapshot.registry):
+            raise ValueError('Invalid snapshot')
+        return self._eligible_scopes_validated(snapshot,usages)
+
     def _eligible_validated(self, snapshot, usage):
         if not isinstance(usage, str):
             raise ValueError('Invalid scope')
+        return self._eligible_scopes_validated(snapshot,(usage,))
+
+    def _eligible_scopes_validated(self, snapshot, usages):
         with self._lock:
             records = {r.source_id: r for r in self._registry.entries}
             return tuple(c for c in snapshot.chunks
                          if c.source_id in records and c.source_id not in self._revoked
-                         and records[c.source_id].permits(usage, c.source_hash, c.source_commit)
+                         and all(records[c.source_id].permits(usage, c.source_hash, c.source_commit) for usage in usages)
                          and (records[c.source_id].path or records[c.source_id].url) == c.source_locator
                          and records[c.source_id].title == c.source_title)

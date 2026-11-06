@@ -31,9 +31,9 @@ class GroundedConsultant:
         if gate.state!='sufficient':return stop(gate.reason,state=gate.state)
         mapping={c.chunk_id:c for c in snapshot.chunks};ids=gate.evidence_ids
         def permitted():
-            indexed={c.chunk_id for c in self.service.catalog.eligible_snapshot_chunks(snapshot,'local_index')}
-            generated={c.chunk_id for c in self.service.catalog.eligible_snapshot_chunks(snapshot,'local_generate')}
-            return set(ids)<=indexed&generated
+            allowed={c.chunk_id for c in self.service.catalog.eligible_snapshot_chunks_for_usages(
+                snapshot,('local_index','local_generate'))}
+            return set(ids)<=allowed
         try:
             if not permitted():return stop('source_revoked',state='insufficient')
             if len(ids)>5 or sum(len(mapping[cid].chunk.text) for cid in ids)>8000:

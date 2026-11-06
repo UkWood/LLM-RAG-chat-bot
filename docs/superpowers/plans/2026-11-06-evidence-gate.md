@@ -14,17 +14,17 @@ No real source approvals/cloud/site writes/model dumps; unchanged dataset/corpus
 
 Files grounding/contracts.py, grounding/gate.py, tests/unit/test_evidence_gate.py.
 Interfaces: QuestionPlan(entity_id,aspect), GateResult(state,reason,evidence_ids), plan_question(question,snapshot), evaluate_evidence(plan,snapshot,candidates,catalog).
-- [ ] RED tests strict grammar/unknown suffix/typo/mixed/injection, canonical full field sets/list coverage, malformed typed values, conflict, manual page and local_generate policy.
-- [ ] Implement exact schema-driven field selection and gate, no dataset dependency; targeted GREEN.
-- [ ] Full verifier and commit, ledger evidence.
+- [x] RED tests strict grammar/unknown suffix/typo/mixed/injection, canonical full field sets/list coverage, malformed typed values, conflict, manual page and local_generate policy.
+- [x] Implement exact schema-driven field selection and gate, no dataset dependency; targeted GREEN.
+- [x] Full verifier and commit, ledger evidence.
 
 ### Task2: grounded application and canonical citations
 
 Files grounding/application.py, grounding/__main__.py, retrieval/service.py captured rerank helper, tests/integration/test_grounded_pipeline.py.
 Interfaces: GroundedConsultant(service,scorer,provider).answer(question)->GroundedResult; result status/gate/claims/sources/reason/snapshot. Captured helper keeps snapshot through rerank; GenerationRequest reused.
-- [ ] RED tests provider absent on failed gate, exact grounded claims, invented/omitted/duplicate text/IDs, canonical physical pages, revocation before/during generation and active publication, provider errors/offline guard/context budget.
-- [ ] Implement minimal captured flow, immutable internal canonical evidence, strict output validation, backend citations; GREEN.
-- [ ] Full suite and commit.
+- [x] RED tests provider absent on failed gate, exact grounded claims, invented/omitted/duplicate text/IDs, canonical physical pages, revocation before/during generation and active publication, provider errors/offline guard/context budget.
+- [x] Implement minimal captured flow, immutable internal canonical evidence, strict output validation, backend citations; GREEN.
+- [x] Full suite and commit.
 
 ### Task3: actual evaluation and CLI/docs
 

@@ -73,9 +73,7 @@ def evaluate_evidence(plan,snapshot,candidates,catalog):
                 or type(c.rank) is not int or c.rank!=rank or type(c.score) not in (float,int) or not isfinite(c.score)):
             raise ValueError('Invalid evidence candidate identity/rank')
         seen.add(c.chunk_id)
-    indexed={c.chunk_id for c in catalog.eligible_snapshot_chunks(snapshot,'local_index')}
-    generated={c.chunk_id for c in catalog.eligible_snapshot_chunks(snapshot,'local_generate')}
-    allowed=indexed&generated
+    allowed={c.chunk_id for c in catalog.eligible_snapshot_chunks_for_usages(snapshot,('local_index','local_generate'))}
     docs={d.source_id:d for d in snapshot.documents};records={r.source_id:r for r in snapshot.registry.entries}
     target=[c for c in snapshot.chunks if entity_id(docs[c.source_id])==plan.entity_id]
     if plan.aspect=='manual':
@@ -86,11 +84,13 @@ def evaluate_evidence(plan,snapshot,candidates,catalog):
             return GateResult('insufficient',reason)
         # A manual link is a document lookup: one real approved page establishes a citation.
         chosen=next(mapping[c.chunk_id] for c in candidates if c.chunk_id in {e.chunk_id for e in eligible})
+        if len(chosen.chunk.text)>8000:return GateResult('insufficient','evidence_budget')
         return GateResult('sufficient','document_lookup',(chosen.chunk_id,))
     raw=[c for c in target if c.chunk.field_path.split('[')[0]==plan.aspect]
     by_source={};valid={}
     for c in raw:
         value=_typed_value(c,plan.aspect)
+        if c.chunk_id in allowed and value is None:return GateResult('insufficient','malformed_evidence')
         if c.chunk_id in allowed and value is not None:
             by_source.setdefault(c.source_id,set()).add(value);valid[c.chunk_id]=value
     if not by_source:

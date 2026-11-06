@@ -106,3 +106,34 @@ class GroundedPipelineTests(unittest.TestCase):
         service=RetrievalService(SnapshotCatalog(conflict.registry));service.publish(IndexSet(conflict,BM25Index(conflict)))
         spy=FakeLLMProvider();result=GroundedConsultant(service,Scorer(),spy,mode='lexical').answer('Питание EDU-410?')
         self.assertEqual((result.status,result.gate_state),('refused','conflict'));self.assertEqual(spy.calls,[])
+
+    def test_torn_policy_grants_are_rejected_before_and_after_provider(self):
+        from copy import deepcopy
+        import json
+        from saturn_ai.ingestion.registry import load_registry
+        from saturn_ai.grounding.contracts import GateResult
+        sid='synthetic:products/edu-410'
+        raw=json.loads(self.snapshot.registry.raw_bytes);policies={}
+        for usage in ('local_index','local_generate'):
+            data=deepcopy(raw);next(r for r in data['entries'] if r['source_id']==sid)['allowed_usage']=[usage]
+            policies[usage]=load_registry(json.dumps(data).encode())
+        chunk=next(c for c in self.snapshot.chunks if c.source_id==sid and c.chunk.field_path=='power')
+        for boundary in ('before','after'):
+            self.service.catalog.update_policy(self.snapshot.registry);active=[False]
+            catalog=self.service.catalog;original=catalog.eligible_snapshot_chunks
+            def alternating(snapshot,usage):
+                if active[0]:catalog.update_policy(policies[usage])
+                return original(snapshot,usage)
+            def gate(*args):
+                if boundary=='before':active[0]=True;catalog.update_policy(policies['local_index'])
+                return GateResult('sufficient','structured_fact',(chunk.chunk_id,))
+            class Switching(FakeLLMProvider):
+                def generate(self,request):
+                    active[0]=True;catalog.update_policy(policies['local_index'])
+                    return super().generate(request)
+            provider=Switching();app=GroundedConsultant(self.service,Scorer(),provider,mode='lexical')
+            with self.subTest(boundary=boundary),patch.object(catalog,'eligible_snapshot_chunks',side_effect=alternating), \
+                 patch('saturn_ai.grounding.application.evaluate_evidence',side_effect=gate):
+                result=app.answer('Питание EDU-410?')
+                self.assertEqual(result.reason_code,'source_revoked');self.assertEqual(result.sources,())
+                self.assertEqual(len(provider.calls),0 if boundary=='before' else 1)
