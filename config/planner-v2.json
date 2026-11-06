@@ -1,0 +1,20 @@
+{
+  "schema_version": 2,
+  "projection_revision": "canonical-spans-v2.1",
+  "limits": {"question_chars": 4000, "entities": 3, "needs": 4, "chunks": 5, "evidence_chars": 8000},
+  "predicates": ["power", "interfaces", "protocols", "temperature_c", "status", "spec", "features", "purpose", "composition", "configuration_interface", "document_reference", "entity_type"],
+  "document_kinds": ["any", "product_card", "manual"],
+  "representations": ["any", "structured_field", "markdown_table", "quoted_statement"],
+  "aliases": {
+    "power": ["питан", "напряжен", "supply", "voltage"],
+    "interfaces": ["интерфейс", "разъем", "порт", "соединен", "interface"],
+    "protocols": ["протокол", "protocol"],
+    "temperature_c": ["температур", "temperature"],
+    "status": ["статус", "выпуск", "производств", "discontinued", "status"],
+    "features": ["возможност", "функци", "features"],
+    "purpose": ["назначен", "предназнач", "задач", "делает", "выполня", "purpose"],
+    "composition": ["состав", "состоит", "входит", "входят", "компонент"],
+    "document_reference": ["руководств", "инструкц", "manual"],
+    "entity_type": ["тип", "сущност", "классификац"]
+  }
+}
