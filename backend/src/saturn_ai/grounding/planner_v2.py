@@ -12,9 +12,9 @@ from .projections import norm
 CONTEXT=('как','како','каки','каков','какая','какую','сколь','что','чем','где','кто','для','на','у','в','во','по','из','с','со','от','до','через','при',
  'рядом','его','ее','их','оба','обе','двух','кажд','также','переч','назов','укаж','сообщ','покаж','найд','нужн','треб','устан','задан','дост','опис',
  'знач','данн','учеб','вымыш','стенд','контрол','шлюз','прибор','устрой','оборуд','сбор','датчик','показан','переда','отправ','сет','локал','программ',
- 'помен','измен','адрес','настр','конфиг','кабел','сравн','отлич','между','свед','расскаж','узна','опред','привед','получ','согласно','указан',
+ 'адрес','кабел','сравн','отлич','между','свед','расскаж','узна','опред','привед','получ','согласно','указан',
  'перечисл','поддерж','относи','явля','это','или','вид','роль','характерист','карточ','таблиц','строк','столб','документ','pdf','пожалуй','можно','ли',
- 'usb','modbus','rtu','tcp','ethernet','rs','а','и','об','о','к','нет','есть','выполня','делает')
+ 'usb','ethernet','rs','а','и','об','о','к','есть','выполня','делает')
 
 
 def _tokens(text):return re.findall(r'[a-zа-яё]+\d*|\d+',norm(text))
@@ -24,7 +24,7 @@ def _matches(token,stems):return any(token.startswith(stem) for stem in stems)
 
 
 def _context(token):
-    exact={'как','что','чем','где','кто','для','на','у','в','во','по','из','с','со','от','до','через','при','рядом','его','ее','их','оба','обе','также','нет','есть','а','и','об','о','к','ли','можно','usb','tcp','rtu','rs','сеть','сети','сетевой','сетевого','сетевому','сетевым','сетевую','сетевые','сетевая'}
+    exact={'как','что','чем','где','кто','для','на','у','в','во','по','из','с','со','от','до','через','при','рядом','его','ее','их','оба','обе','также','есть','а','и','об','о','к','ли','можно','usb','rs','сеть','сети','сетевой','сетевого','сетевому','сетевым','сетевую','сетевые','сетевая'}
     return token in exact or any(len(stem)>=4 and token.startswith(stem) for stem in CONTEXT if stem not in exact)
 
 
@@ -33,7 +33,7 @@ def plan_v2(question,snapshot,projections):
     if not isinstance(question,str) or not question.strip() or len(question)>config['limits']['question_chars']:
         return GateResult('insufficient','invalid_question')
     text=norm(question)
-    if re.search(r'\b(?:не|ни|без|игнор\w*|придум\w*|ignore|reveal|pretend|invent)\b',text):
+    if re.search(r'\b(?:не|ни|нет|без|игнор\w*|придум\w*|ignore|reveal|pretend|invent)\b',text):
         return GateResult('insufficient','unsupported_question')
     if re.search(r'потребля\w*\s+ток|цен[аыуе]|стоимост|совместим|котл|котел|погод|рецепт',text):
         return GateResult('insufficient','unsupported_question')
@@ -89,6 +89,19 @@ def plan_v2(question,snapshot,projections):
         if not predicates and any(t.startswith(('категор','сущност')) for t in tokens):
             predicates=[('entity_type','')];covered.update(t for t in tokens if t.startswith(('категор','сущност')))
         if any(p[0]=='temperature_c' for p in predicates):covered.update(t for t in tokens if t.startswith('диапазон'))
+        # Modification words are substantive, not universal grammatical context.
+        # Consume them only for the supported software/address or interface lookup.
+        modification={t for t in tokens if t.startswith(('помен','измен','настр','конфиг'))}
+        lookup=any(t.startswith(('како','каки','кака','каку')) for t in tokens) and 'можно' not in token_set
+        purpose_lookup=(lookup and {p[0] for p in predicates}=={'purpose'}
+            and any(t.startswith('программ') for t in tokens) and any(t.startswith('адрес') for t in tokens)
+            and modification<={'поменять','изменить','настроить','конфигурировать'})
+        interface_lookup=({p[0] for p in predicates}=={'configuration_interface'}
+            and all(t.startswith(('настр','конфиг')) for t in modification)
+            and ((lookup and bool(token_set & {'через','по'}))
+                 or all(t.startswith(('настройк','конфигураци')) for t in modification)))
+        if purpose_lookup or interface_lookup:covered.update(modification)
+
         # Every substantive word must be accounted for by ontology, spec label or grammar.
         unknown=[t for t in tokens if t not in covered and not re.fullmatch(r'zzentity\d+',t)
                  and not _context(t)]

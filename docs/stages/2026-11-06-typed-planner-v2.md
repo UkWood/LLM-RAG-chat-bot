@@ -1,5 +1,7 @@
 # Typed planner V2 — 2026-11-06
 
+Historical report for frozen7bc6f11. Subsequent owner-authorized safety corrections are documented in [corrective report](2026-11-06-planner-v2-corrections.md); the first result does not measure the corrected revision, whose independent quality is NOT_RUN. Original experiment artifacts remain unchanged.
+
 Owner accepted design PR9 and explicitly requested implementation. Base main e0e44e54996b9f9e713899f7949746f27e33485b after PR8 merge. Branch feat/typed-planner-v2 includes the accepted design; feature PR will supersede docs-only PR9. This branch is not automatically merged.
 
 ## Implementation and boundaries

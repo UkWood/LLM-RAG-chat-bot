@@ -1,5 +1,12 @@
 # Состояние проекта
 
+## Planner V2 corrective revision — 2026-11-06
+
+Owner requested continuing after PR10 merge review found two Important blockers: discarded `нет` and protocol qualifiers. Corrections reject negation, unsupported Modbus/TCP/RTU qualification and modification requests outside supported lookup bindings before generation; unqualified protocol queries remain supported, V1 default unchanged. [Corrective report](stages/2026-11-06-planner-v2-corrections.md), [plan addendum](superpowers/plans/2026-11-06-typed-planner-v2.md). Final local verification5project+168backend PASS in both environments (base11optional skips/optional0), calibration14/14 positives20/20statuses without V1-positive regression; independent review fix pass complete. Current-head remote CI/merge outcome must be checked in PR10.
+
+This is a post-blind corrective version. First experiment7bc6f11/dataset/START/report are immutable historical evidence; old8/24+14/16 numbers do NOT measure the corrected runtime. Its independent quality is NOT_RUN, prototype NOT accepted. No consumed-set replay/tuning or new safety/generalization claim. Fresh independent data/freeze needed before a future quality claim. Real sources/cloud unchanged; Saturn-Main-Site strictly READ-ONLY. Historical entries below describe earlier revisions.
+
+
 ## Typed planner V2: first blind assessment — 2026-11-06
 
 Owner-approved PR9 design implemented in feat/typed-planner-v2; v1 remains default. Freeze7bc6f118e820fc5d4f648fb22997ad65d9e1c99c; independently authored/reviewed40case dataset consumed once after exclusive START. Actual V2 positives8/24, negative/ambiguity14/16, all22/40; V1 positives0/24, negative/ambiguity12/16. V2 emitted quote support/canonical validity1.0,unsafe0,errors0; quality target FALSE, full prototype NOT accepted. Calibration14/14 positives did not generalize. No code/config/grader changes after first result. [Stage report](stages/2026-11-06-typed-planner-v2.md), [first report](../evaluation/reports/2026-11-06-planner-v2-first-blind.json), [ADR0009](decisions/0009-typed-planner-v2.md).

@@ -48,3 +48,15 @@ Files evaluation/planner_v2.py, evaluation/blind_dataset.py, evaluation/__main__
 - [x] Base+optional full verifier; legacy CALIBRATION ONLY actual comparison/tuning, no reading old held_out or blind. Freeze final code/config/calibration at exact commit +config/projection hashes and write freeze manifest BEFORE blind run.
 - [x] Independent whole-branch review before blind, important fixes RED→GREEN +full suite, then final freeze. First blind evaluation once after logged START, do not inspect questions/labels before it. Save all40 cases/metrics/errors including unmet target. New target24/24 positives+16/16negative/ambiguity, no unsafe claims/invalid citations, complete needs for each answered. v1/v2 same rubric/artifacts/config.
 - [x] After result no planner/config changes; if bug invalidates experiment mark consumed/invalid and require fresh set for new independence. Final quality report not baseline relabeling. Publish feature PR +actual CI, docs/handoff; no auto merge.
+
+## Corrective addendum after merge review — 2026-11-06
+
+Owner requested continuing after two independently reproduced merge blockers. This is a new corrective revision after freeze, not a continuation/replay of the first blind experiment. Keep the first dataset/START/report bytes immutable, mark their metrics as historical for7bc6f11 only; independent quality for the corrected runtime is NOT_RUN. No new generalization claim without a fresh independently authored set. Existing conditional owner authorization to merge applies only after these blockers are fixed, final review and current-head CI pass; it does not accept prototype quality.
+
+Use the existing accepted whole-query contract: reject negation and any explicit qualifier which the bounded schema cannot bind. Minimal repair: reject `нет` explicitly; remove Modbus/TCP/RTU from generic context so they cannot silently become an unqualified protocol need. Do not add protocol selection capability or tune language coverage from consumed blind cases. Preserve unqualified protocol questions and V1 default.
+
+- [x] Add RED planner/application regression for `нет`, including mixed request; fix root negation handling and verify GREEN.
+- [x] Add RED planner/application regressions for literal protocol/transport qualification, including deferred clauses and mixed fields; remove unsupported qualifier consumption, verify GREEN alongside supported unqualified questions.
+- [x] Record historical experiment applicability in ADR/stage/status/handoff/README; keep existing dataset/config/projection/report/START bytes unchanged.
+- [x] Final review additional Important: unsupported modification requests become static facts. RED→GREEN rejection outside supported software/address or configuration-interface lookup; preserve positive calibration bindings.
+- [x] Base+optional full verifiers and one independent final review; Important findings fixed RED→GREEN. Publication/merge protocol recorded: current-head CI must pass and merge must remain conditional on a clean reviewed head under prior owner authorization. Live publication/check/merge outcomes are recorded in PR10.

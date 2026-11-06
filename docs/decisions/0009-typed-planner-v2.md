@@ -11,3 +11,11 @@ Evaluate calibration separately from a new40case independently authored/reviewed
 No new models/dependencies, real source approvals, cloud provider, deployment or Saturn-Main-Site writes. Existing local E5/mmarco bundles only. Exact quote support and typed binding do not establish general natural-language entailment or engineering advice quality.
 
 [Accepted design](../superpowers/specs/2026-11-06-planner-expansion-design.md), [implementation plan](../superpowers/plans/2026-11-06-typed-planner-v2.md), [stage report](../stages/2026-11-06-typed-planner-v2.md).
+
+## Corrective revision after merge review
+
+Owner requested continuing after review reproduced dropped negation and protocol qualifiers. Restore the already accepted refusal contract: reject `нет`; unsupported literal Modbus/TCP/RTU qualification must fail closed instead of becoming an unqualified need. Do not add protocol selectors or new dependencies. This costs answer coverage for explicit qualified protocol questions; it does not remove existing unqualified protocol support.
+
+Freeze protects the original experiment's identity and single-use independence; it does not make the old report evidence for a corrected runtime. Keep dataset/START/report/config/projection bytes unchanged; old8/24+14/16 belongs only to frozen7bc6f11. Mark corrected revision independent quality NOT_RUN and old experiment not applicable to it. No new independent quality claim until fresh author/review/freeze/first evaluation. [Correction report](../stages/2026-11-06-planner-v2-corrections.md).
+
+Final-review ruling: modification/configuration verbs are not universal context. Consume them only for supported software/address or configuration-interface lookup roles; reject action/how-to/possibility requests outside those bindings. Additional counterexamples were custom review probes, not consumed dataset tuning. RED→GREEN and a final full verification/calibration rerun required.

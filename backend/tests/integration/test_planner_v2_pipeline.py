@@ -123,3 +123,49 @@ class V2ApplicationTests(unittest.TestCase):
             service.publish(IndexSet(snapshot,BM25Index(snapshot)))
             app=GroundedConsultantV2(service,Scorer(),FakeLLMProvider(),mode='lexical')
             with self.subTest(tail=tail):self.assertNotEqual(app.answer(q).status,'answered')
+
+    def test_no_negation_refuses_whole_request_before_generation(self):
+        for question in ('У EDU-410 нет питания?', 'Питание EDU-410 и нет интерфейсов EDU-420?'):
+            with self.subTest(question=question):
+                result=self.app.answer(question)
+                self.assertEqual(result.status,'refused')
+                self.assertEqual(result.claims,())
+                self.assertEqual(result.sources,())
+                self.assertEqual(result.references,())
+        self.assertEqual(self.provider.calls,[])
+
+    def test_protocol_literals_refuse_instead_of_returning_different_protocol(self):
+        questions=('Какой протокол TCP у EDU-410?', 'Протокол Modbus TCP EDU-410?',
+                   'Протокол RTU EDU-420?', 'Протокол Modbus EDU-410?',
+                   'Протокол TCP и питание EDU-410?', 'Протокол EDU-410 и EDU-420 RTU?',
+                   'Питание EDU-410 и протокол TCP EDU-420?')
+        for question in questions:
+            with self.subTest(question=question):
+                result=self.app.answer(question)
+                self.assertEqual(result.status,'refused')
+                self.assertEqual(result.claims,())
+                self.assertEqual(result.sources,())
+                self.assertEqual(result.references,())
+        self.assertEqual(self.provider.calls,[])
+
+    def test_unqualified_protocol_questions_still_quote_canonical_protocol(self):
+        for question,quote in (('Протокол EDU-410?','protocols: Modbus RTU'),
+                               ('Протокол EDU-420?','protocols: Modbus TCP')):
+            with self.subTest(question=question):
+                result=self.app.answer(question)
+                self.assertEqual(result.status,'answered')
+                self.assertEqual([c.text for c in result.claims],[quote])
+
+    def test_modification_requests_refuse_before_provider(self):
+        for question in ('Можно ли поменять питание EDU-410?', 'Измени питание EDU-410?',
+                         'Как изменить питание EDU-410?', 'Настрой питание EDU-410?',
+                         'Как настроить питание EDU-410?', 'Измени назначение EDU-CONFIG?',
+                         'Настрой интерфейс EDU-410?', 'Как настроить интерфейс EDU-410?',
+                         'Какой интерфейс настроить EDU-410?'):
+            with self.subTest(question=question):
+                result=self.app.answer(question)
+                self.assertEqual(result.status,'refused')
+                self.assertEqual(result.claims,())
+                self.assertEqual(result.sources,())
+                self.assertEqual(result.references,())
+        self.assertEqual(self.provider.calls,[])

@@ -22,3 +22,5 @@
 - [2026-11-06: bounded evidence gate and measured grounded pipeline](2026-11-06-evidence-gate.md)
 
 - [2026-11-06: proposed typed planner expansion and blind evaluation protocol](2026-11-06-planner-expansion-design.md)
+
+- [Planner V2 post-review corrections, historical experiment applicability](2026-11-06-planner-v2-corrections.md)

@@ -102,3 +102,31 @@ class PlannerV2Tests(unittest.TestCase):
         p=self.plan('Интерфейс Ethernet и питание EDU-410?')
         self.assertTrue(not isinstance(p,QueryPlanV2) or next(n for n in p.needs if n.predicate=='interfaces').selector=='interface=ethernet')
         self.assertNotIsInstance(self.plan('Интерфейс Ethernet USB EDU-410?'),QueryPlanV2)
+
+    def test_no_negation_cannot_become_affirmative_need(self):
+        for question in ('У EDU-410 нет питания?', 'НЕТ питания EDU-410?',
+                         'Питание EDU-410 и нет интерфейсов EDU-420?'):
+            with self.subTest(question=question):
+                result=self.plan(question)
+                self.assertNotIsInstance(result,QueryPlanV2)
+                self.assertEqual(result.state,'insufficient')
+
+    def test_protocol_literals_cannot_be_discarded_as_context(self):
+        questions=('Какой протокол TCP у EDU-410?', 'Протокол Modbus TCP EDU-410?',
+                   'Протокол RTU EDU-420?', 'Протокол Modbus EDU-410?',
+                   'Протокол TCP и питание EDU-410?', 'Протокол EDU-410 и EDU-420 RTU?',
+                   'Питание EDU-410 и протокол TCP EDU-420?',
+                   'Назначение EDU-CONFIG по Modbus?', 'Протокол tcp/rtu EDU-410?')
+        for question in questions:
+            with self.subTest(question=question):
+                self.assertNotIsInstance(self.plan(question),QueryPlanV2)
+
+    def test_modification_request_cannot_become_static_fact_need(self):
+        for question in ('Можно ли поменять питание EDU-410?', 'Измени питание EDU-410?',
+                         'Как изменить питание EDU-410?', 'Настрой питание EDU-410?',
+                         'Как настроить питание EDU-410?', 'Измени назначение EDU-CONFIG?',
+                         'Питание EDU-410 и поменяй протокол EDU-420?',
+                         'Настрой интерфейс EDU-410?', 'Как настроить интерфейс EDU-410?',
+                         'Какой интерфейс настроить EDU-410?'):
+            with self.subTest(question=question):
+                self.assertNotIsInstance(self.plan(question),QueryPlanV2)
