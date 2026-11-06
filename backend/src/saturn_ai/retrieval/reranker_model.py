@@ -61,6 +61,9 @@ class LocalONNXReranker:
         manifest,_,_,artifacts=_read_manifest(Path(directory))
         self._identity=manifest
         self._tokenizer,self._session=_load_runtime(artifacts['model.onnx'],artifacts['tokenizer.json'],manifest)
+        from tokenizers import Tokenizer
+        self._length_tokenizer=Tokenizer.from_str(artifacts['tokenizer.json'].decode())
+        self._length_tokenizer.no_truncation();self._length_tokenizer.no_padding()
         self._tokenizer.enable_truncation(max_length=manifest['max_length'],strategy='longest_first')
         pad_token=self._tokenizer.id_to_token(manifest['pad_id'])
         if pad_token is None:raise ValueError('Padding token missing from tokenizer')
@@ -73,6 +76,10 @@ class LocalONNXReranker:
 
     @property
     def identity(self):return dict(self._identity)
+
+    def pair_lengths(self,query,passages):
+        validate_pairs(query,passages)
+        return [len(e.ids) for e in self._length_tokenizer.encode_batch([(query,p) for p in passages])]
 
     def score_pairs(self,query,passages):
         validate_pairs(query,passages)
