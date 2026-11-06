@@ -1,5 +1,24 @@
 # Передача контекста
 
+## Продолжение 2026-11-06: actual checkpoint и измерение
+
+Предыдущий сетевой blocker снят: runtime policy unrestricted/enforced, huggingface.co и us.aws.cdn.hf.co вернули HTTP200 через штатный proxy. Получен официальный intfloat/multilingual-e5-small revision614241f622f53c4eeff9890bdc4f31cfecc418b3; CPU smoke прошёл, artifacts только в ignored work/. Model card декларирует MIT; отдельного LICENSE нет, сохранена точная строка декларации, это не production legal clearance.
+
+На неизменных 10docs/44chunks/30cases: dense source-hit@5=18/20 (calibration12/14, held_out6/6), hybrid17/20 (13/14,4/6), BM25 baseline17/20 (14/14,3/6). Цель100% не пройдена. Reranking/grounding/refusal NOT_RUN; M1 generator не менялся. Не подгонять held_out. Следующий шаг — отдельный план reranking/evidence gate и calibration-only улучшений; реальные источники по-прежнему pending/UNKNOWN, Saturn-Main-Site только чтение.
+
+Проверки: base verifier 5 project +93 backend tests, 6 optional skips; optional verifier 5+93 без skips. Десять targeted preparation tests PASS; canonical URL regression RED→GREEN. Обновлён optional CI. Отчёт: [model preparation](stages/2026-11-06-model-preparation.md). Публикация/CI фиксируются ниже по фактическому результату. Прежние блокеры и сведения о PR #4 ниже исторические (PR #4 merged a1093fb).
+
+
+## Точка перехода в новую среду — 2026-11-06
+
+PR #4 слит: main `a1093fb826c27d68db215c0d2c0211d3d6e2ef2f`, CI42097546595 success (проверено до начала подготовки модели). Текущая ветка `feat/embedding-model-preparation` — промежуточная работа, ещё без PR/полной проверки и review. Прежние сведения ниже о незавершённом merge #4 исторические.
+
+Владелец сообщил, что добавил huggingface.co в опубликованную конфигурацию. Текущая среда продолжает использовать spec_revision1, allowed_hosts только api.github.com/github.com (+package_managers); повторный HEAD официальной model card после сообщения владельца всё ещё CONNECT403/envoy (2026-11-06 04:29 UTC). Новую сессию запускать с обновлённой средой, сначала проверить effective policy и фактический HTTPS. Это сетевые правила среды, а не переменная приложения. Обход прокси/зеркала не использовать. Возможные дополнительные хосты для весов определять по фактическому redirect/отказу.
+
+Сохранена WIP-подготовка: local explicit files/profile → pinned model/tokenizer/card/license provenance → CPU smoke → atomic new directory. Никаких моделей/секретов в Git. Numeric runtime_contract не допускается к semantic evaluation. Команда `PYTHONPATH=backend/src work/retrieval-venv/bin/python -m unittest discover -s backend/tests -p test_model_preparation.py -v`: 8 PASS, включая actual numeric ONNX, cleanup и конкурентное создание destination. Это только целевые проверки; общий CI/полный suite этой ветки ещё не проверены. Не заявлять готовность к merge.
+
+Продолжить по [плану подготовки](superpowers/plans/2026-11-06-model-preparation.md): review импорта/provenance (включая canonical source URL и трактовку license_id как заявления оператора, не доказательства лицензии), CLI docs/profile example, optional CI для новых actual tests, full verification; затем actual checkpoint с проверенной model card/license/revision и dense/hybrid benchmark, если доступ появился. Candidate intfloat/multilingual-e5-small пока не выбран окончательно; license/weights/hash не проверены. Source-hit BM25 остаётся17/20, neural quality NOT_RUN. После этого stage report/ADR/status, PR и фактический CI. Виртуальные окружения под work/ могут не пережить смену среды: восстановить из requirements-onnx.lock.
+
 Обновлено:2026-11-05, local retrieval baseline.
 
 ## Восстановление
@@ -27,3 +46,7 @@ Process-local/local SDK до10000chunks, не server-Qdrant/multi-worker/durable
 Обеспечить локальный embedding artifact и провести dense/hybrid quality benchmark; далее reranking и evidence/grounding. Tune только calibration, не чинить held_out частными правилами. --require-source-hit-target даёт exit1 при85%; обычный code verification сохраняет измеренный failure, не объявляет prototype acceptance.
 
 Полные права LLM-RAG-chat-bot сохраняются; обычные commits/push/PR без повторного запроса. Новые PR не считаются merged по green CI. Saturn-Main-Site строго READ-ONLY. Real registry8pending/UNKNOWN,allowed0; ничего не разрешать от имени владельца. До real ingestion нужны exact source approvals и OS parser sandbox/quality review; до cloud privacy/endpoint gates. ADR-0001 proposed, bounded decisions ADR-0002…0006.
+
+## Публикация 2026-11-06
+
+Commit b653014162b72b589eebd543a370a637f1dba92c опубликован в feat/embedding-model-preparation. [PR #5](https://github.com/UkWood/LLM-RAG-chat-bot/pull/5) открыт, не слит. [Push CI42165522960](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42165522960) на b653014 завершился success в обоих jobs, включая actual numeric preparation/swap tests. PR-event CI42165549055 на момент фиксации ещё in_progress; не считать его проверенным. Эта запись — отдельный docs commit, его CI следует проверять отдельно.

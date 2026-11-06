@@ -12,6 +12,7 @@ from ..snapshots import build_snapshot, SnapshotCatalog
 from ..retrieval.lexical import BM25Index
 from ..retrieval.dense import QdrantIndex
 from ..retrieval.embeddings import LocalONNXEncoder
+from ..retrieval.model_preparation import read_model_provenance
 from ..retrieval.service import RetrievalService, IndexSet
 from ..retrieval.contracts import Candidate, REPRESENTATION_VERSION
 from .dataset import validate_dataset
@@ -64,10 +65,16 @@ def run_retrieval_evaluation(root: Path,dataset_path: Path,*,mode='lexical',mode
     if mode not in ('lexical','dense','hybrid') or (mode=='lexical' and model_directory is not None):
         raise ValueError('Invalid explicit model/mode selection')
     encoder=None
+    provenance=None
     if mode!='lexical':
         if model_directory is None:
             raise ValueError('Real local checkpoint required for dense/hybrid evaluation')
+        provenance=read_model_provenance(model_directory,require_semantic=True)
         encoder=LocalONNXEncoder(model_directory)
+        loaded_provenance=read_model_provenance(model_directory,require_semantic=True,identity=encoder.identity)
+        if loaded_provenance!=provenance:
+            raise ValueError('Model bundle changed during loading')
+        provenance=loaded_provenance
         if encoder.identity.get('kind')!='local_onnx':
             raise ValueError('Test encoders cannot measure semantic quality')
     registry=load_registry((root/'registry.json').read_bytes())
@@ -97,6 +104,7 @@ def run_retrieval_evaluation(root: Path,dataset_path: Path,*,mode='lexical',mode
                         lexical_configuration_hash=lexical.descriptor.configuration_hash,
                         dense_configuration_hash=dense.descriptor.configuration_hash if dense else None),
                     embedding=encoder.identity if encoder else None,
+                    model_provenance={key:provenance[key] for key in ('bundle_id','model_card_sha256','license_sha256')} if provenance else None,
                     software=dict(qdrant_client=version('qdrant-client'),numpy=version('numpy')),
                     quality_evaluation=dict(lexical='measured' if mode!='dense' else 'not_run',
                         dense='measured' if encoder else 'not_run',hybrid='measured' if mode=='hybrid' else 'not_run',

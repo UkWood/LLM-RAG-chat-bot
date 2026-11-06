@@ -36,6 +36,18 @@ Install `backend/requirements-onnx.lock` into the chosen CPU venv. Supply a trus
 PYTHONPATH=backend/src work/venv/bin/python -m saturn_ai.evaluation --stage retrieval --mode hybrid --model-dir work/local-embedding-model --corpus fixtures/evaluation --dataset evaluation/datasets/synthetic-v1.json
 ```
 
-No checkpoint is currently available (confirmed by the owner). Actual neural quality is therefore unmeasured. The optional CI job exercises a tiny authored numeric ONNX graph only: it proves CPU/runtime/hash/sidecar contracts, not language embeddings. No model weights are downloaded or committed. Query/passage formatting, license and pooling must be checked against the chosen model card before a real model benchmark.
+Historical baseline: no checkpoint was available on 2026-11-05. The pinned E5 candidate experiment on 2026-11-06 is documented in [the stage report](../docs/stages/2026-11-06-model-preparation.md); it does not select a production model. The optional CI job exercises a tiny authored numeric ONNX graph only: it proves CPU/runtime/hash/sidecar contracts, not language embeddings. No model weights are downloaded or committed. Query/passage formatting, license and pooling must be checked against the chosen model card before a real model benchmark.
 
 Local diagnostics: `PYTHONPATH=backend/src work/venv/bin/python -m saturn_ai.retrieval --corpus fixtures/evaluation --query 'Какие интерфейсы у EDU-410?' --mode lexical`. `--show-text` explicitly displays approved synthetic snippets locally; default diagnostics/report contain IDs/ranks/scores only, no raw questions/context. No answer is generated.
+
+## Explicit model preparation
+
+Install the hash-locked optional profile first. Obtain trusted model/tokenizer/card/license evidence separately; inference and the importer never download. Use a reviewed versioned profile (the E5 experiment profile is `config/embeddings/multilingual-e5-small.profile.json`):
+
+```bash
+work/venv/bin/python scripts/prepare_local_embedding.py --profile config/embeddings/multilingual-e5-small.profile.json --model work/model-source/model.onnx --tokenizer work/model-source/tokenizer.json --model-card work/model-source/README.md --license work/model-source/LICENSE.declaration --destination work/multilingual-e5-small
+```
+
+`--license` preserves evidence reviewed by the operator; `license_id` is an operator assertion, not proof of a legal grant. For this candidate the upstream repository supplies only card metadata `license: mit`, no standalone LICENSE: the exact declaration line is retained, with the complete card separately hashed. This is a local candidate experiment, not production/redistribution clearance. Review the exact source and scope before other uses. The destination must be new, is published atomically, and contains manifest/provenance/card/license/smoke receipts. Runtime-contract numeric bundles cannot enter semantic evaluation. Artifacts stay in ignored `work/` and must be restored after a fresh environment.
+
+For measured runs use the existing evaluation command with `--mode dense` or `--mode hybrid`, `--model-dir work/multilingual-e5-small`; redirect stdout to the corresponding report. CPU smoke is not a semantic quality result. Dataset, corpus, aliases and ranking settings are frozen for these runs.

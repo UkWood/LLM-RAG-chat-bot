@@ -12,3 +12,5 @@
 - [2026-11-05 — snapshot contracts и synthetic baseline](2026-11-05-snapshot-baseline.md)
 
 - [2026-11-05 — local retrieval и измеренный BM25 baseline](2026-11-05-local-retrieval.md)
+
+- [2026-11-06: model preparation and actual dense/hybrid](2026-11-06-model-preparation.md)

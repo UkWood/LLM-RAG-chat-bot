@@ -2,7 +2,7 @@
 
 Отдельный технический консультант: ответы только по разрешённым материалам с источниками и отказом при недостатке доказательств. Статический интерфейс Astro, отдельный FastAPI backend, локальная KB и сменный LLM provider.
 
-**Стадия:** M1/ingestion/snapshot baseline слиты в main. Добавлены local indexes и measured BM25: Top-5 source hit17/20=85%; цель100% пока не пройдена, neural quality без checkpoint не измерена. Реальные источники пока не допущены к индексации/облачной отправке. Полная production-архитектура остаётся proposed.
+**Стадия:** M1/ingestion/snapshot baseline слиты в main. Добавлены local indexes и measured BM25: Top-5 source hit17/20=85%; цель100% пока не пройдена. Actual E5 experiment: dense18/20=90%, hybrid17/20=85%; reranking/grounding/refusal ещё не измерены. Реальные источники пока не допущены к индексации/облачной отправке. Полная production-архитектура остаётся proposed.
 
 ## Память проекта
 
@@ -81,8 +81,10 @@ PYTHONPATH=backend/src work/venv/bin/python -m saturn_ai.retrieval --corpus fixt
 PYTHONPATH=backend/src work/venv/bin/python -m saturn_ai.evaluation --stage retrieval --mode lexical --corpus fixtures/evaluation --dataset evaluation/datasets/synthetic-v1.json
 ```
 
-Qdrant SDK local CPU memory/path проверен с контрольными vectors; это не semantic benchmark. Optional `backend/requirements-onnx.lock` и local single-file checkpoint позволяют отдельный dense/hybrid run, но checkpoint сейчас отсутствует. Auto downloads нет. Runtime contracts на numeric ONNX graph проверяются отдельным CI job.
+Qdrant SDK local CPU memory/path проверен с контрольными vectors; это не semantic benchmark. Optional `backend/requirements-onnx.lock` и local single-file checkpoint позволяют отдельный dense/hybrid run, checkpoint кандидата подготовлен в эксперименте 2026-11-06 (см. отчёт ниже). Auto downloads нет. Runtime contracts на numeric ONNX graph проверяются отдельным CI job.
 
 [Измеренный report](evaluation/reports/2026-11-05-lexical-retrieval.json): source-hit17/20, calibration14/14, held_out3/6; corpus/labels/aliases не подгонялись после результата. Dense/hybrid/reranking/grounding/refusal not_run. Диагностика показывает IDs/ranks/scores, `--show-text` включает approved synthetic snippets только локально. Ожидания dataset не используются как ответы.
 
 [Evaluation/модельный manifest и команды](evaluation/README.md), [пример manifest](config/embeddings/local-onnx.example.json), [ADR-0006](docs/decisions/0006-local-retrieval.md), [отчёт этапа3b](docs/stages/2026-11-05-local-retrieval.md).
+
+[Подготовка E5 и actual dense/hybrid experiment](docs/stages/2026-11-06-model-preparation.md). Это измерение synthetic retrieval, не приёмка grounded chatbot и не production model selection.
