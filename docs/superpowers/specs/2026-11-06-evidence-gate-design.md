@@ -1,0 +1,35 @@
+# Evidence gate and extractive grounded pipeline
+
+2026-11-06. Scope authorized by owner: check/merge PR7, then implement next roadmap stage5. PR7 merged861871b; existing accepted prototype criteria govern this bounded implementation. This document records implementation choices, not new source/cloud approvals.
+
+## Intent and approaches
+
+Connect actual retrieval/reranking to a conservative evidence gate, offline FakeLLMProvider, canonical claim/citation validation and separate answer/refusal evaluation. Chosen: explicit structured field requirements derived from a strict full-question grammar, exact entity resolution and verbatim extractive claims. Alternative: free-language semantic planner/entailment model would require separate model/prompt calibration; a score threshold alone is not evidence and is rejected. Existing M1 remains compatible. No cloud/API/UI/site writes, no real sources, no new dependencies.
+
+This stage implements reliable evidence contracts, not universal question understanding. Supported natural questions: exactly one known entity and one structured aspect power/interfaces/protocols/temperature/status, or manual lookup. Aliases come from parser schema/domain vocabulary, not dataset IDs/expected answers. Mixed, negated or unsupported formulations fail closed. One-edit near designations request clarification, never silently correct. Unknown suffixes do not match prefixes. Dataset30cases stays frozen; unsupported positives are reported as false refusals/clarifications, not patched after held_out evaluation. Full prototype acceptance may remain unmet despite passing retrieval.
+
+## Contracts
+
+QuestionPlan(entity_id,aspect) with aspect from fixed domain schema. parse_question(question,snapshot) returns a plan or explicit insufficient/ambiguous/unknown/invalid reason. Full match only; no keyword-substring answer to a mixed question. Canonical entity names derive from current snapshot entity IDs, not labels or model metadata. No exact answer lookup or dataset import in application modules.
+
+GateResult(state=sufficient/insufficient/ambiguous/conflict,reason,evidence_ids). Evaluate only candidate IDs from one captured IndexSet/trace, validate unique IDs/source/snapshot/rank. Resolve content/metadata from canonical snapshot. Current local_index AND local_generate must permit every provider evidence item. Pre-retrieval gate rejects invalid/unknown/ambiguous/unsupported questions without provider; missing eligible requested facts after retrieval → insufficient. Model score never grants sufficiency.
+
+For structured aspects, gather canonical fields for exact entity and requested aspect, group collection values per source. Scalar power/temperature/status use closed value grammar; malformed/instruction-like fact strings are not eligible typed facts. Compare current eligible complete field sets across sources: conflicting values → conflict, not arbitrary selection or two independent proofs from duplicate text. Every value in a canonical required field set must be present in selected evidence, otherwise insufficient (cannot answer partial interfaces). List-valued interfaces/protocols are sets within a document, not conflicting individual members. Manual lookup accepts only independently approved registry document_type manual with matching canonical entity and physical page; pending links do not become approvals. Citation page is actual parsed page, never guessed.
+
+Evidence<=5chunks/8000chars. No context from category relationships or arbitrary body paragraphs yet; unrestricted diagnostic text/safety advice and multiple-entity comparisons remain unsupported. Missing public facts, unsupported arbitrary engineering compatibility and pricing questions refuse. This is deliberate fail-closed scope, evaluated honestly.
+
+## Generation and publication
+
+Capture indexes once; planning, retrieval/rerank, gate and metadata use that snapshot. Active-index replacement cannot mix new content. Recheck current policy before provider and before result. Revocation after initial gate refuses without source text; rollback does not restore access. Concurrent snapshot change can use original allowed capture. Error in retrieval/provider is status=error, never no_evidence.
+
+Only offline=True/test_only=True provider accepted at construction and each call. Reuse existing GenerationRequest/Claim/FakeLLMProvider, adapt selected canonical chunks to its evidence protocol. System rule treats evidence as data. No web/model tool execution or instruction following. Provider claims must be a bounded nonempty tuple, unique known chunk IDs, exact verbatim text, and cover all required selected evidence IDs. Any invented ID/text/omission/duplicate or mutable request tampering fails as unverified_answer. Verified citation metadata comes only from snapshot registry and canonical chunks: source ID/title/URL/version/hash/heading/physical pages. Provider cannot supply URLs/page/source metadata. Non-sufficient gate never calls provider. Result schema separate from M1 to preserve physical pages and gate state.
+
+Extractive validation proves byte/text support, not arbitrary semantic entailment. Prompt-injection tests demonstrate known scenarios only. Fake provider cannot establish safety of real LLMs, and no real provider or unapproved source is enabled.
+
+## Evaluation and acceptance
+
+Separate grounding stage on unchanged30cases with actual pinned E5+reranker and offline Fake provider. Report model/config/snapshot/dataset/provider identities, per-case status/reason/evidence/source IDs, expected-status accuracy, false refusals/clarifications, errors, expected-evidence coverage, verbatim claim support and canonical citation validity; calibration/held_out/all. Labels used only after app returns, never passed to planner/gate/retrieval/provider. No raw questions/context/answers in persistent report. Negatives/typos have separate proper denominators. Infrastructure errors never count as correct refusal.
+
+Mandatory tests: unknown source/wrong page/fabricated claim, evidence missing/partial/conflict/duplicate sources, source hash/policy drift, local_index-only source denied to provider, current revocations before/during provider, publication during retrieval, user/document injection, unsupported mixed/negated questions, unknown model suffix, typo clarification, provider errors/offline guard and evidence budget. Numeric/test adapters exercise contracts only. Real answer report uses pretrained bundles; unsupported positives remain explicit failures. No threshold tuning or dataset edits.
+
+Completion: working bounded gate/grounded CLI, test and actual evaluation evidence, independent review and CI. Record limitations and quality failures; do not claim full prototype acceptance, natural semantic correctness or engineering quality merely from green code tests.
