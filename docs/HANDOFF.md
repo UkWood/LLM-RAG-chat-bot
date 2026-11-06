@@ -125,3 +125,5 @@ Verified remote CI: [push42168613444](https://github.com/UkWood/LLM-RAG-chat-bot
 ## Publication
 
 [Implementation PR #10](https://github.com/UkWood/LLM-RAG-chat-bot/pull/10), branch feat/typed-planner-v2. PR open/unmerged; implementation freeze7bc6f11, first-result/report commitc0f0f3f. Docs-only PR9 superseded by this implementation including its owner-accepted design. Actual remote checks are available on the current head in PR10; local PASS is not a remote-CI claim or quality acceptance. The24/24+16/16 quality target remains FAILED. No runtime/config/grader change after freeze.
+
+Publication: [proposed design PR #11](https://github.com/UkWood/LLM-RAG-chat-bot/pull/11), feat/semantic-planner-design. Approach selected in chat; detailed contracts await design approval. PR open/unmerged, no implementation/data/quality result. Current-head remote checks are tracked in PR11; do not infer success or design acceptance from local docs checks.
