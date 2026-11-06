@@ -1,5 +1,14 @@
 # Передача контекста
 
+## Актуальная точка продолжения — 2026-11-06
+
+PR #5 уже MERGED в `92e70223c579d10dfc785263d24a23d92940c6c1`; main CI42166311910 success. Сведения об open PR #5 ниже исторические. Corpus/dataset frozen: BM25 17/20, E5 dense18/20, hybrid17/20; target100% unmet, reranking/grounding/refusal NOT_RUN.
+
+Начат следующий этап: [proposed local reranking design](superpowers/specs/2026-11-06-local-reranking-design.md), [planning report](stages/2026-11-06-local-reranking-design.md). Implementation НЕ начата. После принятия дизайна составить detailed implementation plan и выполнять inline/TDD. Candidate cross-encoder/mmarco-mMiniLMv2-L12-H384-v1 revision1427fd652930e4ba29e8149678df786c240d8825: прочитаны official card/config/tokenizer config; weights/hash/inference/license grant не проверены. card Apache-2.0 declaration не является legal clearance.
+
+Saturn-Main-Site READ-ONLY, не допускать pending real sources, не изменять held_out под результат. Existing E5/operator artifacts только в work/, после смены среды могут отсутствовать.
+
+
 ## Продолжение 2026-11-06: actual checkpoint и измерение
 
 Предыдущий сетевой blocker снят: runtime policy unrestricted/enforced, huggingface.co и us.aws.cdn.hf.co вернули HTTP200 через штатный proxy. Получен официальный intfloat/multilingual-e5-small revision614241f622f53c4eeff9890bdc4f31cfecc418b3; CPU smoke прошёл, artifacts только в ignored work/. Model card декларирует MIT; отдельного LICENSE нет, сохранена точная строка декларации, это не production legal clearance.

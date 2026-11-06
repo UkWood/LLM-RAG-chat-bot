@@ -1,5 +1,12 @@
 # Состояние проекта
 
+## Текущий статус — 2026-11-06, после merge PR #5
+
+PR #5 merged: main `92e70223c579d10dfc785263d24a23d92940c6c1`, main CI42166311910 success. Подготовка E5 и actual dense/hybrid measurements опубликованы; источник правды — [отчёт](stages/2026-11-06-model-preparation.md). Исторические упоминания open PR #5/no checkpoint ниже относятся к предыдущим переходам.
+
+Следующий bounded этап4: [local reranking design](superpowers/specs/2026-11-06-local-reranking-design.md), статус proposed. Изучены card/config лёгкого multilingual cross-encoder; pretrained reranker не получен и не выполнялся. До implementation нужен детальный план после принятия дизайна. Evidence gate/grounding/refusal — отдельный этап5. [Результат проектирования](stages/2026-11-06-local-reranking-design.md).
+
+
 ## Продолжение 2026-11-06: actual checkpoint и измерение
 
 Предыдущий сетевой blocker снят: runtime policy unrestricted/enforced, huggingface.co и us.aws.cdn.hf.co вернули HTTP200 через штатный proxy. Получен официальный intfloat/multilingual-e5-small revision614241f622f53c4eeff9890bdc4f31cfecc418b3; CPU smoke прошёл, artifacts только в ignored work/. Model card декларирует MIT; отдельного LICENSE нет, сохранена точная строка декларации, это не production legal clearance.

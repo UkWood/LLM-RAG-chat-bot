@@ -14,3 +14,5 @@
 - [2026-11-05 — local retrieval и измеренный BM25 baseline](2026-11-05-local-retrieval.md)
 
 - [2026-11-06: model preparation and actual dense/hybrid](2026-11-06-model-preparation.md)
+
+- [2026-11-06: proposed local reranking design](2026-11-06-local-reranking-design.md)
