@@ -411,21 +411,21 @@
     {
       "id": "v3-blind-014",
       "group": "source_scoped",
-      "question": "Какой интерфейс отведён для локальной настройки EDU-410 согласно тексту руководства?",
+      "question": "Согласно тексту карточки EDU-410, для какого интерфейса явно заявлена локальная настройка?",
       "expected_status": "answered",
       "requirements": [
         {
           "entity_id": "products/edu-410",
           "predicate": "configuration_interface",
           "selector": "",
-          "document_kind": "manual",
+          "document_kind": "product_card",
           "representation": "quoted_statement",
           "evidence": [
             {
-              "source_id": "synthetic:pdf:edu-410-manual",
-              "field_path": "pdf.page",
-              "page": 2,
-              "text": "EDU-410 - Wiring and configuration\nRS-485 terminals: A, B and signal reference.\nUSB is reserved for local configuration using EDU-CONFIG.\nDefault Modbus address: 7.\nSerial configuration: 9600 bit/s, 8N1.\nDo not connect the classroom bus to a live plant."
+              "source_id": "synthetic:products/edu-410",
+              "field_path": "body",
+              "page": null,
+              "text": "Контроллер передаёт показания по Modbus RTU через RS-485. USB используется для локальной настройки."
             }
           ],
           "reference": null

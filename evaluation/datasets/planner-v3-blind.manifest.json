@@ -4,8 +4,8 @@
   "snapshot_id": "820b9c032a001af50276178bfa765e414667b1e8046ad2070f0a68122af1c680",
   "registry_revision": "9d1502c38c1557c680cfafd2a717b5aaa325f7bde07b28ef1d296a56393b8cf8",
   "dataset": "planner-v3-blind.json",
-  "sha256": "4874a8a26a0e2651242a7341830e43e2a2aa1c77c039534b77ad152dd27c008f",
-  "raw_bytes": 25668,
+  "sha256": "6f48fdbad02761fac30c1950e3a9f8c3a0b77ed0fbc3eb5c854a1315fb23dbe0",
+  "raw_bytes": 25589,
   "counts": {
     "total": 40,
     "by_status": {
@@ -85,5 +85,16 @@
       "new_dependencies": 0,
       "writes": "none"
     }
+  },
+  "baseline_capability_review": {
+    "reviewer_agent": "/root/v3_blind_label_review",
+    "metadata_sha256": "9f3bb7e9d05337408cbaf7326eb03d2a1a346f18070debc7f9511420746dba72",
+    "author_metadata_access": false,
+    "author_candidate_implementation_access": false,
+    "outcome": "canonical_source_supported_replacement_within_original_quota",
+    "final_independent_review": "passed",
+    "metadata_access": "independent_reviewer_only",
+    "evidence_needs_reviewed": 25,
+    "typed_references_reviewed": 6
   }
 }
