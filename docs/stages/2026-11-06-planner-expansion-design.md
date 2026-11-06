@@ -11,3 +11,5 @@ Independent fresh-context builder found3 contract decisions: quotation-less rela
 Implementation is paused at proposed design, not claimed complete. After owner accepts: detailed implementation plan, independent blind author/label review, code/config freeze, TDD/actual comparison, whole-branch review, CI. No new cloud/source approvals or automatic merge.
 
 Documentation verification: `python3 scripts/check_project.py` PASS;5 project registry/policy tests PASS; `git diff --check` clean. Application suite was not rerun for this documentation-only proposal; no new model/answer-quality outcome is claimed.
+
+Публикация: [PR #9](https://github.com/UkWood/LLM-RAG-chat-bot/pull/9), feat/planner-expansion-design, initial commit1b14fb9. Design proposed, PR open/unmerged. До принятия владельцем код/new dataset не создавать. Актуальный CI смотреть на текущем head PR9; локальные doc checks не заменяют remote CI и не являются benchmark quality.

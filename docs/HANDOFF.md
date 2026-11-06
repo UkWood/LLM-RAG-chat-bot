@@ -98,3 +98,5 @@ Verified remote CI: [push42168613444](https://github.com/UkWood/LLM-RAG-chat-bot
 [PR #8](https://github.com/UkWood/LLM-RAG-chat-bot/pull/8), branch feat/evidence-gate, implementation commitf01ca77. PR открыт, НЕ слит; предыдущий PR7 merged861871b и main CI42169517262 SUCCESS. Текущие actual push/PR checks доступны в PR8; не выводить CI success из локальных тестов и не считать green CI quality acceptance.
 
 Финальный actual replay после атомарного policy fix совпал с saved report по metrics/cases/model/snapshot/dataset identities. Единая optional команда завершилась strict_grounding_exit=1 именно из-за targetFalse, после133PASS backend tests; base verifier exit0. Ограниченная grammar/held_out0/6/false refusals не скрываются. Реальные source approvals/cloud/Saturn-Main-Site не менялись.
+
+Публикация: [PR #9](https://github.com/UkWood/LLM-RAG-chat-bot/pull/9), feat/planner-expansion-design, initial commit1b14fb9. Design proposed, PR open/unmerged. До принятия владельцем код/new dataset не создавать. Актуальный CI смотреть на текущем head PR9; локальные doc checks не заменяют remote CI и не являются benchmark quality.
