@@ -16,3 +16,5 @@
 - [2026-11-06: model preparation and actual dense/hybrid](2026-11-06-model-preparation.md)
 
 - [2026-11-06: proposed local reranking design](2026-11-06-local-reranking-design.md)
+
+- [2026-11-06: local reranking implementation and measurement](2026-11-06-local-reranking.md)

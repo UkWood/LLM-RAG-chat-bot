@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "kind": "local_onnx_pair_scorer",
+  "model_id": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+  "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+  "source_url": "https://huggingface.co/cross-encoder/mmarco-mMiniLMv2-L12-H384-v1/tree/1427fd652930e4ba29e8149678df786c240d8825",
+  "license_id": "Apache-2.0",
+  "review_reference": "docs/stages/2026-11-06-local-reranking.md; official card/config reviewed; Apache-2.0 metadata declaration only, no standalone LICENSE; local experiment, not redistribution clearance",
+  "purpose": "semantic_candidate",
+  "max_length": 512,
+  "pad_id": 1,
+  "output_name": "logits",
+  "activation": "identity"
+}

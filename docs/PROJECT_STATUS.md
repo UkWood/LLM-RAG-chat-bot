@@ -1,5 +1,12 @@
 # Состояние проекта
 
+## Актуально: local reranking implementation — 2026-11-06
+
+Owner approved design PR #6 and implementation. New bounded stage4 implemented after main92e7022: separate CPU pair scorer, canonical/policy-safe captured rerank and explicit atomic local preparation. Official mmarco-MiniLM revision1427fd652930e4ba29e8149678df786c240d8825 experiment: source-hit20/20, all-source/gold evidence1.0, MRR.916667,nDCG.867586; baseline hybrid17/20,nDCG.629721. Frozen data/settings; no held_out tuning. Retrieval target passes this small synthetic set only. Grounding/refusal/answer quality NOT_RUN, full prototype NOT accepted.
+
+[Stage report](stages/2026-11-06-local-reranking.md), [accepted design](superpowers/specs/2026-11-06-local-reranking-design.md), [implementation plan](superpowers/plans/2026-11-06-local-reranking.md), [ADR-0007](decisions/0007-local-reranking.md). Prior proposed/open state below is historical. Weights/card/tokenizer only work/; explicit restoration required after environment replacement. License card Apache-2.0 declaration only, not production legal clearance. Next stage5 evidence gate/grounded pipeline; real sources pending, cloud disabled, Saturn-Main-Site READ-ONLY. Actual verification/review/publication follow in stage report; never infer merge from green CI.
+
+
 ## Текущий статус — 2026-11-06, после merge PR #5
 
 PR #5 merged: main `92e70223c579d10dfc785263d24a23d92940c6c1`, main CI42166311910 success. Подготовка E5 и actual dense/hybrid measurements опубликованы; источник правды — [отчёт](stages/2026-11-06-model-preparation.md). Исторические упоминания open PR #5/no checkpoint ниже относятся к предыдущим переходам.

@@ -51,3 +51,21 @@ work/venv/bin/python scripts/prepare_local_embedding.py --profile config/embeddi
 `--license` preserves evidence reviewed by the operator; `license_id` is an operator assertion, not proof of a legal grant. For this candidate the upstream repository supplies only card metadata `license: mit`, no standalone LICENSE: the exact declaration line is retained, with the complete card separately hashed. This is a local candidate experiment, not production/redistribution clearance. Review the exact source and scope before other uses. The destination must be new, is published atomically, and contains manifest/provenance/card/license/smoke receipts. Runtime-contract numeric bundles cannot enter semantic evaluation. Artifacts stay in ignored `work/` and must be restored after a fresh environment.
 
 For measured runs use the existing evaluation command with `--mode dense` or `--mode hybrid`, `--model-dir work/multilingual-e5-small`; redirect stdout to the corresponding report. CPU smoke is not a semantic quality result. Dataset, corpus, aliases and ranking settings are frozen for these runs.
+
+## Local reranking experiment (2026-11-06)
+
+The accepted stage4 implementation uses the existing frozen hybrid pool,30 unique chunks, then a separately pinned local single-logit cross-encoder and top5. No query/passages/E5 prefixes are invented by the reranker; canonical passages and current source policy are checked before/after CPU scoring. No generation/evidence-sufficiency decision happens here.
+
+Install the same hash-locked optional ONNX profile. Obtain reviewed files separately using the exact revision in `config/rerankers/mmarco-minilm.profile.json`. The official card declares Apache-2.0, with no standalone LICENSE in its listing: preserve the exact `license: apache-2.0` line as declaration evidence, the complete card separately, and do not infer redistribution/legal clearance.
+
+```bash
+work/venv/bin/python scripts/prepare_local_reranker.py --profile config/rerankers/mmarco-minilm.profile.json --model work/reranker-source/onnx_model.onnx --tokenizer work/reranker-source/tokenizer.json --model-card work/reranker-source/README.md --license work/reranker-source/LICENSE.declaration --destination work/mmarco-reranker
+PYTHONPATH=backend/src work/venv/bin/python -m saturn_ai.evaluation --stage reranking --mode hybrid --model-dir work/multilingual-e5-small --reranker-dir work/mmarco-reranker --corpus fixtures/evaluation --dataset evaluation/datasets/synthetic-v1.json
+PYTHONPATH=backend/src work/venv/bin/python -m saturn_ai.retrieval --mode hybrid --model-dir work/multilingual-e5-small --reranker-dir work/mmarco-reranker --corpus fixtures/evaluation --query 'Какие интерфейсы у EDU-410?'
+```
+
+The importer publishes only to a new destination atomically; errors preserve existing destinations and clean staging. Pair tokenizer is bounded512tokens/longest_first, batches<=8, query<=4000chars, passage<=20000chars,<=30pairs; output must be finite [batch,1] raw logits with identity activation. It reuses verified-byte single-file graph loading, not embedding pooling. Prepared runtime_contract graphs cannot enter semantic evaluation.
+
+[Measured reranking report](reports/2026-11-06-reranking.json): source-hit20/20, all-source/evidence recall1.0, MRR.916667, binary evidence nDCG.867586; baseline hybrid17/20, nDCG.629721. nDCG uses binary canonical source/field/page/text relevance; ideal DCG counts all relevant chunks in snapshot, not only pool hits. Pool source coverage@30=1.0. Calibration14/14 and held_out6/6 passed source-hit, with no tuning or label leakage. Negatives remain unscored for refusal. `--require-source-hit-target` is available for the reranking stage; the default unified verifier still checks the unchanged lexical baseline17/20 and does not claim full prototype acceptance.
+
+Pretrained weights/tokenizer/card/bundles remain in ignored work/; restore them explicitly after environment replacement. CI exercises authored numeric graphs only. Full grounding/refusal/engineering-answer quality is NOT_RUN. See [stage report](../docs/stages/2026-11-06-local-reranking.md) for provenance, review, commands and limitations.

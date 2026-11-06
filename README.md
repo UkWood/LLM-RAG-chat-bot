@@ -2,7 +2,7 @@
 
 Отдельный технический консультант: ответы только по разрешённым материалам с источниками и отказом при недостатке доказательств. Статический интерфейс Astro, отдельный FastAPI backend, локальная KB и сменный LLM provider.
 
-**Стадия:** M1/ingestion/snapshot baseline слиты в main. Добавлены local indexes и measured BM25: Top-5 source hit17/20=85%; цель100% пока не пройдена. Actual E5 experiment: dense18/20=90%, hybrid17/20=85%; reranking/grounding/refusal ещё не измерены. Реальные источники пока не допущены к индексации/облачной отправке. Полная production-архитектура остаётся proposed.
+**Стадия:** M1/ingestion/snapshot baseline слиты в main. Добавлены local indexes и measured BM25: Top-5 source hit17/20=85%; lexical target100% пока не пройден. Actual E5 experiment: dense18/20=90%, hybrid17/20=85%; Actual local reranker достиг20/20 и evidence recall100% на том же synthetic наборе; grounding/refusal ещё не измерены. Реальные источники пока не допущены к индексации/облачной отправке. Полная production-архитектура остаётся proposed.
 
 ## Память проекта
 
@@ -88,3 +88,5 @@ Qdrant SDK local CPU memory/path проверен с контрольными ve
 [Evaluation/модельный manifest и команды](evaluation/README.md), [пример manifest](config/embeddings/local-onnx.example.json), [ADR-0006](docs/decisions/0006-local-retrieval.md), [отчёт этапа3b](docs/stages/2026-11-05-local-retrieval.md).
 
 [Подготовка E5 и actual dense/hybrid experiment](docs/stages/2026-11-06-model-preparation.md). Это измерение synthetic retrieval, не приёмка grounded chatbot и не production model selection.
+
+[Local reranking: реализация, actual benchmark и ограничения](docs/stages/2026-11-06-local-reranking.md). Retrieval target на synthetic наборе пройден; это не приёмка grounded chatbot.

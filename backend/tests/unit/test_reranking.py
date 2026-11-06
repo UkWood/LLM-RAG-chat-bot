@@ -57,9 +57,15 @@ class RerankingTests(unittest.TestCase):
         self.assertFalse(any(c.source_id==target for c in trace.input_candidates))
 
     def test_capture_is_stable_when_new_active_indexes_published(self):
+        from unit.test_evaluation import CORPUS
+        from saturn_ai.ingestion.registry import load_registry
+        from saturn_ai.ingestion.pipeline import build_fixture
+        registry=load_registry((CORPUS/'registry.json').read_bytes())
+        alternate=build_snapshot(build_fixture(CORPUS,registry,registry.source_snapshot),registry)
+        self.assertNotEqual(alternate.snapshot_id,self.snapshot.snapshot_id)
         original=self.index.search
         def republish(*args):
-            self.service.publish(IndexSet(self.snapshot,BM25Index(self.snapshot)))
+            self.service.publish(IndexSet(alternate,BM25Index(alternate)))
             return original(*args)
         with patch.object(self.index,'search',side_effect=republish):
             result=self.service.rerank('RS-485',Scorer(),mode='lexical')
