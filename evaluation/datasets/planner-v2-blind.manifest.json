@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "profile": "planner_v2_blind",
+  "dataset_sha256": "3889e584af3687ac6c686a3e80aeb172f429534f257d457c19ab5251469219e1",
+  "snapshot_id": "820b9c032a001af50276178bfa765e414667b1e8046ad2070f0a68122af1c680",
+  "registry_revision": "9d1502c38c1557c680cfafd2a717b5aaa325f7bde07b28ef1d296a56393b8cf8",
+  "case_count": 40,
+  "group_counts": {
+    "single_field": 8,
+    "multi_need": 4,
+    "source_scoped": 4,
+    "document_reference": 4,
+    "relationship_type": 4,
+    "mandatory_refusal": 8,
+    "ambiguous_invalid": 8
+  },
+  "status_counts": {
+    "answered": 24,
+    "refused": 12,
+    "clarification": 4
+  },
+  "author_provenance": "Independent fresh-context author; accepted capability specification and canonical synthetic fixture/registry plus ingestion/snapshot contracts only; no old dataset, report, test, planner, gate, plan, or candidate implementation consulted. All evidence checked against exact canonical parser output and typed reference metadata. Synthetic sources confer no real approvals."
+}

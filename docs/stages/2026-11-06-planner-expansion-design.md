@@ -1,0 +1,15 @@
+# Planner expansion design — 2026-11-06
+
+Status: proposed design, no implementation or new evaluation executed. Base main after merged PR8 e0e44e54996b9f9e713899f7949746f27e33485b; main CI42209130861 verified success. Current bounded grounded pipeline quality8/20 positives, correct refusal/clarification10/10, target unmet. Saturn-Main-Site strictly read-only, no registry/corpus/dataset/model changes.
+
+[Proposed design](../superpowers/specs/2026-11-06-planner-expansion-design.md): compositional typed requirements, canonical fact projections/spec/table provenance and explicit backend references. Existing capture/policy/claim/citation integrity preserved; multiple requirements all-or-nothing. Alternatives (semantic router over current CPU models or new generative planner) assessed and deferred for separate quality/model gates. This is a bounded coverage expansion, not universal language understanding.
+
+Old calibration cases and current schema/contracts inspected for design; old exposed held_out is no longer new independent evidence. Existing30cases/reports remain immutable regression. New proposed40case blind set must be authored/reviewed independently from canonical KB/capability schema before code/config freeze, hidden from implementer until first evaluation. No dataset has been authored in this design task. Fresh-set quality gate proposed before results:24/24 supported positives and16/16 required refusal/ambiguity outcomes correct, with no invalid claims/citations or incomplete needs. Progress below this goal does not pass acceptance; full prototype acceptance is not lowered or granted.
+
+Independent fresh-context builder found3 contract decisions: quotation-less relationship/entity metadata, list cardinality/completeness, and source-kind/table combination. Proposals resolved in spec: no parser/snapshot changes, metadata selector hints or explicit backend reference variants; list groups compared as complete sets, partial unions disallowed; orthogonal document-kind/representation constraints, unsupported manual table extraction refuses. Reviewer found blind protocol feasible and did not inspect old held_out contents.
+
+Implementation is paused at proposed design, not claimed complete. After owner accepts: detailed implementation plan, independent blind author/label review, code/config freeze, TDD/actual comparison, whole-branch review, CI. No new cloud/source approvals or automatic merge.
+
+Documentation verification: `python3 scripts/check_project.py` PASS;5 project registry/policy tests PASS; `git diff --check` clean. Application suite was not rerun for this documentation-only proposal; no new model/answer-quality outcome is claimed.
+
+Публикация: [PR #9](https://github.com/UkWood/LLM-RAG-chat-bot/pull/9), feat/planner-expansion-design, initial commit1b14fb9. Design proposed, PR open/unmerged. До принятия владельцем код/new dataset не создавать. Актуальный CI смотреть на текущем head PR9; локальные doc checks не заменяют remote CI и не являются benchmark quality.

@@ -1,5 +1,26 @@
 # Состояние проекта
 
+## Planner V2 corrective revision — 2026-11-06
+
+Owner requested continuing after PR10 merge review found two Important blockers: discarded `нет` and protocol qualifiers. Corrections reject negation, unsupported Modbus/TCP/RTU qualification and modification requests outside supported lookup bindings before generation; unqualified protocol queries remain supported, V1 default unchanged. [Corrective report](stages/2026-11-06-planner-v2-corrections.md), [plan addendum](superpowers/plans/2026-11-06-typed-planner-v2.md). Final local verification5project+168backend PASS in both environments (base11optional skips/optional0), calibration14/14 positives20/20statuses without V1-positive regression; independent review fix pass complete. Current-head remote CI/merge outcome must be checked in PR10.
+
+This is a post-blind corrective version. First experiment7bc6f11/dataset/START/report are immutable historical evidence; old8/24+14/16 numbers do NOT measure the corrected runtime. Its independent quality is NOT_RUN, prototype NOT accepted. No consumed-set replay/tuning or new safety/generalization claim. Fresh independent data/freeze needed before a future quality claim. Real sources/cloud unchanged; Saturn-Main-Site strictly READ-ONLY. Historical entries below describe earlier revisions.
+
+
+## Typed planner V2: first blind assessment — 2026-11-06
+
+Owner-approved PR9 design implemented in feat/typed-planner-v2; v1 remains default. Freeze7bc6f118e820fc5d4f648fb22997ad65d9e1c99c; independently authored/reviewed40case dataset consumed once after exclusive START. Actual V2 positives8/24, negative/ambiguity14/16, all22/40; V1 positives0/24, negative/ambiguity12/16. V2 emitted quote support/canonical validity1.0,unsafe0,errors0; quality target FALSE, full prototype NOT accepted. Calibration14/14 positives did not generalize. No code/config/grader changes after first result. [Stage report](stages/2026-11-06-typed-planner-v2.md), [first report](../evaluation/reports/2026-11-06-planner-v2-first-blind.json), [ADR0009](decisions/0009-typed-planner-v2.md).
+
+Final local verification5project+161backend PASS in both environments (base11optional skips/optional0); independent review fixes RED→GREEN. Existing local bundles only, no new dependencies/approvals/cloud; Saturn-Main-Site strictly READ-ONLY. Next: separately designed/calibrated broader planner and fresh independent evaluation, not tuning on consumed cases or UI/cloud masking current coverage. Historical proposed/pending entries below superseded; publication/CI evidence appended after actual results.
+
+
+## Актуально: после merge PR8, planner design — 2026-11-06
+
+PR8 MERGED в maine0e44e54996b9f9e713899f7949746f27e33485b; main CI42209130861 SUCCESS проверен. Предыдущие open/unmerged сведения ниже исторические. Grounding quality остаётся8/20 positives, targetFalse; source-hit20/20 не означает answer20/20.
+
+Подготовлен [proposed typed planner/projection design](superpowers/specs/2026-11-06-planner-expansion-design.md), [design report](stages/2026-11-06-planner-expansion-design.md). Код/новый dataset/benchmark НЕ создавались. Требуется принятие дизайна перед implementation. Рекомендация: compositional typed requirements, complete canonical fact groups, separate backend references, fresh independent blind set; semantic/generative router отдельно. Старые30cases сохранять как regression, tuning только calibration, не использовать exposed held_out как независимое доказательство. Новый proposed quality gate:24/24 positives +16/16 negative/ambiguity outcomes; меньший результат не является приёмкой. Saturn-Main-Site READ-ONLY, real sources/cloud по-прежнему закрыты.
+
+
 ## Текущий этап5: evidence gate — 2026-11-06
 
 PR #7 MERGED в main861871b609f76ecad065e4b635e86ec3638b2cc8 после проверки clean head/all CI success; дальнейший merge нового PR не разрешён автоматически. Реализован bounded canonical evidence gate + Fake provider + exact claim/citation validation. [Design](superpowers/specs/2026-11-06-evidence-gate-design.md), [plan](superpowers/plans/2026-11-06-evidence-gate.md), [ADR0008](decisions/0008-evidence-gate.md), [stage report](stages/2026-11-06-evidence-gate.md).
@@ -81,3 +102,9 @@ Verified remote CI: [push42168613444](https://github.com/UkWood/LLM-RAG-chat-bot
 [PR #8](https://github.com/UkWood/LLM-RAG-chat-bot/pull/8), branch feat/evidence-gate, implementation commitf01ca77. PR открыт, НЕ слит; предыдущий PR7 merged861871b и main CI42169517262 SUCCESS. Текущие actual push/PR checks доступны в PR8; не выводить CI success из локальных тестов и не считать green CI quality acceptance.
 
 Финальный actual replay после атомарного policy fix совпал с saved report по metrics/cases/model/snapshot/dataset identities. Единая optional команда завершилась strict_grounding_exit=1 именно из-за targetFalse, после133PASS backend tests; base verifier exit0. Ограниченная grammar/held_out0/6/false refusals не скрываются. Реальные source approvals/cloud/Saturn-Main-Site не менялись.
+
+Публикация: [PR #9](https://github.com/UkWood/LLM-RAG-chat-bot/pull/9), feat/planner-expansion-design, initial commit1b14fb9. Design proposed, PR open/unmerged. До принятия владельцем код/new dataset не создавать. Актуальный CI смотреть на текущем head PR9; локальные doc checks не заменяют remote CI и не являются benchmark quality.
+
+## Publication
+
+[Implementation PR #10](https://github.com/UkWood/LLM-RAG-chat-bot/pull/10), branch feat/typed-planner-v2. PR open/unmerged; implementation freeze7bc6f11, first-result/report commitc0f0f3f. Docs-only PR9 superseded by this implementation including its owner-accepted design. Actual remote checks are available on the current head in PR10; local PASS is not a remote-CI claim or quality acceptance. The24/24+16/16 quality target remains FAILED. No runtime/config/grader change after freeze.

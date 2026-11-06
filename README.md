@@ -92,3 +92,17 @@ Qdrant SDK local CPU memory/path проверен с контрольными ve
 [Local reranking: реализация, actual benchmark и ограничения](docs/stages/2026-11-06-local-reranking.md). Retrieval target на synthetic наборе пройден; это не приёмка grounded chatbot.
 
 [Bounded evidence gate и extractive grounded pipeline](docs/stages/2026-11-06-evidence-gate.md):8/20 positives answered, обязательные отказ/уточнение10/10, claims/citations1.0 для выданных ответов. Grounding target и полная prototype acceptance НЕ пройдены; source-hit20/20 не означает answer coverage20/20.
+
+## Opt-in typed planner V2
+
+V2 adds bounded multi-need plans, canonical table/spec/relation projections and separate backend metadata references. V1 remains default. No new approvals, provider or dependencies. [Design](docs/superpowers/specs/2026-11-06-planner-expansion-design.md), [stage/protocol/results](docs/stages/2026-11-06-typed-planner-v2.md). Synthetic code checks are separate from blind quality acceptance.
+
+```bash
+PYTHONPATH=backend/src work/venv/bin/python -m saturn_ai.grounding --planner-version v2 --corpus fixtures/evaluation --model-dir work/multilingual-e5-small --reranker-dir work/mmarco-reranker --query 'Питание и интерфейсы EDU-410?'
+```
+
+Requires the existing explicitly prepared local bundles; no automatic downloads. V2 emits schema_version=2 with requirement bindings and backend references; engineering claims remain exact canonical quotations. Unsupported clauses/qualifiers or incomplete evidence refuse the entire request. This is bounded structured interpretation, not general engineering advice. The fresh blind benchmark is single-use after freeze; follow the stage commands, never rerun it as routine CI.
+
+First frozen40case blind assessment: V2 fully correct8/24 positives and14/16 negative/ambiguity outcomes; V1 0/24 and12/16. V2 emitted support/canonical validity1.0, but the24/24+16/16 quality gate FAILED. Prototype not accepted. No post-result tuning; this set is now exposed regression evidence. Calibration14/14 positives is not blind generalization.
+
+Post-review corrective revision rejects `нет`, unsupported literal Modbus/TCP/RTU qualifiers and modification requests outside supported lookup bindings instead of discarding them. Unqualified protocol questions remain supported. The first blind score above is historical for frozen7bc6f11, not a measurement of this corrected runtime: independent quality NOT_RUN, prototype not accepted. Dataset/START/report unchanged, no blind rerun. [Corrective stage report](docs/stages/2026-11-06-planner-v2-corrections.md).
