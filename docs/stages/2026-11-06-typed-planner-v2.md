@@ -31,3 +31,24 @@ Freeze requires clean committed tree; execution writes exclusive tracked START b
 Final code verification PASS:5 project +161 backend tests in both environments; base11 optional skips, optional0 skips. Both full verifier commands exited0 after final qualifier fix. Independent preblind review complete; all Important findings fixed RED→GREEN. Actual calibration: v1 positives8/14/status14/20; v2 positives14/14/status20/20, no v1-positive regressions, canonical output validity1.0. Strict pointer recall v1.428571/v2.714286 remains distinct from requirement correctness; reference-only outputs do not fabricate quotes. [Calibration report](../../evaluation/reports/2026-11-06-planner-v2-calibration.json). First blind result is pending at this commit; no blind quality claim. New quality target24/24positive+16/16negative/ambiguity; full prototype/real sample/natural-language entailment remain unaccepted.
 
 Network recheck2026-11-06: both https://huggingface.co and https://us.aws.cdn.hf.co returned HTTP200 through the configured proxy. No new artifacts downloaded.
+
+## First frozen blind result — quality target FAILED
+
+Freeze commit7bc6f118e820fc5d4f648fb22997ad65d9e1c99c. Exclusive START2026-11-06T16:20:21.884880+00:00 precedes parsing/model evaluation. [First-run report](../../evaluation/reports/2026-11-06-planner-v2-first-blind.json) retains all40 cases; experiment_valid=true,0errors,0unexecuted,80system runs. Strict command exited1 for new_quality_target_met=false. No runtime/config/grader changes after this result. Dataset is consumed; no rerun/tuning can supply another independent claim.
+
+| Same new40case rubric | V1 | V2 |
+|---|---:|---:|
+| Fully correct positives |0/24|8/24|
+| Correct negative/ambiguity outcomes |12/16|14/16|
+| All fully correct |12/40 (30%)|22/40 (55%)|
+| False refusals among positives |21/24|16/24|
+| False clarifications among positives |3/24|0/24|
+| Mean requirement coverage |0|.333333|
+| Strict conjunctive gold-pointer recall |0|.208333|
+| Unsafe/incomplete emitted answers by rubric |0|0|
+| Canonical output validity |1.0|1.0|
+| Verbatim support of emitted claims |N/A (none)|1.0|
+
+V2 positives by group: single_field3/8, multi_need0/4, source_scoped2/4, document_reference2/4, relationship_type1/4. Mandatory refusals8/8; ambiguous_invalid6/8. All12 required refusals match, but2/4 required clarifications incorrectly refuse. Positive misses:14unsupported_clause and2incomplete_evidence. A valid canonical quote cannot cure these false refusals. Correct emitted answers do not imply complete open-language understanding.
+
+V2 improves over V1 on this new set but the24/24+16/16 acceptance gate fails substantially. Calibration14/14 did not generalize; do not present it as answer-quality acceptance. Full prototype remains NOT accepted, default V1 unchanged. This first blind set becomes exposed regression evidence only. Next work needs a separately designed/calibrated planning approach and a fresh independently authored evaluation set; do not patch the consumed cases and report a new blind score. Real sample, natural-language entailment and production remain NOT_RUN.

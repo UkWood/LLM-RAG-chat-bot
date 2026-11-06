@@ -1,0 +1,14 @@
+{
+  "state": "started",
+  "utc": "2026-11-06T16:20:21.884880+00:00",
+  "schema_version": 1,
+  "source_commit": "7bc6f118e820fc5d4f648fb22997ad65d9e1c99c",
+  "config_sha256": "773d49d8c217d91f8ca30f6408336f1cd14aecec5b1b3ab3cd9c3b56bf4b8bb6",
+  "projection_sha256": "b6dcd2f55a2d801b4033e7eae2771527c6d92261e7c06eaa4116d43caf92aa21",
+  "dataset_sha256": "3889e584af3687ac6c686a3e80aeb172f429534f257d457c19ab5251469219e1",
+  "author_manifest_sha256": "e3150493c1280cc9d4b4077afd44bc7d2c62578aa4f928a77482c8c849b292d7",
+  "model_manifest_sha256": "8457aec437dc0c9a70d48a80e12f1b6911cddfbb84387ac24279785977e4ba77",
+  "reranker_manifest_sha256": "a64e3c0397020fbb6820af70cdf5d82754db28adecb51246aa4d1189e72bc368",
+  "snapshot_id": "820b9c032a001af50276178bfa765e414667b1e8046ad2070f0a68122af1c680",
+  "protocol": "pre-implementation independent author/review; first blind run only after this freeze"
+}

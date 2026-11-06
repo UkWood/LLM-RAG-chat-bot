@@ -1,8 +1,10 @@
 # Состояние проекта
 
-## Typed planner V2 implementation — 2026-11-06
+## Typed planner V2: first blind assessment — 2026-11-06
 
-Owner accepted PR9 design and requested implementation. Branch feat/typed-planner-v2 implements opt-in multi-need planning, canonical projections and backend references; v1 remains default. [ADR0009](decisions/0009-typed-planner-v2.md), [stage report](stages/2026-11-06-typed-planner-v2.md). Independent40case set authored/reviewed before implementation; payload withheld from implementer until final freeze/first START. Full checks/calibration/first blind result are pending; no new quality acceptance. Subsequent historical proposed/no-code entries below are superseded. Saturn-Main-Site READ-ONLY, real approvals/cloud unchanged.
+Owner-approved PR9 design implemented in feat/typed-planner-v2; v1 remains default. Freeze7bc6f118e820fc5d4f648fb22997ad65d9e1c99c; independently authored/reviewed40case dataset consumed once after exclusive START. Actual V2 positives8/24, negative/ambiguity14/16, all22/40; V1 positives0/24, negative/ambiguity12/16. V2 emitted quote support/canonical validity1.0,unsafe0,errors0; quality target FALSE, full prototype NOT accepted. Calibration14/14 positives did not generalize. No code/config/grader changes after first result. [Stage report](stages/2026-11-06-typed-planner-v2.md), [first report](../evaluation/reports/2026-11-06-planner-v2-first-blind.json), [ADR0009](decisions/0009-typed-planner-v2.md).
+
+Final local verification5project+161backend PASS in both environments (base11optional skips/optional0); independent review fixes RED→GREEN. Existing local bundles only, no new dependencies/approvals/cloud; Saturn-Main-Site strictly READ-ONLY. Next: separately designed/calibrated broader planner and fresh independent evaluation, not tuning on consumed cases or UI/cloud masking current coverage. Historical proposed/pending entries below superseded; publication/CI evidence appended after actual results.
 
 
 ## Актуально: после merge PR8, planner design — 2026-11-06

@@ -102,3 +102,5 @@ PYTHONPATH=backend/src work/venv/bin/python -m saturn_ai.grounding --planner-ver
 ```
 
 Requires the existing explicitly prepared local bundles; no automatic downloads. V2 emits schema_version=2 with requirement bindings and backend references; engineering claims remain exact canonical quotations. Unsupported clauses/qualifiers or incomplete evidence refuse the entire request. This is bounded structured interpretation, not general engineering advice. The fresh blind benchmark is single-use after freeze; follow the stage commands, never rerun it as routine CI.
+
+First frozen40case blind assessment: V2 fully correct8/24 positives and14/16 negative/ambiguity outcomes; V1 0/24 and12/16. V2 emitted support/canonical validity1.0, but the24/24+16/16 quality gate FAILED. Prototype not accepted. No post-result tuning; this set is now exposed regression evidence. Calibration14/14 positives is not blind generalization.
