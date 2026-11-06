@@ -50,3 +50,7 @@ PYTHONPATH=backend/src work/venv/bin/python -m saturn_ai.evaluation --stage rera
 See evaluation/README.md for explicit preparation/diagnostic CLI. Numeric pair tokenization/truncation/shape/external-data/hash-load-swap, directory collision/cleanup/provenance replacement, canonical policy/revocation/capture, nDCG/oracle and no-label-leak tests added through RED→GREEN. Intermediate bugs: manual512token expected sum corrected2552; positive empty-gold guard moved before legacy division after reproduced ZeroDivisionError. Neither changes retrieval settings. ORT telemetry-ID persistence warning observed; runtime disables telemetry and inference completed. Actual dependencies unchanged.
 
 Validation/review/publication results recorded after their actual runs. Next stage: evidence gate/grounded pipeline with FakeLLMProvider; do not use score thresholds as truth or allow pending real materials. ADR-0007 records bounded decision.
+
+## Фактическая проверка перед review
+
+После реализации: base verifier5project+111backend PASS (11optional skips), optional verifier5+111PASS без skips. Targeted reranking8, pair-model6, evaluator4tests PASS; positive empty-gold regression GREEN после исправления. Verifier включает actual lexical17/20 и preflight, без pretrained downloads. Diagnostic CLI проверен на официальных локальных bundles, выдаёт IDs/ranks/scores, answer_evaluation=not_run и без raw text по умолчанию. Exact dataset/snapshot identities совпали с предыдущим report. `git diff --check` clean; tracked models/work/index dumps отсутствуют.
