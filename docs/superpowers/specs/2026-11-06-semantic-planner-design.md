@@ -1,6 +1,6 @@
 # Bounded semantic planning and need-directed retrieval — proposed design
 
-2026-11-06. Status: proposed detailed design, not approved for implementation. Owner selected the approach using the existing local reranker after the alternatives were presented in chat. The concrete contracts below are implementer proposals for review. Base main bb16530e5b9a4943abae5c1b0f526cb218f46b2d, merged PR10; main CI42256501265 SUCCESS verified. Saturn-Main-Site strictly read-only.
+2026-11-06. Status: accepted by owner in chat 2026-11-06, explicit implementation instruction received. Owner selected the approach using the existing local reranker after the alternatives were presented in chat. The concrete contracts below were approved with PR11 design. Base main bb16530e5b9a4943abae5c1b0f526cb218f46b2d, merged PR10; main CI42256501265 SUCCESS verified. Saturn-Main-Site strictly read-only.
 
 ## Goal and evidence
 
@@ -14,7 +14,7 @@ This experiment adds a bounded proposal of typed predicates plus retrieval for e
 2. Selected direction: a role-aware bounded parser plus semantic predicate proposals using the existing local mmarco cross-encoder, with calibrated abstention and canonical all-needs validation. Uses existing CPU resources. Its retrieval logits are not probabilities or entailment; feasibility and safety on held-out questions remain unproven. Stop the experiment if calibration cannot produce useful coverage without incorrect answers.
 3. A new constrained generative planner may handle broader language, but needs a separately chosen/licensed model, runtime/dependencies, resource budget and semantic validation. Outside this stage; do not download one as a fallback.
 
-The user selected direction2; exact bounds, data protocol and acceptance below remain proposed until design approval.
+The user selected direction2; exact bounds, data protocol and acceptance below were explicitly approved.
 
 ## Role-aware question contract
 

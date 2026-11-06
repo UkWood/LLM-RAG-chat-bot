@@ -1,6 +1,6 @@
 # ADR-0010: bounded semantic predicate proposal — proposed
 
-Status: proposed detailed design. Owner selected the existing-local-reranker approach, not yet the concrete implementation contracts. [Design](../superpowers/specs/2026-11-06-semantic-planner-design.md), [stage](../stages/2026-11-06-semantic-planner-design.md).
+Status: accepted bounded experiment; owner approved detailed PR11 design and explicitly requested implementation. [Design](../superpowers/specs/2026-11-06-semantic-planner-design.md), [stage](../stages/2026-11-06-semantic-planner-design.md).
 
 Keep deterministic roles/entity/source/qualifier constraints; use existing mmarco only to propose a schema predicate with calibrated abstention. Scores cannot prove semantics/evidence. Retrieve per resolved need and select a bounded canonical complete-group cover before a V3 gate that validates the exact pinned group/reference bindings while preserving all current all-needs/current-policy invariants. V2 public behavior remains unchanged. Preserve V1 default and explicit opt-in modes, no automatic fallback or generative/new-model dependency.
 
