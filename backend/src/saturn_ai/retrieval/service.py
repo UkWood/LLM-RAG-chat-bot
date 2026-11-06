@@ -55,6 +55,20 @@ class RetrievalService:
         allowed = frozenset(c.chunk_id for c in self.catalog.eligible_snapshot_chunks(indexes.snapshot, 'local_index'))
         lexical = indexes.lexical.search(query, allowed, 40) if mode != 'dense' else ()
         dense = indexes.dense.search(query, allowed, 40) if mode != 'lexical' else ()
+        # Validate raw channels before RRF can replace scores/identity or collapse IDs.
+        mapping={c.chunk_id:c for c in indexes.snapshot.chunks}
+        for channel,candidates in (('lexical',lexical),('dense',dense)):
+            if not isinstance(candidates,(tuple,list)) or len(candidates)>40:
+                raise ValueError('Invalid bounded retrieval channel')
+            seen=set()
+            for rank,candidate in enumerate(candidates,1):
+                if (not isinstance(candidate,Candidate) or candidate.chunk_id not in mapping
+                        or candidate.chunk_id in seen or candidate.source_id!=mapping[candidate.chunk_id].source_id
+                        or candidate.snapshot_id!=indexes.snapshot.snapshot_id or candidate.channel!=channel
+                        or type(candidate.rank) is not int or candidate.rank!=rank
+                        or type(candidate.score) not in (int,float) or not isfinite(candidate.score)):
+                    raise ValueError('Invalid raw retrieval channel identity/rank/score')
+                seen.add(candidate.chunk_id)
         # Re-check after queries: a source may have been revoked while an adapter ran.
         current = frozenset(c.chunk_id for c in self.catalog.eligible_snapshot_chunks(indexes.snapshot, 'local_index'))
         lexical = tuple(replace(c,rank=rank) for rank,c in enumerate((c for c in lexical if c.chunk_id in current),1))

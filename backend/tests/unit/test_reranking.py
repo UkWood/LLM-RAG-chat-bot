@@ -95,3 +95,23 @@ class RerankingTests(unittest.TestCase):
             with self.assertRaises(ValueError):validate_pairs(query,passages)
         self.assertIsNone(validate_pairs('q',[]))
         with self.assertRaises(ValueError):self.service.rerank('q',scorer,mode='invalid')
+
+    def test_hybrid_rejects_corrupt_channel_candidates_before_fusion(self):
+        from unit.test_retrieval import TestEncoder
+        from saturn_ai.retrieval.dense import QdrantIndex
+        dense=QdrantIndex(self.snapshot,TestEncoder())
+        self.service.publish(IndexSet(self.snapshot,self.index,dense))
+        corruptions=[lambda r:r+r[:1],lambda r:(replace(r[0],snapshot_id='0'*64),)+r[1:],
+                     lambda r:(replace(r[0],score=float('nan')),)+r[1:],
+                     lambda r:(replace(r[0],rank=999),)+r[1:],
+                     lambda r:(replace(r[0],chunk_id='invented'),)+r[1:]]
+        try:
+            for channel in (self.index,dense):
+                original=channel.search
+                for mutate in corruptions:
+                    scorer=Scorer()
+                    with self.subTest(channel=type(channel).__name__,mutation=mutate), \
+                         patch.object(channel,'search',side_effect=lambda *a:mutate(original(*a))):
+                        with self.assertRaises(ValueError):self.service.rerank('RS-485',scorer)
+                    self.assertEqual(scorer.seen,[])
+        finally:dense.close()

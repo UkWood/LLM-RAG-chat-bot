@@ -27,29 +27,29 @@
 
 Files: retrieval/reranking.py (Reranker protocol, RerankTrace), retrieval/service.py (captured search helper + rerank), backend/tests/unit/test_reranking.py.
 Interfaces: Reranker.identity dict; score_pairs(query,list[str])->list[float]; service.rerank(query,reranker,mode='hybrid')->RerankTrace(snapshot_id,mode,baseline,input_candidates,scored,final,reranker_identity,scoring_seconds). baseline SearchTrace final limited5; input candidates<=30; final<=5.
-- [ ] Write tests for score ordering/tie rank, canonical text, invalid query/limits/score count/NaN/Inf/duplicate/wrong source/snapshot, empty pool; policy revoke during scorer and active publication capture.
-- [ ] Run `PYTHONPATH=backend/src work/venv/bin/python -m unittest discover -s backend/tests -p test_reranking.py -v`; expect RED absent rerank.
-- [ ] Implement typed trace + strict validation and shared captured search, preserve existing search outputs. Same command expected GREEN.
-- [ ] Commit Task1 and ledger results.
+- [x] Write tests for score ordering/tie rank, canonical text, invalid query/limits/score count/NaN/Inf/duplicate/wrong source/snapshot, empty pool; policy revoke during scorer and active publication capture.
+- [x] Run `PYTHONPATH=backend/src work/venv/bin/python -m unittest discover -s backend/tests -p test_reranking.py -v`; expect RED absent rerank.
+- [x] Implement typed trace + strict validation and shared captured search, preserve existing search outputs. Same command expected GREEN.
+- [x] Commit Task1 and ledger results.
 
 ### Task 2: pinned ONNX pair adapter and explicit preparation
 
 Files: retrieval/reranker_model.py, scripts/prepare_local_reranker.py, config/rerankers/mmarco-minilm.profile.json, tests/unit/test_reranker_model.py; embeddings.py only shared low-level byte graph loader extraction if needed.
 Interfaces: LocalONNXReranker(directory), read_reranker_provenance(directory,require_semantic=True,identity=None), prepare_local_reranker(profile_raw,model_path,tokenizer_path,card_path,license_path,destination)->smoke; load_semantic_reranker(directory)->(scorer,provenance) rejects complete bundle swap.
-- [ ] Write numeric actual CPU graph tests (dynamic pair batch/token shapes), pair tokenization/truncation/pad, shape/finite rejection, drift, external-data, runtime_contract benchmark guard, bundle swap, collision/symlink/cleanup.
-- [ ] Run targeted test_reranker_model.py; expect RED missing module.
-- [ ] Implement strict versioned profile + manifest with hashes, exact-byte ORT CPU, separate pair scorer; reuse bounded file reads/atomic publish, no embedding mean pooling. Same command expected GREEN in optional profile, numeric tests skipped in base.
-- [ ] Explicit operator curl pinned official checkpoint/card/config/tokenizer; review graph/format/license evidence, prepare under work/. Record exact blocker if incompatibility, no fallback/guess.
-- [ ] Commit Task2; weights never tracked.
+- [x] Write numeric actual CPU graph tests (dynamic pair batch/token shapes), pair tokenization/truncation/pad, shape/finite rejection, drift, external-data, runtime_contract benchmark guard, bundle swap, collision/symlink/cleanup.
+- [x] Run targeted test_reranker_model.py; expect RED missing module.
+- [x] Implement strict versioned profile + manifest with hashes, exact-byte ORT CPU, separate pair scorer; reuse bounded file reads/atomic publish, no embedding mean pooling. Same command expected GREEN in optional profile, numeric tests skipped in base.
+- [x] Explicit operator curl pinned official checkpoint/card/config/tokenizer; review graph/format/license evidence, prepare under work/. Record exact blocker if incompatibility, no fallback/guess.
+- [x] Commit Task2; weights never tracked.
 
 ### Task 3: evaluation, CLI, diagnostics
 
 Files: evaluation/reranking.py, evaluation/__main__.py, retrieval/__main__.py, tests/unit/test_reranking_evaluation.py.
 Interfaces: evidence_ndcg(case,snapshot,final)->float|None; run_reranking_evaluation(root,dataset_path,model_directory,reranker_directory)->report. CLI --stage reranking --mode hybrid --model-dir --reranker-dir; require-source-hit-target remains explicit gate.
-- [ ] Write hand-computed IDCG all snapshot relevant chunks, missing pool gold, duplicate chunks, negative null, binary multiple evidence matches, pool coverage, baseline/reranked metrics/no label leakage and runtime_contract rejection tests; RED.
-- [ ] Implement separate measured report with identity/config/provenance/software, source/MRR/recall/nDCG, top30 IDs/scores, timing separately; ground/refusal not_run. GREEN targeted.
-- [ ] Actual fixed E5+reranker run; preserve poorer result as-is, no dataset/config tuning. No checkpoint -> precise blocker/not_run.
-- [ ] Add optional numeric CI, CLI docs/ADR/stage/status/handoff, commit.
+- [x] Write hand-computed IDCG all snapshot relevant chunks, missing pool gold, duplicate chunks, negative null, binary multiple evidence matches, pool coverage, baseline/reranked metrics/no label leakage and runtime_contract rejection tests; RED.
+- [x] Implement separate measured report with identity/config/provenance/software, source/MRR/recall/nDCG, top30 IDs/scores, timing separately; ground/refusal not_run. GREEN targeted.
+- [x] Actual fixed E5+reranker run; preserve poorer result as-is, no dataset/config tuning. No checkpoint -> precise blocker/not_run.
+- [x] Add optional numeric CI, CLI docs/ADR/stage/status/handoff, commit.
 
 ### Task 4: review, verify, publish
 

@@ -54,3 +54,13 @@ Validation/review/publication results recorded after their actual runs. Next sta
 ## Фактическая проверка перед review
 
 После реализации: base verifier5project+111backend PASS (11optional skips), optional verifier5+111PASS без skips. Targeted reranking8, pair-model6, evaluator4tests PASS; positive empty-gold regression GREEN после исправления. Verifier включает actual lexical17/20 и preflight, без pretrained downloads. Diagnostic CLI проверен на официальных локальных bundles, выдаёт IDs/ranks/scores, answer_evaluation=not_run и без raw text по умолчанию. Exact dataset/snapshot identities совпали с предыдущим report. `git diff --check` clean; tracked models/work/index dumps отсутствуют.
+
+## Independent review and fix pass
+
+Whole branch reviewed independently against main92e7022. Reviewer independently recomputed saved source-hit20/20 vs17/20 and nDCG.8675857812125146 vs.6297210925935836 from snapshot/dataset and report IDs. Important finding reproduced: RRF could overwrite wrong snapshot/NaN score and collapse duplicate adapter candidates before rerank validated final results; duplicate contributions could change candidate pool. Regression hybrid tests cover both lexical/dense channels and wrong snapshot/rank/unknown chunk/NaN/duplicates. RED allowed malformed candidates to reach scorer; GREEN after raw channel identity/rank/score/uniqueness validation before normalization/fusion. Nine orchestration tests PASS. No additional Important/Critical findings.
+
+Reviewer did not judge legal clearance, production language quality, grounded-answer acceptance or remote CI. Rulings: these remain outside claimed acceptance; license is declaration-only, measured quality covers the frozen synthetic retrieval set, grounding/refusal NOT_RUN, remote CI must be checked separately. Cost of expanding claims would be unverified legal/engineering quality, so none are expanded. Minor unchecked plan/status entries are routine completion bookkeeping, updated as actual milestones finish.
+
+Implementation ruling: ledger tracked manually under ignored work/local-reranking/ because cloud skill helper scripts are not locally installed; cost is absence of helper automation, compensated by saved command logs/commits. Existing verified-byte single-file graph loader reused without changing embedding pooling or global refactor. No new dependency or hidden model fallback.
+
+После review fix полный verifier повторён: base5project+112backend PASS (11optional skips), optional5+112PASS без skips, lexical17/20 unchanged. Targeted orchestration9PASS. Модельный replay после fix проверяется отдельно; исходные report metrics independently recomputed reviewer. Полная validation проверяет текущий code tree, а не выводится из предыдущего green run.
