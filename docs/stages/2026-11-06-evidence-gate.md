@@ -62,3 +62,9 @@ Main after PR7 merge: [CI42169517262](https://github.com/UkWood/LLM-RAG-chat-bot
 ## Final local code verification
 
 After atomic policy fix: base verifier5project+133backend PASS (11optional skips), optional verifier5+133PASS without skips; lexical17/20 unchanged. Targeted gate8/application9/evaluator4 (21total) PASS; policy-race gate and both provider boundary tests observed RED before fix and GREEN after it. Grounded CLI actual local model smoke answered interfaces with2canonical claims/citations. Full optional command also executes actual grounded quality and intentionally returns1 if target unmet; final model replay result recorded separately. No code/quality acceptance is inferred from doc checks or install alone.
+
+## Публикация
+
+[PR #8](https://github.com/UkWood/LLM-RAG-chat-bot/pull/8), branch feat/evidence-gate, implementation commitf01ca77. PR открыт, НЕ слит; предыдущий PR7 merged861871b и main CI42169517262 SUCCESS. Текущие actual push/PR checks доступны в PR8; не выводить CI success из локальных тестов и не считать green CI quality acceptance.
+
+Финальный actual replay после атомарного policy fix совпал с saved report по metrics/cases/model/snapshot/dataset identities. Единая optional команда завершилась strict_grounding_exit=1 именно из-за targetFalse, после133PASS backend tests; base verifier exit0. Ограниченная grammar/held_out0/6/false refusals не скрываются. Реальные source approvals/cloud/Saturn-Main-Site не менялись.

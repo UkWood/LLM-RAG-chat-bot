@@ -30,6 +30,6 @@ Interfaces: GroundedConsultant(service,scorer,provider).answer(question)->Ground
 
 Files evaluation/grounding.py, evaluation/__main__.py, tests/unit/test_grounding_evaluation.py, stage/status/handoff/ADR0008/README.
 Interfaces run_grounding_evaluation(root,dataset,model_directory,reranker_directory)->report; stage grounding requires hybrid/pinned artifacts. Runtime reports contain no raw questions/context.
-- [ ] RED metric denominator/no-label-leak tests; implement status/false-refusal/citation/claim/evidence metrics with calibration/held_out and exact identities; GREEN.
-- [ ] Actual pretrained+Fake run on30cases, preserve unsupported-positive failures; no dataset/settings changes or tuning.
-- [ ] Two-profile full verifier, independent whole-branch review, RED→GREEN important fixes, publish feature PR and check actual CI. No automatic merge of new PR.
+- [x] RED metric denominator/no-label-leak tests; implement status/false-refusal/citation/claim/evidence metrics with calibration/held_out and exact identities; GREEN.
+- [x] Actual pretrained+Fake run on30cases, preserve unsupported-positive failures; no dataset/settings changes or tuning.
+- [x] Two-profile full verifier, independent whole-branch review, RED→GREEN important fixes, publish feature PR and check actual CI. No automatic merge of new PR.
