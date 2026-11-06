@@ -1,6 +1,6 @@
 # Typed planner and evidence projections — proposed design
 
-2026-11-06. Status: proposed for owner approval, implementation not started. Continues the measured stage5 coverage gap after PR8 merged `e0e44e54996b9f9e713899f7949746f27e33485b`; main CI42209130861 success verified. Current133backend tests/CI pass, but answer coverage8/20 and status accuracy.60 fail quality acceptance. Existing source-hit20/20 is not answer coverage. Saturn-Main-Site remains strictly read-only.
+2026-11-06. Status: accepted by owner in chat 2026-11-06, explicit implementation instruction received. Continues the measured stage5 coverage gap after PR8 merged `e0e44e54996b9f9e713899f7949746f27e33485b`; main CI42209130861 success verified. Current133backend tests/CI pass, but answer coverage8/20 and status accuracy.60 fail quality acceptance. Existing source-hit20/20 is not answer coverage. Saturn-Main-Site remains strictly read-only.
 
 ## Goal and reason
 
