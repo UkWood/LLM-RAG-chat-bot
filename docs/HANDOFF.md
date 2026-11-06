@@ -1,5 +1,15 @@
 # Передача контекста
 
+## Точка перехода в новую среду — 2026-11-06
+
+PR #4 слит: main `a1093fb826c27d68db215c0d2c0211d3d6e2ef2f`, CI42097546595 success (проверено до начала подготовки модели). Текущая ветка `feat/embedding-model-preparation` — промежуточная работа, ещё без PR/полной проверки и review. Прежние сведения ниже о незавершённом merge #4 исторические.
+
+Владелец сообщил, что добавил huggingface.co в опубликованную конфигурацию. Текущая среда продолжает использовать spec_revision1, allowed_hosts только api.github.com/github.com (+package_managers); повторный HEAD официальной model card после сообщения владельца всё ещё CONNECT403/envoy (2026-11-06 04:29 UTC). Новую сессию запускать с обновлённой средой, сначала проверить effective policy и фактический HTTPS. Это сетевые правила среды, а не переменная приложения. Обход прокси/зеркала не использовать. Возможные дополнительные хосты для весов определять по фактическому redirect/отказу.
+
+Сохранена WIP-подготовка: local explicit files/profile → pinned model/tokenizer/card/license provenance → CPU smoke → atomic new directory. Никаких моделей/секретов в Git. Numeric runtime_contract не допускается к semantic evaluation. Команда `PYTHONPATH=backend/src work/retrieval-venv/bin/python -m unittest discover -s backend/tests -p test_model_preparation.py -v`: 8 PASS, включая actual numeric ONNX, cleanup и конкурентное создание destination. Это только целевые проверки; общий CI/полный suite этой ветки ещё не проверены. Не заявлять готовность к merge.
+
+Продолжить по [плану подготовки](superpowers/plans/2026-11-06-model-preparation.md): review импорта/provenance (включая canonical source URL и трактовку license_id как заявления оператора, не доказательства лицензии), CLI docs/profile example, optional CI для новых actual tests, full verification; затем actual checkpoint с проверенной model card/license/revision и dense/hybrid benchmark, если доступ появился. Candidate intfloat/multilingual-e5-small пока не выбран окончательно; license/weights/hash не проверены. Source-hit BM25 остаётся17/20, neural quality NOT_RUN. После этого stage report/ADR/status, PR и фактический CI. Виртуальные окружения под work/ могут не пережить смену среды: восстановить из requirements-onnx.lock.
+
 Обновлено:2026-11-05, local retrieval baseline.
 
 ## Восстановление
