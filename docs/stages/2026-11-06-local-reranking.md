@@ -1,0 +1,76 @@
+# Local reranking — stage4, 2026-11-06
+
+Owner accepted design PR #6 and explicitly authorized implementation. Base main92e7022 (PR #5 merged), main CI42166311910 success. Design PR #6 remains open; implementation branch inherits its documentation and acceptance. No automatic merge.
+
+## Result
+
+Working separate bounded CPU pair reranker + actual pretrained experiment. Frozen corpus10docs44chunks/dataset30cases/20positive labels; no aliases/settings/labels/corpus edits. No Saturn-Main-Site access/writes, real registry8pending/UNKNOWN unchanged. No provider/grounding/refusal measurements or source/cloud approvals.
+
+| Metric | Hybrid baseline | Hybrid + reranker |
+|---|---|---|
+| Source-hit@5 |17/20=.85|20/20=1.0|
+| All expected sources |.80|1.0|
+| Gold evidence recall |.725|1.0|
+| MRR@5 |.758333|.916667|
+| Binary evidence nDCG@5 |.629721|.867586|
+| Calibration source-hit |13/14|14/14|
+| Held-out source-hit |4/6|6/6|
+
+Candidate-pool oracle source-hit and expected-source coverage@30=1.0. No failed source/evidence cases after reranking. Negative10cases not scored as refusal. Rank metrics are not answer correctness. This passes the source-hit retrieval target on this small synthetic set only; full chatbot acceptance remains open. nDCG relevance is canonical source/field/physical page/text support; IDCG counts all relevant snapshot chunks, not only retrieved pool. Labels scored after rerank, never used as model inputs.
+
+[Measured report](../../evaluation/reports/2026-11-06-reranking.json). Fixed top30/final5,batch8,max512/longest_first, BM25k1=1.2/b=.75,per-channel40/RRF60 unchanged. CPU p50 full query1.826487s,p952.166960s; pair scoring1.004003s/1.270742s. Includes canonical policy validation, baseline reuses same pool, single process, not SLA. RAM not_measured. No threshold/model selection based on held_out.
+
+## Official candidate and provenance
+
+Explicit operator acquisition via pinned official resolve URLs, no runtime downloads. cross-encoder/mmarco-mMiniLMv2-L12-H384-v1 revision1427fd652930e4ba29e8149678df786c240d8825: README/config/tokenizer config/tokenizer.json/onnx/model.onnx. Card/config match earlier discovery bytes; pair formatting without E5 prefixes, pad1,max512,Identity activation,logits[batch,1]. Single-file470883696bytes weights passed recursive external-data rejection + real CPU pair smoke. No conversion/quantization/tuning. E5 identity same as prior report.
+
+Official card metadata declares Apache-2.0, no standalone LICENSE in listing. Exact declaration line preserved as LICENSE evidence, full card separately; operator assertion is not legal/redistribution clearance. Candidate is local experimental, not production selection. Artifacts/venvs under ignored work/ only.
+
+- bundle_id: `efc61040651012b14c58e4f111a70ead71e6d39b5944e1b069a3bb6d28421aaf`
+- model_sha256: `3e9a03ed1e966f7c5288dd4230e3d6a9bf5e3a170a06f1f4241c5bca12c6487c`
+- tokenizer_sha256: `62c24cdc13d4c9952d63718d6c9fa4c287974249e16b7ade6d5a85e7bbb75626`
+- model_card_sha256: `474736a65d6393a060119a8dc304563af67af4d8d86ccfee4a05dd0df107fc11`
+- license_sha256: `5e05dfca6eeba9772cf92c589149b62c0fd75573469b8801649008df8f8e8f5f`
+
+## Implementation and reproducibility
+
+Reranker protocol, separate RerankTrace and captured service helper preserve baseline search. Canonical membership/identity/uniqueness checked; current policy before/after inference; scorer cannot invent source IDs/text. Complete index replacement during query uses original capture; revocation during inference suppresses survivors. Wrong scalar count/shape/NaN/Inf or adapter failure rejects, no fallback or refusal fabrication.
+
+Separate strict pair profile/manifest/preparation: bounded regular file reads, exact hashes/immutable runtime bytes via existing single-file loader, pair CPU smoke/determinism, atomic Linux renameat2 no-replace and cleanup. Read-only identity exposed as copy; complete bundle swaps fail before semantic benchmark. Numeric graph tests exercise actual ORT but remain runtime_contract; they do not assert language quality.
+
+Commands after locked optional install:
+
+```bash
+PYTHONPATH=backend/src work/venv/bin/python -m unittest discover -s backend/tests -p 'test_rerank*.py' -v
+work/base-venv/bin/python scripts/verify_offline.py
+work/venv/bin/python scripts/verify_offline.py
+PYTHONPATH=backend/src work/venv/bin/python -m saturn_ai.evaluation --stage reranking --mode hybrid --model-dir work/multilingual-e5-small --reranker-dir work/mmarco-reranker --corpus fixtures/evaluation --dataset evaluation/datasets/synthetic-v1.json
+```
+
+See evaluation/README.md for explicit preparation/diagnostic CLI. Numeric pair tokenization/truncation/shape/external-data/hash-load-swap, directory collision/cleanup/provenance replacement, canonical policy/revocation/capture, nDCG/oracle and no-label-leak tests added through RED→GREEN. Intermediate bugs: manual512token expected sum corrected2552; positive empty-gold guard moved before legacy division after reproduced ZeroDivisionError. Neither changes retrieval settings. ORT telemetry-ID persistence warning observed; runtime disables telemetry and inference completed. Actual dependencies unchanged.
+
+Validation/review/publication results recorded after their actual runs. Next stage: evidence gate/grounded pipeline with FakeLLMProvider; do not use score thresholds as truth or allow pending real materials. ADR-0007 records bounded decision.
+
+## Фактическая проверка перед review
+
+После реализации: base verifier5project+111backend PASS (11optional skips), optional verifier5+111PASS без skips. Targeted reranking8, pair-model6, evaluator4tests PASS; positive empty-gold regression GREEN после исправления. Verifier включает actual lexical17/20 и preflight, без pretrained downloads. Diagnostic CLI проверен на официальных локальных bundles, выдаёт IDs/ranks/scores, answer_evaluation=not_run и без raw text по умолчанию. Exact dataset/snapshot identities совпали с предыдущим report. `git diff --check` clean; tracked models/work/index dumps отсутствуют.
+
+## Independent review and fix pass
+
+Whole branch reviewed independently against main92e7022. Reviewer independently recomputed saved source-hit20/20 vs17/20 and nDCG.8675857812125146 vs.6297210925935836 from snapshot/dataset and report IDs. Important finding reproduced: RRF could overwrite wrong snapshot/NaN score and collapse duplicate adapter candidates before rerank validated final results; duplicate contributions could change candidate pool. Regression hybrid tests cover both lexical/dense channels and wrong snapshot/rank/unknown chunk/NaN/duplicates. RED allowed malformed candidates to reach scorer; GREEN after raw channel identity/rank/score/uniqueness validation before normalization/fusion. Nine orchestration tests PASS. No additional Important/Critical findings.
+
+Reviewer did not judge legal clearance, production language quality, grounded-answer acceptance or remote CI. Rulings: these remain outside claimed acceptance; license is declaration-only, measured quality covers the frozen synthetic retrieval set, grounding/refusal NOT_RUN, remote CI must be checked separately. Cost of expanding claims would be unverified legal/engineering quality, so none are expanded. Minor unchecked plan/status entries are routine completion bookkeeping, updated as actual milestones finish.
+
+Implementation ruling: ledger tracked manually under ignored work/local-reranking/ because cloud skill helper scripts are not locally installed; cost is absence of helper automation, compensated by saved command logs/commits. Existing verified-byte single-file graph loader reused without changing embedding pooling or global refactor. No new dependency or hidden model fallback.
+
+После review fix полный verifier повторён: base5project+112backend PASS (11optional skips), optional5+112PASS без skips, lexical17/20 unchanged. Targeted orchestration9PASS. Модельный replay после fix проверяется отдельно; исходные report metrics independently recomputed reviewer. Полная validation проверяет текущий code tree, а не выводится из предыдущего green run.
+
+## Публикация stage4
+
+[PR #7](https://github.com/UkWood/LLM-RAG-chat-bot/pull/7), feat/local-reranking, implementation/fix commit2463ab0. PR открыт, НЕ слит. Design PR #6 закрыт как superseded: его accepted design и документация включены в #7; это не merge #6.
+
+После review fix официальный pretrained benchmark повторён: metrics/baseline_metrics, все per-case ranks/raw scores и pinned identities точно совпали с committed report. Первоначальные timing measurements сохранены, повтор не используется для tuning. Full final base5+112PASS(skips11),optional5+112PASS(0 skips). Независимый review завершён, Important defect исправлен RED→GREEN, deferred product minors нет.
+
+CI при публикации: push42168512725 и PR42168537774 на2463ab0 in_progress; это наблюдение, не заявление success. Проверять текущий head/actual checks в PR перед merge; новый docs commit проверяется отдельно. No automatic merge. Следующий отдельный stage5 — evidence gate/grounded pipeline, с собственным design/plan/quality gates.
+
+Verified remote CI: [push42168613444](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42168613444) на d03a95d74535822f800b9cf02918eee7a7a863fe завершился SUCCESS, offline-checks и onnx-contracts (включая новые actual CPU pair contracts) оба success. Это CI реализации; данная запись — отдельный docs commit, его status проверять по текущему head PR #7. PR остаётся open/unmerged.

@@ -9,17 +9,24 @@ def main():
     parser=argparse.ArgumentParser(description='Synthetic preflight / measured local retrieval')
     parser.add_argument('--corpus',type=Path,required=True)
     parser.add_argument('--dataset',type=Path,required=True)
-    parser.add_argument('--stage',choices=['preflight','retrieval'],default='preflight')
+    parser.add_argument('--stage',choices=['preflight','retrieval','reranking'],default='preflight')
     parser.add_argument('--mode',choices=['lexical','dense','hybrid'],default='lexical')
     parser.add_argument('--model-dir',type=Path)
+    parser.add_argument('--reranker-dir',type=Path)
     parser.add_argument('--require-source-hit-target',action='store_true')
     args=parser.parse_args()
     try:
         if args.stage=='preflight':
-            if args.model_dir or args.mode!='lexical' or args.require_source_hit_target:
+            if args.model_dir or args.reranker_dir or args.mode!='lexical' or args.require_source_hit_target:
                 raise ValueError('Retrieval options require retrieval stage')
             report=run_preflight(args.corpus,args.dataset)
+        elif args.stage=='reranking':
+            if args.mode!='hybrid' or args.model_dir is None or args.reranker_dir is None:
+                raise ValueError('Explicit hybrid embedding and reranker bundles required')
+            from .reranking import run_reranking_evaluation
+            report=run_reranking_evaluation(args.corpus,args.dataset,args.model_dir,args.reranker_dir)
         else:
+            if args.reranker_dir is not None:raise ValueError('Reranker requires reranking stage')
             from .retrieval import run_retrieval_evaluation
             report=run_retrieval_evaluation(args.corpus,args.dataset,mode=args.mode,model_directory=args.model_dir)
     except (ValueError,OSError,RecursionError):

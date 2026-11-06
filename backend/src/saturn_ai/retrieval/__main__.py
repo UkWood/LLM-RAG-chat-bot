@@ -19,6 +19,7 @@ def main():
     parser.add_argument('--mode',choices=['lexical','dense','hybrid'],default='lexical')
     parser.add_argument('--model-dir',type=Path)
     parser.add_argument('--index-dir',type=Path)
+    parser.add_argument('--reranker-dir',type=Path)
     parser.add_argument('--top-k',type=int,default=5)
     parser.add_argument('--show-text',action='store_true',help='Explicit local output of approved synthetic text')
     args=parser.parse_args();dense=None
@@ -33,8 +34,15 @@ def main():
         if args.model_dir:
             dense=QdrantIndex(snapshot,LocalONNXEncoder(args.model_dir),path=args.index_dir)
         service=RetrievalService(SnapshotCatalog(registry));service.publish(IndexSet(snapshot,lexical,dense))
-        trace=service.search(args.query,mode=args.mode,top_k=args.top_k)
-        output=asdict(trace);output['answer_evaluation']='not_run';output['reranking']='not_run'
+        if args.reranker_dir:
+            if args.mode!='hybrid' or args.top_k!=5:raise ValueError('Reranking requires hybrid/fixed top5')
+            from .reranker_model import load_semantic_reranker
+            scorer,_=load_semantic_reranker(args.reranker_dir)
+            trace=service.rerank(args.query,scorer,mode=args.mode)
+        else:
+            trace=service.search(args.query,mode=args.mode,top_k=args.top_k)
+        output=asdict(trace);output['answer_evaluation']='not_run'
+        output['reranking']='executed' if args.reranker_dir else 'not_run'
         if args.show_text:
             by_id={c.chunk_id:c for c in snapshot.chunks}
             output['approved_synthetic_text']={c.chunk_id:by_id[c.chunk_id].chunk.text for c in trace.final}

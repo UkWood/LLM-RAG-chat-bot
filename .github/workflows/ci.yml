@@ -37,3 +37,6 @@ jobs:
 
       - name: Prepared bundle contracts (numeric graphs, no semantic quality claim)
         run: PYTHONPATH=backend/src python -m unittest discover -s backend/tests -p test_model_preparation.py -v
+
+      - name: Actual CPU pair-scoring contracts (numeric graphs, no pretrained download)
+        run: PYTHONPATH=backend/src python -m unittest discover -s backend/tests -p 'test_rerank*.py' -v
