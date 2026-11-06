@@ -22,29 +22,29 @@ Query<=4000chars, entities<=3, needs<=4, evidence<=5chunks/8000chars. Source doc
 ### Task1: independent blind authoring/review, before implementation
 
 Files evaluation/datasets/planner-v2-blind.json, planner-v2-blind.manifest.json (root reads manifest only).
-- [ ] Fresh author reads ONLY canonical KB, approved capability spec and current ingestion/snapshot modules, not old datasets/reports/tests or candidate code. Author40cases:24positive (8single field/spec,4multi-need,4source-scoped,4document-ref,4relationship/type),8mandatory_refusal,8ambiguous_invalid (4clarification,4refused). See author schema in task dispatch; semantic gold evidence is canonical source/field/page/text or typed ref.
-- [ ] Fresh label reviewer validates canonical hashes/support, distribution, semantic outcomes and independence without revealing text/labels to root. Fix before freeze, then manifest SHA/counts/version; root commit blindly stages files, never prints payload.
-- [ ] Record identity/provenance in manifest and ledger; authoring fixture, not real approval.
+- [x] Fresh author reads ONLY canonical KB, approved capability spec and current ingestion/snapshot modules, not old datasets/reports/tests or candidate code. Author40cases:24positive (8single field/spec,4multi-need,4source-scoped,4document-ref,4relationship/type),8mandatory_refusal,8ambiguous_invalid (4clarification,4refused). See author schema in task dispatch; semantic gold evidence is canonical source/field/page/text or typed ref.
+- [x] Fresh label reviewer validates canonical hashes/support, distribution, semantic outcomes and independence without revealing text/labels to root. Fix before freeze, then manifest SHA/counts/version; root commit blindly stages files, never prints payload.
+- [x] Record identity/provenance in manifest and ledger; authoring fixture, not real approval.
 
 ### Task2: v2 contracts, projections, compositional parsing
 
 Files grounding/v2_contracts.py, projections.py, planner_v2.py, config/planner-v2.json; tests/unit/test_planner_v2.py (root-authored calibration/custom only).
 Interfaces SourceConstraints(document_kind,representation); EvidenceNeed(entity_id,predicate,selector='',constraints=...); QueryPlanV2(needs,question_sha256,config_revision); CanonicalSpan(chunk_id,start,end,role); FactProjection(entity_id,predicate,value,source_id,spans,unit,group_id,cardinality,complete,representation); build_projections(snapshot)->tuple; plan_v2(question,snapshot,projections)->QueryPlanV2|GateResult.
-- [ ] RED tests schema field/spec/table literal spans, wrong-row/unit trap, valid list/group, statement purpose/composition/config-interface, unquotable metadata hints, malformed/open-list rejection.
-- [ ] Implement deterministic versioned projections with canonical spans; no synthetic model facts. Typed metadata refs separate.
-- [ ] RED plan tests whole-query consumption, single/multi needs/entities, source/representation conjunction, unsupported/negated/trailing/missing entity and typo clarification; implement explicit clause grammar using schema aliases/calibration only. GREEN targeted; commit.
+- [x] RED tests schema field/spec/table literal spans, wrong-row/unit trap, valid list/group, statement purpose/composition/config-interface, unquotable metadata hints, malformed/open-list rejection.
+- [x] Implement deterministic versioned projections with canonical spans; no synthetic model facts. Typed metadata refs separate.
+- [x] RED plan tests whole-query consumption, single/multi needs/entities, source/representation conjunction, unsupported/negated/trailing/missing entity and typo clarification; implement explicit clause grammar using schema aliases/calibration only. GREEN targeted; commit.
 
 ### Task3: complete gate/application/reference results
 
 Files grounding/gate_v2.py, application_v2.py; tests/integration/test_planner_v2_pipeline.py.
 Interfaces GateV2(state,reason,evidence_ids,bindings,anchor_ids); GroundedResultV2(status,...claims,sources,references,plan,bindings,schema_version=2); TypedReference(kind,entity_id,source_id,value,title,url,document_id,content_hash,anchor_chunk_id,page).
-- [ ] RED tests need completeness, source scope mismatch, complete set conflict/partial union, malformed projection, canonical cell spans, request mixed refs+quotes, wrong metadata, provider omission/fake claim, budget/current policy/capture/ref-only revocation.
-- [ ] Implement all-or-nothing gate over top5 plus explicit same retrieved-manual anchor, validated against same canonical snapshot. Provider only canonical quote subset; backend refs exact canonical metadata, all-reference bypass with identical policy checks. v1 untouched/default unchanged. GREEN/full verifier; commit.
+- [x] RED tests need completeness, source scope mismatch, complete set conflict/partial union, malformed projection, canonical cell spans, request mixed refs+quotes, wrong metadata, provider omission/fake claim, budget/current policy/capture/ref-only revocation.
+- [x] Implement all-or-nothing gate over top5 plus explicit same retrieved-manual anchor, validated against same canonical snapshot. Provider only canonical quote subset; backend refs exact canonical metadata, all-reference bypass with identical policy checks. v1 untouched/default unchanged. GREEN/full verifier; commit.
 
 ### Task4: blinded evaluator, CLI, freeze and first actual comparison
 
 Files evaluation/planner_v2.py, evaluation/blind_dataset.py, evaluation/__main__.py, grounding/__main__.py; tests/unit/test_planner_v2_evaluation.py; docs/ADR/stage/status.
-- [ ] RED tests data validation (test-local custom synthetic cases, never blind contents), proper denominators, exact requirement/source/quote/ref equivalence across v1/v2, missing-third-need and metadata mismatch, no labels passed to app; GREEN.
+- [x] RED tests data validation (test-local custom synthetic cases, never blind contents), proper denominators, exact requirement/source/quote/ref equivalence across v1/v2, missing-third-need and metadata mismatch, no labels passed to app; GREEN.
 - [ ] Base+optional full verifier; legacy CALIBRATION ONLY actual comparison/tuning, no reading old held_out or blind. Freeze final code/config/calibration at exact commit +config/projection hashes and write freeze manifest BEFORE blind run.
 - [ ] Independent whole-branch review before blind, important fixes RED→GREEN +full suite, then final freeze. First blind evaluation once after logged START, do not inspect questions/labels before it. Save all40 cases/metrics/errors including unmet target. New target24/24 positives+16/16negative/ambiguity, no unsafe claims/invalid citations, complete needs for each answered. v1/v2 same rubric/artifacts/config.
 - [ ] After result no planner/config changes; if bug invalidates experiment mark consumed/invalid and require fresh set for new independence. Final quality report not baseline relabeling. Publish feature PR +actual CI, docs/handoff; no auto merge.

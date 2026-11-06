@@ -48,6 +48,8 @@ class FactProjection:
     selector: str = ''
     valid: bool = True
     complete_for_source: bool = False
+    parser_revision: str = ''
+    projection_revision: str = ''
 
 
 @dataclass(frozen=True)

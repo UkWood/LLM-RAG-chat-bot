@@ -1,5 +1,10 @@
 # Передача контекста
 
+## Typed planner V2 implementation — 2026-11-06
+
+Owner accepted PR9 design and requested implementation. Branch feat/typed-planner-v2 implements opt-in multi-need planning, canonical projections and backend references; v1 remains default. [ADR0009](decisions/0009-typed-planner-v2.md), [stage report](stages/2026-11-06-typed-planner-v2.md). Independent40case set authored/reviewed before implementation; payload withheld from implementer until final freeze/first START. Full checks/calibration/first blind result are pending; no new quality acceptance. Subsequent historical proposed/no-code entries below are superseded. Saturn-Main-Site READ-ONLY, real approvals/cloud unchanged.
+
+
 ## Актуально: после merge PR8, planner design — 2026-11-06
 
 PR8 MERGED в maine0e44e54996b9f9e713899f7949746f27e33485b; main CI42209130861 SUCCESS проверен. Предыдущие open/unmerged сведения ниже исторические. Grounding quality остаётся8/20 positives, targetFalse; source-hit20/20 не означает answer20/20.

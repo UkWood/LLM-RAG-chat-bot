@@ -5,6 +5,7 @@ import re
 from ..ingestion.contracts import identifier
 from .gate import entity_id,_typed_value
 from .v2_contracts import CanonicalSpan,FactProjection
+from .v2_config import load_config
 
 
 def norm(text):return text.casefold().replace('ё','е').strip()
@@ -32,11 +33,11 @@ def _voltage(text):
 def build_projections(snapshot):
     docs={d.source_id:d for d in snapshot.documents}
     names={norm(entity_id(d).split('/')[-1]):entity_id(d) for d in snapshot.documents if d.entity_type!='Document'}
-    result=[]
+    result=[];projection_revision=load_config()[0]['projection_revision']
     def emit(c,entity,predicate,value,*,unit='',selector='',cardinality='scalar',complete=True,valid=True,representation='structured_field',spans=None,complete_for_source=False):
         group=identifier(c.source_id,entity,predicate,selector,representation)
         spans=tuple(spans or (CanonicalSpan(c.chunk_id,0,len(c.chunk.text),'value'),))
-        result.append(FactProjection(entity,predicate,value,c.source_id,spans,unit,group,cardinality,complete,representation,selector,valid,complete_for_source))
+        result.append(FactProjection(entity,predicate,value,c.source_id,spans,unit,group,cardinality,complete,representation,selector,valid,complete_for_source,docs[c.source_id].parser_version,projection_revision))
     for c in snapshot.chunks:
         doc=docs[c.source_id];entity=entity_id(doc);field=c.chunk.field_path.split('[')[0];text=c.chunk.text
         if field in ('power','interfaces','protocols','temperature_c','status'):
@@ -50,12 +51,14 @@ def build_projections(snapshot):
         elif field=='features':
             value=text.removeprefix('features: ').strip()
             valid=value!=text and bool(value) and not re.search(r'ignore|reveal|игнор|секрет',value,re.I)
-            emit(c,entity,'features',norm(value),cardinality='set',complete=valid,valid=valid)
+            emit(c,entity,'features',norm(value),cardinality='set',complete=valid and not re.search(r'и друг|например|в том числе|etc|проч|и т\.|…|\.\.\.',value,re.I),valid=valid)
         elif field=='specs':
             label,sep,value=text.partition(': ')
             if sep:
                 valid=bool(re.fullmatch(r'\d+(?:[.,]\d+)?(?:\s+[A-Za-zА-Яа-я°]+)?',value))
-                emit(c,entity,'spec',value,selector=norm(label),unit='count' if re.search('вход|выход',label,re.I) else '',valid=valid,complete=valid)
+                count=bool(re.search('вход|выход|количеств',label,re.I))
+                if count:valid=bool(re.fullmatch(r'\d+',value))
+                emit(c,entity,'spec',value,selector=norm(label),unit='count' if count else '',valid=valid,complete=valid)
         if field=='pdf.page':
             # Explicit typed lines only; flat text is never a PDF table.
             for match in re.finditer(r'(?:Supply: )(?P<value>\d+(?:\.\d+)? V DC)\.',text):
@@ -140,3 +143,14 @@ def validate_projection(projection,snapshot):
             raise ValueError('Invalid canonical projection span')
     if projection not in build_projections(snapshot):raise ValueError('Projection differs from canonical derivation')
     return projection
+
+
+def selector_matches(projection,selector):
+    if selector.startswith('interface='):
+        value=selector.removeprefix('interface=')
+        if projection.predicate in ('interfaces','configuration_interface'):
+            return projection.value==value
+        if projection.predicate=='purpose':
+            return bool(re.search(r' по '+re.escape(value)+r'\.$',projection.value))
+        return False
+    return projection.selector==selector

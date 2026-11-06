@@ -19,6 +19,7 @@ def main():
     parser=argparse.ArgumentParser(description='Synthetic local grounded answer with offline fake provider')
     for name in ('corpus','model-dir','reranker-dir'):parser.add_argument('--'+name,type=Path,required=True)
     parser.add_argument('--query',required=True)
+    parser.add_argument('--planner-version',choices=['v1','v2'],default='v1')
     args=parser.parse_args();dense=None
     try:
         encoder,_=load_embedding(args.model_dir);scorer,_=load_semantic_reranker(args.reranker_dir)
@@ -26,7 +27,11 @@ def main():
         snapshot=build_snapshot(build_fixture(args.corpus,registry,registry.source_snapshot),registry)
         dense=QdrantIndex(snapshot,encoder);service=RetrievalService(SnapshotCatalog(registry))
         service.publish(IndexSet(snapshot,BM25Index(snapshot),dense))
-        result=GroundedConsultant(service,scorer,FakeLLMProvider()).answer(args.query)
+        if args.planner_version=='v2':
+            from .application_v2 import GroundedConsultantV2
+            app=GroundedConsultantV2(service,scorer,FakeLLMProvider())
+        else:app=GroundedConsultant(service,scorer,FakeLLMProvider())
+        result=app.answer(args.query)
         print(json.dumps(asdict(result),ensure_ascii=False,indent=2))
         return 1 if result.status=='error' else 0
     except (ValueError,OSError,RecursionError):parser.exit(2,'Local grounded pipeline setup rejected.\n')

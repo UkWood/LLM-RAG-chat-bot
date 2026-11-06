@@ -4,7 +4,7 @@ from ..retrieval.contracts import Candidate
 from .gate import entity_id
 from .v2_contracts import QueryPlanV2,EvidenceNeed,SourceConstraints,GateV2,NeedBinding,TypedReference
 from .v2_config import load_config
-from .projections import build_projections,projection_id,document_kind
+from .projections import build_projections,projection_id,document_kind,selector_matches
 
 
 def canonical_reference(kind,eid,source_id,anchor_id,snapshot):
@@ -33,7 +33,7 @@ def evaluate_v2(plan,snapshot,candidates,catalog,projections):
                 or not isinstance(n.constraints,SourceConstraints)
                 or n.constraints.document_kind not in config['document_kinds']
                 or n.constraints.representation not in config['representations']
-                or type(n.selector) is not str or len(n.selector)>128 or (n.selector and n.predicate!='spec')):
+                or type(n.selector) is not str or len(n.selector)>128 or (n.selector and n.predicate!='spec' and not (n.predicate in ('interfaces','configuration_interface','purpose') and n.selector in ('interface=usb','interface=ethernet','interface=rs-485')))):
             raise ValueError('Invalid typed requirement')
     mapping={c.chunk_id:c for c in snapshot.chunks};docs={d.source_id:d for d in snapshot.documents}
     records={r.source_id:r for r in snapshot.registry.entries}
@@ -81,7 +81,7 @@ def evaluate_v2(plan,snapshot,candidates,catalog,projections):
             ref=possible[0]
             if ref.anchor_chunk_id not in ranked and ref.anchor_chunk_id not in anchors:anchors.append(ref.anchor_chunk_id)
             add((ref.anchor_chunk_id,));bindings.append(NeedBinding(index,(ref.anchor_chunk_id,),reference=ref));continue
-        matching=[p for p in projections if p.entity_id==need.entity_id and p.predicate==need.predicate and p.selector==need.selector
+        matching=[p for p in projections if p.entity_id==need.entity_id and p.predicate==need.predicate and selector_matches(p,need.selector)
             and matches(p.source_id,need.constraints,p.representation)
             and all(span.chunk_id in allowed for span in p.spans)]
         if not matching:return GateV2('insufficient','no_evidence')

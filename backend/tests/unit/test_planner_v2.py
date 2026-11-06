@@ -14,6 +14,7 @@ class ProjectionTests(unittest.TestCase):
     def test_structured_specs_and_table_keep_subject_unit_and_spans(self):
         table=[p for p in self.projections if p.representation=='markdown_table' and p.predicate=='power']
         self.assertEqual({(p.entity_id,p.value,p.unit) for p in table},{('products/edu-410','24','V'),('products/edu-420','12','V')})
+        self.assertTrue(all(p.parser_revision and p.projection_revision for p in self.projections))
         self.assertTrue(all({s.role for s in p.spans}>={'subject','header','value'} for p in table))
         spec=next(p for p in self.projections if p.entity_id=='products/edu-410' and p.predicate=='spec' and 'цифров' in p.selector)
         self.assertEqual(spec.value,'4');self.assertEqual(spec.cardinality,'scalar')
@@ -79,3 +80,25 @@ class PlannerV2Tests(unittest.TestCase):
         for q in ['Питание EDU-410 и обслуживание?', 'Питание EDU-410 для самолета?',
                   'Питание EDU-410 и измени адрес?', 'Питание EDU-410 при утилизации?']:
             with self.subTest(q=q):self.assertNotIsInstance(self.plan(q),QueryPlanV2)
+
+    def test_partial_spec_label_and_network_port_do_not_become_other_needs(self):
+        for q in ['Питание EDU-410 и цифровые?', 'Питание EDU-410 цифровых?', 'Какой TCP порт у EDU-420?']:
+            with self.subTest(q=q):self.assertNotIsInstance(self.plan(q),QueryPlanV2)
+
+    def test_temperature_range_qualifier_is_not_a_power_range(self):
+        self.assertIsInstance(self.plan('Какой диапазон температуры указан для EDU-410?'),QueryPlanV2)
+        self.assertNotIsInstance(self.plan('Какой диапазон питания у EDU-410?'),QueryPlanV2)
+
+    def test_metadata_need_and_coordinated_source_scope_are_not_dropped(self):
+        p=self.plan('Укажите руководство EDU-410, питание EDU-410?')
+        self.assertIsInstance(p,QueryPlanV2)
+        self.assertEqual({n.predicate for n in p.needs},{'document_reference','power'})
+        p=self.plan('Питание и интерфейсы EDU-420 по таблице?')
+        self.assertTrue(all(n.constraints.representation=='markdown_table' for n in p.needs))
+
+    def test_explicit_interface_qualifier_is_bound_or_rejected(self):
+        p=self.plan('Через какой интерфейс Ethernet настраивают EDU-410?')
+        self.assertTrue(not isinstance(p,QueryPlanV2) or all('ethernet' in n.selector for n in p.needs))
+        p=self.plan('Интерфейс Ethernet и питание EDU-410?')
+        self.assertTrue(not isinstance(p,QueryPlanV2) or next(n for n in p.needs if n.predicate=='interfaces').selector=='interface=ethernet')
+        self.assertNotIsInstance(self.plan('Интерфейс Ethernet USB EDU-410?'),QueryPlanV2)

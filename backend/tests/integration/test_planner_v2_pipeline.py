@@ -110,3 +110,16 @@ class V2ApplicationTests(unittest.TestCase):
         for q in ['Питание EDU-999?','Не сообщай питание EDU-410.', 'Питание EDU-410 и обслуживание?']:
             self.assertNotEqual(self.app.answer(q).status,'answered')
         self.assertEqual(self.provider.calls,[])
+
+    def test_review_explicit_qualifier_never_returns_different_interface(self):
+        result=self.app.answer('Через какой интерфейс Ethernet настраивают EDU-410?')
+        self.assertNotEqual(result.status,'answered')
+
+    def test_open_features_and_non_count_units_do_not_satisfy_count(self):
+        from unit.test_evidence_gate import power_snapshot
+        for tail,q in [("features: [USB и другие]",'Функции EDU-410?')]+[
+                (f"specs:\n  - name: Цифровые входы\n    value: '{v}'",'Сколько цифровых входов у EDU-410?') for v in ('4 V','4 A','4.5')]:
+            snapshot=power_snapshot(['24 В постоянного тока\n'+tail]);service=RetrievalService(SnapshotCatalog(snapshot.registry))
+            service.publish(IndexSet(snapshot,BM25Index(snapshot)))
+            app=GroundedConsultantV2(service,Scorer(),FakeLLMProvider(),mode='lexical')
+            with self.subTest(tail=tail):self.assertNotEqual(app.answer(q).status,'answered')

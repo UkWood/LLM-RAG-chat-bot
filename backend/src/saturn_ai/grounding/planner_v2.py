@@ -57,13 +57,15 @@ def plan_v2(question,snapshot,projections):
     for start,end,replacement in reversed(replacements):text=text[:start]+replacement+text[end:]
     aliases=config['aliases'];spec_labels=sorted({p.selector for p in projections if p.predicate=='spec' and p.valid})
     spec_stems={label:tuple(t[:4] for t in _tokens(label)) for label in spec_labels}
-    clauses=[c.strip(' ,.:?!—-') for c in re.split(r'\s+(?:и|а также|плюс)\s+|;',text) if c.strip(' ,.:?!—-')]
+    clauses=[c.strip(' ,.:?!—-') for c in re.split(r'\s+(?:и|а также|плюс)\s+|[;,]',text) if c.strip(' ,.:?!—-')]
     if not clauses:return GateResult('insufficient','unsupported_question')
     needs=[];last_predicates=[];last_entities=[];pending=[]
-    for clause in clauses:
+    for clause_index,clause in enumerate(clauses):
         tokens=_tokens(clause);token_set=set(tokens)
         subjects=[found[int(i)] for i in re.findall(r'zzentity(\d+)',clause)]
         subjects=list(dict.fromkeys(subjects));explicit_subjects=bool(subjects)
+        if any(t.startswith('порт') for t in tokens) and token_set&{'tcp','udp'}:
+            return GateResult('insufficient','unsupported_network_port')
         constraints=SourceConstraints('manual' if any(_matches(t,('руководств','инструкц','manual')) for t in tokens)
             else 'product_card' if any(t.startswith('карточ') for t in tokens) else 'any',
             'markdown_table' if any(t.startswith('таблиц') for t in tokens) else 'any')
@@ -79,16 +81,25 @@ def plan_v2(question,snapshot,projections):
         if any(t.startswith('настр') or t.startswith('конфиг') for t in tokens) and any(t.startswith(('разъем','интерфейс','порт')) for t in tokens):
             predicates=[p for p in predicates if p[0] not in ('interfaces','purpose','features')]+[('configuration_interface','')]
         if any(p[0]=='purpose' for p in predicates):predicates=[p for p in predicates if p[0]!='features']
-        if any(p[0] not in ('entity_type','document_reference') for p in predicates):
-            predicates=[p for p in predicates if p[0] not in ('entity_type','document_reference')]
+        # A manual used as a source is a scope; a requested manual remains a need.
+        if re.search(r'(?:по|в|из)\s+(?:его\s+)?(?:руководств|инструкц|manual)',clause):
+            predicates=[p for p in predicates if p[0]!='document_reference']
         if not predicates and any(t.startswith(('программ','по')) for t in tokens) and any(t.startswith(('измен','помен','настр')) for t in tokens):
             predicates=[('purpose','')]
         if not predicates and any(t.startswith(('категор','сущност')) for t in tokens):
             predicates=[('entity_type','')];covered.update(t for t in tokens if t.startswith(('категор','сущност')))
+        if any(p[0]=='temperature_c' for p in predicates):covered.update(t for t in tokens if t.startswith('диапазон'))
         # Every substantive word must be accounted for by ontology, spec label or grammar.
         unknown=[t for t in tokens if t not in covered and not re.fullmatch(r'zzentity\d+',t)
-                 and not _context(t) and not any(_matches(t,stem) for stem in spec_stems.values())]
+                 and not _context(t)]
         if unknown:return GateResult('insufficient','unsupported_clause')
+        literals={v.replace('rs485','rs-485') for v in re.findall(r'\b(?:usb|ethernet|rs-?485)\b',clause)}
+        if literals:
+            if len(literals)!=1 or any(pred not in ('interfaces','configuration_interface','purpose') for pred,_ in predicates):
+                return GateResult('insufficient','unsupported_interface_qualifier')
+            predicates=[(pred,'interface='+next(iter(literals))) for pred,_ in predicates]
+        if not subjects and predicates and not last_entities and found and clause_index<len(clauses)-1:
+            pending.extend((pred,selector,constraints) for pred,selector in predicates);continue
         if not subjects:
             if len(found)==1:subjects=found[:]
             elif last_entities:subjects=last_entities[:]
@@ -98,16 +109,17 @@ def plan_v2(question,snapshot,projections):
                 if len(choices)==1:subjects=list(choices)
                 elif choices:return GateResult('ambiguous','ambiguous_entity')
         if not subjects and predicates:
-            pending.extend(predicates);continue
+            pending.extend((pred,selector,constraints) for pred,selector in predicates);continue
         if not subjects:return GateResult('ambiguous','ambiguous_entity')
         if not predicates:
             if not explicit_subjects:return GateResult('insufficient','unsupported_clause')
             predicates=last_predicates[:]
-        predicates=list(dict.fromkeys(pending+predicates));pending=[]
-        if not predicates:return GateResult('insufficient','unsupported_question')
+        scoped=[(pred,selector,own if own!=SourceConstraints() else constraints) for pred,selector,own in pending]
+        scoped.extend((pred,selector,constraints) for pred,selector in predicates);pending=[]
+        if not scoped:return GateResult('insufficient','unsupported_question')
         for eid in subjects:
-            for pred,selector in predicates:
-                need=EvidenceNeed(eid,pred,selector,constraints)
+            for pred,selector,scope in scoped:
+                need=EvidenceNeed(eid,pred,selector,scope)
                 if need not in needs:needs.append(need)
         last_predicates=predicates;last_entities=subjects
     if pending or not needs:return GateResult('insufficient','incomplete_plan')
