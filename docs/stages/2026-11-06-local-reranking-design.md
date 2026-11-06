@@ -19,3 +19,5 @@ Pinned source hashes:
 Проверки текущей документационной работы: `python3 scripts/check_project.py`, `git diff --check`; outcome фиксируется перед публикацией. Application tests не заменены этим этапом и не заявляются как заново выполненные. Следующий шаг — принятие дизайна и detailed implementation plan/TDD, затем actual experiment и independent review/CI. Старые права на обычную публикацию сохраняются; этот proposed doc не даёт source/cloud approvals.
 
 Independent builder check: существенных вопросов, мешающих планированию, не найдено; design согласуется с retrieval/acceptance contracts. `scripts/check_project.py` PASS,5 project tests PASS, `git diff --check` clean. Это проверка proposed documentation, не reranker implementation или model benchmark.
+
+Публикация дизайна: [PR #6](https://github.com/UkWood/LLM-RAG-chat-bot/pull/6), branch feat/local-reranking-design, исходный commit55958ed. PR открыт, не принят/не слит; implementation не начата. CI проверять на текущем head PR, не выводить success из статуса предыдущих запусков.
