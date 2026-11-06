@@ -51,8 +51,16 @@ class ModelPreparationTests(unittest.TestCase):
             self.assertEqual(result['semantic_quality'],'not_measured')
             with self.assertRaises(ValueError):read_model_provenance(root/'first',require_semantic=True)
 
+    def test_source_url_rejects_normalized_control_characters(self):
+        from saturn_ai.retrieval.model_preparation import _profile
+        for url in ['https://\nhuggingface.co/test-only/numeric-graph/tree/'+'c'*40,
+                    'https://huggingface.co/test-only/numeric-graph/tree/'+'c'*20+'\t'+'c'*20]:
+            with self.subTest(url=url), self.assertRaises(ValueError):
+                _profile(profile(source_url=url))
+
     def test_invalid_profile_does_not_publish(self):
         for changes in [dict(revision='main'),dict(source_url='https://evil.invalid/repo'),
+                        dict(source_url='https://\nhuggingface.co/test-only/numeric-graph/tree/'+'c'*40),
                         dict(source_url='https://user:pass@huggingface.co/a'),dict(source_url='http://huggingface.co/a'),
                         dict(source_url='https://huggingface.co/test-\nonly/numeric-graph/tree/'+'c'*40),
                         dict(source_url='https://huggingface.co/test-only/numeric-graph/tree/'+'d'*40),
@@ -137,3 +145,22 @@ class ActualPreparationTests(unittest.TestCase):
             root=Path(temp);files=self.make_source(root/'source');dest=root/'prepared'
             prepare_local_model(profile(),*files,dest)
             with self.assertRaises(ValueError):run_retrieval_evaluation(CORPUS,DATASET,mode='hybrid',model_directory=dest)
+
+    def test_complete_bundle_swap_during_evaluation_is_rejected(self):
+        from saturn_ai.evaluation.retrieval import run_retrieval_evaluation
+        from saturn_ai.retrieval.embeddings import LocalONNXEncoder
+        from unit.test_evaluation import CORPUS, DATASET
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp);files=self.make_source(root/'source')
+            semantic=profile(purpose='semantic_candidate')
+            prepare_local_model(semantic,*files,root/'active')
+            files[2].write_text('Different reviewed card for identical graph')
+            prepare_local_model(semantic,*files,root/'replacement')
+            def swap(directory):
+                directory.rename(root/'old')
+                (root/'replacement').rename(directory)
+                return LocalONNXEncoder(directory)
+            with patch('saturn_ai.evaluation.retrieval.LocalONNXEncoder',side_effect=swap), patch(
+                    'saturn_ai.evaluation.retrieval.QdrantIndex',side_effect=AssertionError('Changed bundle reached indexing')):
+                with self.assertRaisesRegex(ValueError,'changed during loading'):
+                    run_retrieval_evaluation(CORPUS,DATASET,mode='dense',model_directory=root/'active')

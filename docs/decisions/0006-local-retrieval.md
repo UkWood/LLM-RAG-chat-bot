@@ -23,3 +23,7 @@ Frozen BM25: source-hit@5=17/20=.85, calibration14/14, held_out3/6; all-source s
 Dense/hybrid/reranking/grounding/refusal=not_run. Цель source-hit1.0 и полная prototype acceptance не пройдены. Green code CI доказывает корректность операций/отчётов; --require-source-hit-target отдельно даёт exit1 при quality failure. Следующий quality шаг требует локального checkpoint; inference-contract CI его не заменяет.
 
 Persistence проверена только для Qdrant local reopen. BM25 и active pointer process-local; durable/multi-worker coordinated promotion не реализована. Наблюдаемые latency включают canonical policy revalidation и не являются SLA. Реальные источники/cloud и Saturn-Main-Site не меняются, ADR-0001 proposed.
+
+## Experiment update 2026-11-06
+
+Pinned E5 candidate prepared; dense18/20, hybrid17/20 actual synthetic source-hit@5. Mean pooling/prefixes checked against pinned card; MIT declaration metadata only, no standalone LICENSE/legal clearance. This supersedes historical neural not_run above for dense/hybrid only. No production model selection. [Evidence](../stages/2026-11-06-model-preparation.md).

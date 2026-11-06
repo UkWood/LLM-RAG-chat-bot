@@ -54,7 +54,7 @@ def _profile(raw):
         raise ValueError('Explicit reviewed license identifier required')
     url=urlsplit(data['source_url'])
     if (url.scheme!='https' or url.netloc not in ('huggingface.co','github.com') or url.query or url.fragment
-            or data['source_url']!=data['source_url'].strip()
+            or data['source_url']!=f'https://{url.netloc}/{data["model_id"]}/tree/{data["revision"]}'
             or url.path!=f'/{data["model_id"]}/tree/{data["revision"]}'):
         raise ValueError('Source URL must pin exact public repo/revision')
     return data

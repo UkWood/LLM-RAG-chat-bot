@@ -71,7 +71,10 @@ def run_retrieval_evaluation(root: Path,dataset_path: Path,*,mode='lexical',mode
             raise ValueError('Real local checkpoint required for dense/hybrid evaluation')
         provenance=read_model_provenance(model_directory,require_semantic=True)
         encoder=LocalONNXEncoder(model_directory)
-        read_model_provenance(model_directory,require_semantic=True,identity=encoder.identity)
+        loaded_provenance=read_model_provenance(model_directory,require_semantic=True,identity=encoder.identity)
+        if loaded_provenance!=provenance:
+            raise ValueError('Model bundle changed during loading')
+        provenance=loaded_provenance
         if encoder.identity.get('kind')!='local_onnx':
             raise ValueError('Test encoders cannot measure semantic quality')
     registry=load_registry((root/'registry.json').read_bytes())

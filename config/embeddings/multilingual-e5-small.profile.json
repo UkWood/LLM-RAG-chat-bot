@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "model_id": "intfloat/multilingual-e5-small",
+  "revision": "614241f622f53c4eeff9890bdc4f31cfecc418b3",
+  "source_url": "https://huggingface.co/intfloat/multilingual-e5-small/tree/614241f622f53c4eeff9890bdc4f31cfecc418b3",
+  "license_id": "MIT",
+  "review_reference": "docs/stages/2026-11-06-model-preparation.md; upstream card license: mit declaration only, no standalone LICENSE supplied; experimental evaluation, not production legal clearance",
+  "purpose": "semantic_candidate",
+  "dimensions": 384,
+  "max_length": 512,
+  "query_prefix": "query: ",
+  "passage_prefix": "passage: ",
+  "pad_id": 0,
+  "output_name": "last_hidden_state",
+  "pooling": "mean"
+}

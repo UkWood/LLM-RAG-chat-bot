@@ -1,5 +1,14 @@
 # Состояние проекта
 
+## Продолжение 2026-11-06: actual checkpoint и измерение
+
+Предыдущий сетевой blocker снят: runtime policy unrestricted/enforced, huggingface.co и us.aws.cdn.hf.co вернули HTTP200 через штатный proxy. Получен официальный intfloat/multilingual-e5-small revision614241f622f53c4eeff9890bdc4f31cfecc418b3; CPU smoke прошёл, artifacts только в ignored work/. Model card декларирует MIT; отдельного LICENSE нет, сохранена точная строка декларации, это не production legal clearance.
+
+На неизменных 10docs/44chunks/30cases: dense source-hit@5=18/20 (calibration12/14, held_out6/6), hybrid17/20 (13/14,4/6), BM25 baseline17/20 (14/14,3/6). Цель100% не пройдена. Reranking/grounding/refusal NOT_RUN; M1 generator не менялся. Не подгонять held_out. Следующий шаг — отдельный план reranking/evidence gate и calibration-only улучшений; реальные источники по-прежнему pending/UNKNOWN, Saturn-Main-Site только чтение.
+
+Проверки: base verifier 5 project +93 backend tests, 6 optional skips; optional verifier 5+93 без skips. Десять targeted preparation tests PASS; canonical URL regression RED→GREEN. Обновлён optional CI. Отчёт: [model preparation](stages/2026-11-06-model-preparation.md). Публикация/CI фиксируются ниже по фактическому результату. Прежние блокеры и сведения о PR #4 ниже исторические (PR #4 merged a1093fb).
+
+
 ## Промежуточная передача 2026-11-06
 
 PR #4 слит в main a1093fb, CI42097546595 success. Ветка feat/embedding-model-preparation содержит незавершённую подготовку локального embedding bundle; 8 целевых тестов PASS, полный suite/review/CI/PR ещё впереди. Реальная модель не получена, dense/hybrid quality NOT_RUN. Владелец обновил разрешение huggingface.co, но активная среда осталась на прежней политике и CONNECT403; продолжение в новой среде описано в [HANDOFF](HANDOFF.md). Сведения о PR #4 ниже относятся к прошлой публикации.
