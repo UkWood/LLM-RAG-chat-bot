@@ -30,6 +30,21 @@ def numbers(text):
     return {m.group().replace(',','.') for m in re.finditer(r'(?<!\w)[+-]?\d+(?:[.,]\d+)?|\d+(?:[.,]\d+)?',text)}
 
 
+IDENTIFIER=re.compile(r'(?<!\w)[^\W\d_]\w*(?:[-‑–]\w+)*(?!\w)')
+
+
+def numeric_support(text,quotes,cited_context):
+    """Names need cited context; factual numeric values still need exact quotes."""
+    def identifiers(value):
+        return {m.group() for m in IDENTIFIER.finditer(value) if any(c.isdigit() for c in m.group())}
+    names=identifiers(text)
+    if not names<=identifiers(cited_context):return False
+    def without_identifiers(value):
+        return IDENTIFIER.sub(lambda m:' ' if any(c.isdigit() for c in m.group()) else m.group(),value)
+    statement=without_identifiers(text);quoted=without_identifiers(quotes)
+    return numbers(statement)<=numbers(quoted) and quantities(statement)<=quantities(quoted)
+
+
 def quantities(text):
     aliases={'в':'v','мв':'mv','кв':'kv','а':'a','ма':'ma','вт':'w','квт':'kw','гц':'hz','кгц':'khz','мгц':'mhz','°с':'°c'}
     result=set()
@@ -73,6 +88,7 @@ class Consultant:
         if type(question) is not str or not question.strip() or len(question)>4000:return error('invalid_question')
         if self.provider.remote and not public_question:return error('public_question_required')
         if self.provider.remote and not getattr(self.service.catalog,'cloud_allowed',False):return error('cloud_source_not_approved')
+        phase='retrieval'
         try:
             if self.health and self.health()!='ready':return error('publication_not_current')
             indexes=self.service.capture();snapshot=indexes.snapshot;snapshot_id=snapshot.snapshot_id
@@ -94,6 +110,7 @@ class Consultant:
             if not selected:return self._render(question,snapshot,(),(question,),False,'no_evidence')
             def context(live):
                 return [dict(chunk_id=cid,title=mapping[cid].source_title,text=mapping[cid].chunk.text) for cid in selected if cid in live]
+            phase='generation'
             raw=self.provider.complete(GENERATION,json.dumps(dict(question=question,evidence=context(current)),ensure_ascii=False))
             claims=draft_claims(raw)
             current=allowed()
@@ -101,12 +118,14 @@ class Consultant:
                 if re.search(r'https?://',claim.text):return False
                 if any(q.chunk_id not in selected or q.chunk_id not in live or q.quote not in mapping[q.chunk_id].chunk.text for q in claim.evidence):return False
                 quotes=' '.join(q.quote for q in claim.evidence)
-                return numbers(claim.text)<=numbers(quotes) and quantities(claim.text)<=quantities(quotes)
+                cited_context=' '.join(mapping[q.chunk_id].chunk.text for q in claim.evidence)
+                return numeric_support(claim.text,quotes,cited_context)
             candidates=tuple(c for c in claims if deterministic(c,current))
             rejected=len(candidates)!=len(claims)
             if not any(cid in current for cid in selected):return self._render(question,snapshot,(),(question,),False,'source_changed')
             payload=dict(question=question,evidence=context(current),claims=[dict(id=c.id,text=c.text,
                 evidence=[dict(chunk_id=q.chunk_id,quote=q.quote) for q in c.evidence]) for c in candidates])
+            phase='verification'
             check=self.provider.complete(VERIFICATION,json.dumps(payload,ensure_ascii=False))
             if (not isinstance(check,dict) or set(check)!={'verdicts','questions','complete','ambiguous'}
                     or type(check['complete']) is not bool or type(check['ambiguous']) is not bool
@@ -130,9 +149,12 @@ class Consultant:
             # Gap wording cannot introduce new numbers/links; uncertainty remains explicit.
             permitted_text=question+' '+' '.join(mapping[cid].chunk.text for cid in selected if cid in final_allowed)
             if any(re.search(r'https?://',q) or not numbers(q)<=numbers(permitted_text) for q in gaps):gaps=(question,)
+            phase='render'
             return self._render(question,snapshot,kept,gaps,check['ambiguous'],None)
         except ProviderError as exc:return error('provider_'+str(exc))
-        except Exception:return error('pipeline_unavailable')
+        except ValueError:
+            return error({'generation':'invalid_generation_response','verification':'invalid_verification_response'}.get(phase,phase+'_unavailable'))
+        except Exception:return error(phase+'_unavailable')
 
     def _render(self,question,snapshot,claims,gaps,ambiguous,reason):
         # Recheck once more immediately before constructing the public response.

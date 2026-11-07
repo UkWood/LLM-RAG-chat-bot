@@ -1,0 +1,138 @@
+{
+  "scope": "public_synthetic_debug_trace",
+  "case_id": "d03",
+  "mode": "end-to-end",
+  "records": [
+    {
+      "pass": "generation",
+      "request": {
+        "question": "Сравните напряжение питания Лира-21 и Лира-22.",
+        "evidence": [
+          {
+            "chunk_id": "d677c7c3bc26676585077ec4e9dffd9161db3cd360f7f128bf5c312521cfe727",
+            "title": "lira22",
+            "text": "Лира-22. Напряжение питания 12 В. Интерфейс Ethernet."
+          },
+          {
+            "chunk_id": "03ea9837a2e72757971d155ef742c1cf763d56373e4f4ba710e45b35bd091ae4",
+            "title": "lira21",
+            "text": "Лира-21. Напряжение питания 24 В. Интерфейс RS-485. Поддерживаемый протокол Modbus RTU. Рабочая температура от -20 до +60 °C."
+          },
+          {
+            "chunk_id": "367bbde35935db33dd40af18cad5696ff8ba49a5525cf2e1f17dd4a675c266e9",
+            "title": "ultra-manual",
+            "text": "Ультра-8. Редакция 1. Напряжение питания 48 В."
+          },
+          {
+            "chunk_id": "a1f6d8da570521bc777772e885a5448e0897b8898cb565cb7e5796b00f5c9bee",
+            "title": "ultra-card",
+            "text": "Ультра-8. Редакция 1. Напряжение питания 24 В."
+          },
+          {
+            "chunk_id": "208b1211fae937d34a3a63504c7c0d2ba85c3c2b9ef27951ee3d2916780313a8",
+            "title": "vega-a",
+            "text": "Вега, модификация А. Диапазон давления от 0 до 10 бар."
+          }
+        ]
+      },
+      "response": {
+        "claims": [
+          {
+            "id": "c1",
+            "text": "У Лира-22 напряжение питания 12 В.",
+            "evidence": [
+              {
+                "chunk_id": "d677c7c3bc26676585077ec4e9dffd9161db3cd360f7f128bf5c312521cfe727",
+                "quote": "Напряжение питания 12 В."
+              }
+            ]
+          },
+          {
+            "id": "c2",
+            "text": "У Лира-21 напряжение питания 24 В.",
+            "evidence": [
+              {
+                "chunk_id": "03ea9837a2e72757971d155ef742c1cf763d56373e4f4ba710e45b35bd091ae4",
+                "quote": "Напряжение питания 24 В."
+              }
+            ]
+          }
+        ],
+        "questions": []
+      }
+    },
+    {
+      "pass": "verification",
+      "request": {
+        "question": "Сравните напряжение питания Лира-21 и Лира-22.",
+        "evidence": [
+          {
+            "chunk_id": "d677c7c3bc26676585077ec4e9dffd9161db3cd360f7f128bf5c312521cfe727",
+            "title": "lira22",
+            "text": "Лира-22. Напряжение питания 12 В. Интерфейс Ethernet."
+          },
+          {
+            "chunk_id": "03ea9837a2e72757971d155ef742c1cf763d56373e4f4ba710e45b35bd091ae4",
+            "title": "lira21",
+            "text": "Лира-21. Напряжение питания 24 В. Интерфейс RS-485. Поддерживаемый протокол Modbus RTU. Рабочая температура от -20 до +60 °C."
+          },
+          {
+            "chunk_id": "367bbde35935db33dd40af18cad5696ff8ba49a5525cf2e1f17dd4a675c266e9",
+            "title": "ultra-manual",
+            "text": "Ультра-8. Редакция 1. Напряжение питания 48 В."
+          },
+          {
+            "chunk_id": "a1f6d8da570521bc777772e885a5448e0897b8898cb565cb7e5796b00f5c9bee",
+            "title": "ultra-card",
+            "text": "Ультра-8. Редакция 1. Напряжение питания 24 В."
+          },
+          {
+            "chunk_id": "208b1211fae937d34a3a63504c7c0d2ba85c3c2b9ef27951ee3d2916780313a8",
+            "title": "vega-a",
+            "text": "Вега, модификация А. Диапазон давления от 0 до 10 бар."
+          }
+        ],
+        "claims": []
+      },
+      "response": {
+        "verdicts": [],
+        "questions": [
+          "В черновике нет проверяемых утверждений; что именно нужно проверить в сравнении напряжения питания Лира-21 и Лира-22?"
+        ],
+        "complete": false,
+        "ambiguous": false
+      }
+    }
+  ],
+  "events": [
+    {
+      "function": "deterministic",
+      "claim_id": "c1",
+      "text": "У Лира-22 напряжение питания 12 В.",
+      "accepted": false
+    },
+    {
+      "function": "deterministic",
+      "claim_id": "c2",
+      "text": "У Лира-21 напряжение питания 24 В.",
+      "accepted": false
+    },
+    {
+      "function": "<genexpr>",
+      "line": 107,
+      "exception_type": "GeneratorExit"
+    }
+  ],
+  "answer": {
+    "status": "needs_support",
+    "text": "В черновике нет проверяемых утверждений; что именно нужно проверить в сравнении напряжения питания Лира-21 и Лира-22?\nВ доступных материалах подтверждения недостаточно. Для уточнения свяжитесь с поддержкой компании.",
+    "snapshot_id": "89795e0e635a2d83f0076e6a30a5a26609b2d1e9dd6d1a6a80f46e7859df6527",
+    "claims": [],
+    "questions": [
+      "В черновике нет проверяемых утверждений; что именно нужно проверить в сравнении напряжения питания Лира-21 и Лира-22?"
+    ],
+    "sources": [],
+    "reason_code": null,
+    "as_of": null
+  }
+}

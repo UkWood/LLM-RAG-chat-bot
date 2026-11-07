@@ -98,3 +98,73 @@ class ApplicationTests(unittest.TestCase):
         verdict=self.verdict();verdict['ambiguous']=True
         result=self.app(Model([self.draft(),verdict])).answer('Какой именно Блок А?')
         self.assertEqual(result.status,'partial');self.assertTrue(result.questions)
+
+    def test_invalid_generation_schema_has_fixed_specific_code(self):
+        result=self.app(Model([{'claims':'bad synthetic response','questions':[]}])).answer('Блок А?')
+        self.assertEqual(result.status,'error');self.assertEqual(result.reason_code,'invalid_generation_response')
+        self.assertNotIn('bad synthetic response',result.text)
+
+    def test_invalid_verification_schema_has_fixed_specific_code(self):
+        result=self.app(Model([self.draft(),{'verdicts':[]}])).answer('Блок А?')
+        self.assertEqual(result.reason_code,'invalid_verification_response')
+
+    def test_unexpected_retrieval_failure_does_not_expose_exception(self):
+        from unittest.mock import patch
+        with patch.object(self.service,'_rerank',side_effect=RuntimeError('private exception content')):
+            result=self.app(Model([])).answer('Блок А?')
+        self.assertEqual(result.reason_code,'retrieval_unavailable')
+        self.assertNotIn('private exception content',str(result.to_dict()))
+
+class NumericIdentifierTests(unittest.TestCase):
+    def answer(self,text,quote,*,source=None):
+        source=source or 'Контроллер Тест-17. Напряжение 24 В. Интерфейс RS-485.'
+        a=PublishedSource('https://example.invalid/numeric/a',('<main>'+source+'</main>').encode(),'text/html')
+        b=PublishedSource('https://example.invalid/numeric/b','<main>Другой-99. Напряжение 24 В.</main>'.encode(),'text/html')
+        snapshot=PublishedSnapshot((a,b),'numeric-regression')
+        service=RetrievalService(PublishedCatalog(lambda:{s.url:s.content_hash for s in snapshot.sources}))
+        service.publish(IndexSet(snapshot,BM25Index(snapshot)))
+        cid=next(c.chunk_id for c in snapshot.chunks if c.source_id==a.url)
+        class Verifier(Model):
+            def complete(model,system,user):
+                import json
+                payload=json.loads(user)
+                if 'claims' in payload:
+                    return {'verdicts':[{'id':c['id'],'status':'supported'} for c in payload['claims']],
+                        'questions':[],'complete':bool(payload['claims']),'ambiguous':False}
+                return {'claims':[{'id':'power','text':text,'evidence':[{'chunk_id':cid,'quote':quote}]}],'questions':[]}
+        return Consultant(service,None,Verifier([]),mode='lexical').answer('Контроллер Тест-17: напряжение и интерфейс?',context_ids=(cid,))
+
+    def test_identifier_in_cited_context_does_not_require_repeating_it_in_short_quote(self):
+        result=self.answer('Напряжение Тест-17 составляет 24 В.','Напряжение 24 В.')
+        self.assertEqual(result.status,'answered');self.assertEqual(len(result.claims),1)
+        self.assertIn('Тест-17',result.text);self.assertEqual(len(result.sources),1)
+
+    def test_backed_interface_identifier_in_quote_is_not_a_negative_quantity(self):
+        result=self.answer('Тест-17 имеет интерфейс RS-485.','Интерфейс RS-485.')
+        self.assertEqual(result.status,'answered');self.assertEqual(len(result.claims),1)
+
+    def test_identifier_digits_cannot_license_invented_values_units_or_other_entities(self):
+        for text,quote in [
+            ('Напряжение Тест-17 составляет 17 В.','Напряжение 24 В.'),
+            ('Напряжение Тест-17 составляет 48 В.','Напряжение 24 В.'),
+            ('Напряжение Тест-17 составляет 24 мВ.','Напряжение 24 В.'),
+            ('Напряжение Другой-99 составляет 24 В.','Напряжение 24 В.'),
+            ('Напряжение Тест-170 составляет 24 В.','Напряжение 24 В.')]:
+            with self.subTest(text=text):
+                result=self.answer(text,quote)
+                self.assertFalse(result.claims);self.assertEqual(result.status,'needs_support')
+
+    def test_numeric_signs_still_require_exact_quote_support(self):
+        for text,expected in [('Тест-17 работает при -20 °C.','answered'),('Тест-17 работает при 20 °C.','needs_support')]:
+            with self.subTest(text=text):
+                result=self.answer(text,'Температура -20 °C.',source='Тест-17. Температура -20 °C.')
+                self.assertEqual(result.status,expected)
+
+    def test_digits_in_an_interface_identifier_are_not_evidence_for_a_channel_count(self):
+        result=self.answer('Тест-17 имеет 485 каналов.','Интерфейс RS-485.')
+        self.assertFalse(result.claims);self.assertEqual(result.status,'needs_support')
+
+    def test_unit_suffix_in_a_backed_product_identifier_is_not_a_measured_quantity(self):
+        result=self.answer('Напряжение БП-12В составляет 24 В.','Напряжение 24 В.',
+            source='БП-12В. Напряжение 24 В.')
+        self.assertEqual(result.status,'answered');self.assertEqual(len(result.claims),1)
