@@ -66,3 +66,8 @@ Fixture/context review подтверждён владельцем. Oracle15/15 
 ## После numeric correction6f7e728
 
 Новые oracle/end-to-end оба15/15,0infrastructure errors, [ответы и pending human review](../stages/2026-11-07-grounded-rag-corrected-responses.md). Предыдущая остановка d03 историческая; её причина не установлена. Numeric identifiers требуют exact cited-chunk backing и не становятся numeric/quantity evidence. Backend теперь различает invalid_generation_response/invalid_verification_response и retrieval/generation/verification/render_unavailable; provider_* codes сохраняются. Fixed code не содержит exception/body/credentials; при error остановить последующие calls, не retry автоматически. Human answer review и вопросы релевантности d11/d12 всё ещё pending; повторный smoke не нужен.
+
+
+## Requested scope и последние measurements
+
+Sourcef41c25f: публикуются только relevant+supported claims; verdict irrelevant исключает и claim, и его citation. Если requested evidence отсутствует — конкретный support question без постороннего product overview. Последние [reports/responses/review forms](../stages/2026-11-07-grounded-rag-relevance-responses.md): oracle15/15/0errors; end-to-end остановлен наd13 provider_invalid_or_unavailable_response при verification, d14–d15NOT_RUN. Никакого retry; не объявлять report awaiting_human_review полным успехом. D11/d12 без лишних характеристик в обоих режимах. Предыдущие numeric-correction результаты исторические; human answer acceptance pending.

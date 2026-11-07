@@ -91,3 +91,6 @@ Final source `7da1afa`: base/ONNX5project+215backend PASS (12/1skips), separate 
 
 
 Live correction continuation2026-11-07: owner confirmed fixture/context review, initial live reports preserved; numeric-name loss traced and fixed in6f7e728 with9new regressions, one focused correction review and one2finding RED→GREEN pass. Final base/ONNX5project+224backendPASS (12/1skips),36targetedPASS. New oracle/end-to-end each15/15 with0infrastructure errors; see [stage](../../stages/2026-11-07-grounded-rag-numeric-correction.md). Task5 overall remains incomplete: human answer assessment and relevance issues d11/d12 are pending; runtime counts do not mark acceptance. No repeated whole-branch review, model/provider switch, consumed-dataset tuning, merge/deploy.
+
+
+Requested-scope correction2026-11-07 explicitly required by owner: f41c25f generation/verification relevance+irrelevant backend suppression,4new RED→GREEN tests,40targetedPASS, final base/ONNX5project+228backendPASS (12/1skips). [Stage/results](../../stages/2026-11-07-grounded-rag-relevance.md): oracle15/15; full path12cases without error, d13 provider response error, remaining2NOT_RUN. Former extra facts removed in measured d10–d12 and partial cases. No prompt-specific question routing, provider/model change or retry. Task5 overall/human acceptance remains pending; do not mark all quality work complete.

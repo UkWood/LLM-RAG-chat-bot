@@ -1,5 +1,11 @@
 # Состояние проекта
 
+## Исключены сведения вне вопроса — 2026-11-07
+
+Владелец прямо потребовал исключить сведения вне вопроса. Sourcef41c25f: generation ограничена requested scope, verification имеет irrelevant, backend убирает такие claims/citations без искусственного gap в полном ответе.4регрессии RED→GREEN,40targetedPASS; base/ONNX5project+228backendPASS (12/1skips).
+
+[Последние ответы и формы оценки](stages/2026-11-07-grounded-rag-relevance-responses.md), [stage evidence](stages/2026-11-07-grounded-rag-relevance.md). Oracle15/15 без infrastructure errors; в обоих режимах d10–d12 без фактических claims/citations, d06–d08 без прежних посторонних характеристик. End-to-end d01–d12 без error, d13 provider_invalid_or_unavailable_response на verification; d14–d15 NOT_RUN, без retry. Это не успешный full15/15. Human answer assessment/общая приёмка качества pending. Старые reports/dataset неизменны; предыдущие ниже relevance blockers исторические.
+
 ## Исправлен числовой фильтр, оба live diagnostics выполнены — 2026-11-07
 
 Source `6f7e728`: цифры в названии изделия больше не подменяют величины и не требуют повтора имени в короткой quote. Exact identifier backing проверяется в цитируемом chunk; выдуманные values/units/другие IDs отклоняются. Добавлены безопасные phase error codes.9новых regression tests,36targetedPASS; final base/ONNX verify_offline5project+224backendPASS (12/1skips). Один focused review,2findings воспроизведены RED→GREEN и исправлены одним pass.

@@ -1,5 +1,13 @@
 # Checkpoint: переход к среде с LLM variables
 
+## Последнее продолжение: только сведения по вопросу — 2026-11-07
+
+User: «Сведения вне вопроса нужно исключить». Sourcef41c25f добавляет explicit requested scope в generation/verification и verdict irrelevant; backend не публикует extras и не превращает их удаление в искусственную неполноту.4новых RED→GREEN tests,40targetedPASS; final base/ONNX5project+228backendPASS (12/1skips).
+
+[Последние responses/pending human review forms](../stages/2026-11-07-grounded-rag-relevance-responses.md), [actual evidence/границы](../stages/2026-11-07-grounded-rag-relevance.md). Oracle15/15/0errors; full path d01–d12 без error, d13 verification provider_invalid_or_unavailable_response, d14–d15 NOT_RUN, без retries. В обоих режимах d10–d12 нет factual claims/citations, d06–d08 не содержат прежних сторонних фактов. Oracle/full reports immutable, SHA-bound review forms null/pending. Human overall quality acceptance не получена.
+
+Следующий шаг — независимая оценка actual responses; provider failure можно расследовать отдельно с конкретным основанием, не replay набора автоматически. Код не устанавливает точную причину invalid/unavailable provider response. Smoke/provider/model/key/runtime settings не менять и не повторять без причины. Fixtures review owner-attested сохраняется; это не answer acceptance. Source unchanged послеf41c25f, последующий commit только docs/evidence. Прежние reports/checkpoints ниже исторические, no merge/deploy/site operations.
+
 ## Последний checkpoint: numeric correction и30cases без infrastructure errors — 2026-11-07
 
 Продолжение владельца «продолжай». Source6f7e728 исправляет numeric rejection контекстно подтверждённых names и вводит fixed phase error codes; final base/ONNX5project+224backendPASS (12/1skips),36targetedPASS. Один focused correction reviewer,2finding fixes RED→GREEN, без нового whole-branch reviewer loop.
