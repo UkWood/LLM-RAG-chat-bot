@@ -56,7 +56,7 @@ New evaluation/v3_dataset.py: validate_v3(raw,snapshot,profile)->cases for blind
 - [x] Freeze initial catalogue/grammar/grid/resource identities before first calibration. Save each general-rule code/config iteration, select highest fully-correct positive coverage among zero unsafe/canonical-valid/correct negative outcomes, no legacyV1-positive regression and strictly better than correctedV2 new-cal coverage. Finite grid above remains fixed.
 - [x] Base+optional full verifiers and one independent whole-branch review, one Important fix pass RED→GREEN/full checks; no second reviewer loop.
 - [x] If no configuration qualifies: persist feasibility failure, leave blind hidden/unconsumed, no fake blind score; docs/PR/CI and stop experimental stage. If qualifies: exact clean commit/code+config+catalogue+models+calibration+dataset hash freeze, SHA-exclusive START before parsing, single V2/V3 run40cases, errors/partial outcomes persist. Target24/24+16/16, no unsafe/partial/leak; unmet stays failure. No post-blind tuning/replay.
-- [ ] ADR/status/stage/handoff/README and concrete implementation PR+actual current-head CI. Close docs-only11 as superseded once accepted design included. No automatic merge new feature PR.
+- [x] ADR/status/stage/handoff/README and concrete implementation PR+actual current-head CI. Close docs-only11 as superseded once accepted design included. No automatic merge new feature PR.
 
 ## Verification commands
 
@@ -66,3 +66,5 @@ work/venv/bin/python scripts/verify_offline.py
 Use existing local work/multilingual-e5-small and work/mmarco-reranker only for actual calibration/frozen comparison. Reports contain IDs/metrics/provenance, not raw questions/context/answer logs.
 
 Self-review: all spec sections mapped above; same EvidenceNeed/SourceConstraints/FactProjection and canonical references consumed throughout, explicit new locked selection avoids V2 reselection. Gate/provider publication boundaries unchanged; empirical semantic mapping risk remains, default V3 disabled.
+
+Completion2026-11-07: valid first blind target FAILED (V3 2/24+16/16 vs correctedV2 4/24+16/16). Immutable first report/START, draftPR12 and all4outcome-snapshotCI checks published; no default enablement, prototype acceptance, post-blind tuning or automatic merge. Latest docs-head CI evidence is recorded in PR12.
