@@ -68,3 +68,22 @@ class EvaluationTests(unittest.TestCase):
         case=dict(id='baseline',group='single_field',question=q,expected_status='answered',requirements=[dict(entity_id='products/edu-410',predicate='power',selector='',document_kind='any',representation='any',reference=None,evidence=[dict(source_id='synthetic:products/edu-410',field_path='power',page=None,text='24 В')])])
         row=score_v3_case(case,self.s,result)
         self.assertIsNone(row['pool_gold_pointer_recall']);self.assertIsNone(row['retrieval_pairs'])
+
+    def test_legacy_regression_requires_expected_evidence_not_any_true_quote(self):
+        from saturn_ai.evaluation.planner_v3 import legacy_answer_correct
+        from saturn_ai.evaluation.dataset import Case,ExpectedEvidence
+        app=GroundedConsultantV3(self.service,support.Scorer3(),FakeLLMProvider(),mode='lexical')
+        case=Case('legacy-custom','Питание EDU-410?','exact_spec','calibration','answered',True,False,
+            ('synthetic:products/edu-410',),('24 В',),
+            (ExpectedEvidence('synthetic:products/edu-410','24 В','power',None),),())
+        right=app.answer(case.question);wrong=app.answer('Интерфейсы EDU-410?')
+        self.assertEqual(wrong.status,'answered')
+        self.assertTrue(legacy_answer_correct(case,self.s,right))
+        self.assertFalse(legacy_answer_correct(case,self.s,wrong))
+        manual=app.answer('Руководство EDU-410?')
+        source=manual.references[0].source_id
+        anchor=next(c for c in self.s.chunks if c.chunk_id==manual.references[0].anchor_chunk_id)
+        refcase=replace(case,question='Руководство EDU-410?',category='document_lookup',expected_sources=(source,),
+            expected_evidence=(ExpectedEvidence(source,anchor.chunk.text,anchor.chunk.field_path,anchor.chunk.page_start),))
+        self.assertTrue(legacy_answer_correct(refcase,self.s,manual))
+        self.assertFalse(legacy_answer_correct(refcase,self.s,right))

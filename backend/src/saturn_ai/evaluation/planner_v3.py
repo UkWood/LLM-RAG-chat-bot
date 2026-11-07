@@ -44,6 +44,25 @@ def score_v3_case(case,snapshot,result):
     return row
 
 
+def legacy_answer_correct(case,snapshot,result):
+    """Grade V1-supported questions against original gold and equivalent complete facts."""
+    from ..grounding.gate import plan_question
+    from ..grounding.contracts import QuestionPlan
+    if result.status!='answered' or not case.must_answer:return False
+    legacy=plan_question(case.question,snapshot)
+    if not isinstance(legacy,QuestionPlan):return False
+    reference=None;predicate=legacy.aspect
+    if predicate=='manual':
+        manuals=[r for r in snapshot.registry.entries if r.source_id in case.expected_sources and r.document_type=='manual']
+        if len(manuals)!=1:return False
+        record=manuals[0];predicate='document_reference'
+        reference=dict(kind='document',source_id=record.source_id,value=record.title)
+    need=dict(entity_id=legacy.entity_id,predicate=predicate,selector='',document_kind='any',representation='any',
+        reference=reference,evidence=[dict(source_id=e.source_id,field_path=e.field_path,page=e.page,text=e.text) for e in case.expected_evidence])
+    gold=dict(id=case.id,expected_status='answered',requirements=[need])
+    return score_v2_case(gold,snapshot,result)['fully_correct']
+
+
 def metrics(rows):
     m=aggregate_v2(rows);pos=[r for r in rows if r['expected_status']=='answered']
     m['plan_accuracy']=sum(r.get('plan_correct') is True for r in pos)/len(pos) if pos else None
@@ -123,7 +142,7 @@ def run_v3_calibration(corpus,dataset_path,model_directory,reranker_directory):
                 regressions=[]
                 for c,base,result,f in legacy_probes:
                     actual=project_threshold_result(result,f,settings)
-                    if base.status=='answered' and (actual.status!='answered' or not _output_integrity(actual,snapshot)[0]):regressions.append(c.id)
+                    if legacy_answer_correct(c,snapshot,base) and not legacy_answer_correct(c,snapshot,actual):regressions.append(c.id)
                 grid.append(dict(settings=settings,rows=rows,legacy_regression_ids=regressions))
         selected=choose_configuration(grid,baseline);actual_rows=[];times=[];replay_matches=False
         if selected is not None:
@@ -133,9 +152,9 @@ def run_v3_calibration(corpus,dataset_path,model_directory,reranker_directory):
             fields=('status','reason_code','fully_correct','plan_correct','canonical_output_valid','correct_requirements','gold_pointer_coverage')
             replay_matches=all(all(a[k]==b[k] for k in fields) for a,b in zip(actual_rows,selected['rows']))
             for c,old_result,_,_ in legacy_probes:
-                if old_result.status=='answered':
+                if legacy_answer_correct(c,snapshot,old_result):
                     r=app.answer(c.question)
-                    if r.status!='answered' or not _output_integrity(r,snapshot)[0]:replay_matches=False
+                    if not legacy_answer_correct(c,snapshot,r):replay_matches=False
         feasible=selected is not None and replay_matches
         chosen=actual_rows if selected is not None else []
         summaries=[dict(score_min=t['settings']['score_min'],margin_min=t['settings']['margin_min'],metrics=metrics(t['rows']),legacy_regression_ids=t['legacy_regression_ids']) for t in grid]
@@ -144,6 +163,8 @@ def run_v3_calibration(corpus,dataset_path,model_directory,reranker_directory):
             calibration_sha256=_sha(dataset_path),legacy_sha256=_sha(old_path),embedding_manifest_sha256=_sha(model_directory/'manifest.json'),
             reranker_manifest_sha256=_sha(reranker_directory/'manifest.json'),**identity,feasible=feasible,
             selected_settings=selected['settings'] if selected is not None else None,selected_replay_matches=replay_matches,
+            legacy_rubric='V1-supported requirements; original gold pointers define complete canonical fact equivalence; canonical manual reference equivalence',
+            legacy_v1_correct_positive_ids=[c.id for c,b,_,_ in legacy_probes if legacy_answer_correct(c,snapshot,b)],
             grid_method='35 fixed-grid abstention projections from actual permissive proposal outputs; selected configuration fully replayed',
             metrics=dict(v2=metrics(baseline),v3=metrics(chosen) if chosen else None),grid=summaries,
             cases=[dict(case_id=c['id'],group=c['group'],v2=b,v3=chosen[i] if chosen else None) for i,(c,b) in enumerate(zip(cases,baseline))],
