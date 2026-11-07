@@ -115,6 +115,38 @@ class ApplicationTests(unittest.TestCase):
         self.assertEqual(result.reason_code,'retrieval_unavailable')
         self.assertNotIn('private exception content',str(result.to_dict()))
 
+    def test_true_but_unrequested_facts_leave_only_the_requested_support_question(self):
+        verdict=self.verdict(complete=False,questions=['Сколько стоит Блок А?'])
+        for item in verdict['verdicts']:item['status']='irrelevant'
+        result=self.app(Model([self.draft(),verdict])).answer('Сколько стоит Блок А?')
+        self.assertEqual(result.status,'needs_support');self.assertFalse(result.claims);self.assertFalse(result.sources)
+        self.assertNotIn('24 В',result.text);self.assertNotIn('Ethernet',result.text)
+        self.assertEqual(result.questions,('Сколько стоит Блок А?',))
+
+    def test_removing_unrequested_fact_does_not_turn_a_complete_answer_into_partial(self):
+        verdict=self.verdict();verdict['verdicts'][1]['status']='irrelevant'
+        result=self.app(Model([self.draft(),verdict])).answer('Какое питание у Блока А?')
+        self.assertEqual(result.status,'answered');self.assertEqual([c.id for c in result.claims],['power'])
+        self.assertFalse(result.questions);self.assertNotIn('Ethernet',result.text)
+        self.assertEqual(len(result.sources),1)
+
+    def test_relevant_partial_answer_survives_removal_of_extra_fact(self):
+        verdict=self.verdict(complete=False,questions=['При какой температуре работает Блок А?'])
+        verdict['verdicts'][1]['status']='irrelevant'
+        result=self.app(Model([self.draft(),verdict])).answer('Какое питание и рабочая температура Блока А?')
+        self.assertEqual(result.status,'partial');self.assertEqual([c.id for c in result.claims],['power'])
+        self.assertNotIn('Ethernet',result.text);self.assertIn('температуре',result.questions[0])
+
+    def test_mixed_requested_and_unrequested_statement_is_not_published(self):
+        draft=self.draft();draft['claims']=draft['claims'][:1]
+        draft['claims'][0]['text']='Напряжение блока 24 В; интерфейс Ethernet.'
+        draft['claims'][0]['evidence'].append(self.draft()['claims'][1]['evidence'][0])
+        verdict={'verdicts':[{'id':'power','status':'irrelevant'}],
+            'questions':['Какое питание у Блока А?'],'complete':False,'ambiguous':False}
+        result=self.app(Model([draft,verdict])).answer('Какое питание у Блока А?')
+        self.assertFalse(result.claims);self.assertNotIn('Ethernet',result.text)
+        self.assertEqual(result.status,'needs_support')
+
 class NumericIdentifierTests(unittest.TestCase):
     def answer(self,text,quote,*,source=None):
         source=source or 'Контроллер Тест-17. Напряжение 24 В. Интерфейс RS-485.'
