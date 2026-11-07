@@ -71,3 +71,12 @@ Fixture/context review подтверждён владельцем. Oracle15/15 
 ## Requested scope и последние measurements
 
 Sourcef41c25f: публикуются только relevant+supported claims; verdict irrelevant исключает и claim, и его citation. Если requested evidence отсутствует — конкретный support question без постороннего product overview. Последние [reports/responses/review forms](../stages/2026-11-07-grounded-rag-relevance-responses.md): oracle15/15/0errors; end-to-end остановлен наd13 provider_invalid_or_unavailable_response при verification, d14–d15NOT_RUN. Никакого retry; не объявлять report awaiting_human_review полным успехом. D11/d12 без лишних характеристик в обоих режимах. Предыдущие numeric-correction результаты исторические; human answer acceptance pending.
+
+
+## Tested profile4096 и safe provider reasons
+
+Actual d13 verification probe при2048 вернул finish_reason=length/content=null. Для выбранного API/model испытан process profile `LLM_MAX_TOKENS=4096`; задайте эту runtime variable через настройки или перед командой, например `LLM_MAX_TOKENS=4096 PYTHONPATH=backend/src work/venv/bin/python -m saturn_ai.rag ask ...`. Это не secret; `.env` автоматически не загружается. Generic default2048 в коде прежний: команды без override используют inherited значение/default. Диапазон16…8192/response limit/strict finish_reason=stop/JSON guards сохранены.
+
+Sourceac4d289: output_truncated — finish length; invalid_response_envelope — envelope/choices JSON/shape; invalid_response_content — model JSON/content; unsupported_response_shape — tools/other finish; timeout/transport_unavailable отдельно; HTTP http_* прежние. Никаких exception/body/header/key в reason, automatic retry/budget escalation нет. При error остановить следующие calls.
+
+Новые oracle/end-to-end4096 оба15/15/0errors: [responses/reports/SHA-bound human forms](../stages/2026-11-07-grounded-rag-budget4096-responses.md). Старый stopped profile2048 immutable. Дальше human answer review, не автоматическое расширение на UI/site/deploy.

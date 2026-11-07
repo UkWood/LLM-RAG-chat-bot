@@ -1,0 +1,542 @@
+{
+  "report_kind": "public_synthetic_open_rag_diagnostic",
+  "schema_version": 1,
+  "mode": "oracle",
+  "test_only": true,
+  "identities": {
+    "snapshot_id": "89795e0e635a2d83f0076e6a30a5a26609b2d1e9dd6d1a6a80f46e7859df6527",
+    "dataset_sha256": "e5b5a8174e06bc23fa0c5d38a0f25c1f6eaf078bb238c810ed19d12b84cd0e5a",
+    "provider": {
+      "kind": "openai-compatible",
+      "base_url": "https://api.aitunnel.ru/v1",
+      "model": "deepseek-v4.1-flash-1017",
+      "max_tokens": 4096,
+      "json_mode": true
+    },
+    "embedding": null,
+    "reranker": null
+  },
+  "case_count": 15,
+  "fixture_review": "operator_attested",
+  "human_review": "pending",
+  "generation_quality": "pending_human_review",
+  "mean_gold_quote_recall": null,
+  "infrastructure_errors": 0,
+  "cases": [
+    {
+      "case_id": "d01",
+      "kind": "full",
+      "answer": {
+        "status": "answered",
+        "text": "Напряжение питания Лира-21 составляет 24 В. [1]\nИнтерфейс Лира-21 — RS-485. [1]",
+        "snapshot_id": "89795e0e635a2d83f0076e6a30a5a26609b2d1e9dd6d1a6a80f46e7859df6527",
+        "claims": [
+          {
+            "id": "c1",
+            "text": "Напряжение питания Лира-21 составляет 24 В.",
+            "evidence": [
+              {
+                "chunk_id": "03ea9837a2e72757971d155ef742c1cf763d56373e4f4ba710e45b35bd091ae4",
+                "quote": "Напряжение питания 24 В."
+              }
+            ]
+          },
+          {
+            "id": "c2",
+            "text": "Интерфейс Лира-21 — RS-485.",
+            "evidence": [
+              {
+                "chunk_id": "03ea9837a2e72757971d155ef742c1cf763d56373e4f4ba710e45b35bd091ae4",
+                "quote": "Интерфейс RS-485."
+              }
+            ]
+          }
+        ],
+        "questions": [],
+        "sources": [
+          {
+            "number": 1,
+            "chunk_id": "03ea9837a2e72757971d155ef742c1cf763d56373e4f4ba710e45b35bd091ae4",
+            "url": "https://example.invalid/rag-diagnostic/lira21.html",
+            "title": "lira21",
+            "content_sha256": "cee802e861a62922777115cd623f60df84877d128ff38336328deab5a8155ece",
+            "page": null
+          }
+        ],
+        "reason_code": null,
+        "as_of": null
+      }
+    },
+    {
+      "case_id": "d02",
+      "kind": "full",
+      "answer": {
+        "status": "answered",
+        "text": "Лира-21 поддерживает протокол Modbus RTU. [1]",
+        "snapshot_id": "89795e0e635a2d83f0076e6a30a5a26609b2d1e9dd6d1a6a80f46e7859df6527",
+        "claims": [
+          {
+            "id": "c1",
+            "text": "Лира-21 поддерживает протокол Modbus RTU.",
+            "evidence": [
+              {
+                "chunk_id": "03ea9837a2e72757971d155ef742c1cf763d56373e4f4ba710e45b35bd091ae4",
+                "quote": "Поддерживаемый протокол Modbus RTU"
+              }
+            ]
+          }
+        ],
+        "questions": [],
+        "sources": [
+          {
+            "number": 1,
+            "chunk_id": "03ea9837a2e72757971d155ef742c1cf763d56373e4f4ba710e45b35bd091ae4",
+            "url": "https://example.invalid/rag-diagnostic/lira21.html",
+            "title": "lira21",
+            "content_sha256": "cee802e861a62922777115cd623f60df84877d128ff38336328deab5a8155ece",
+            "page": null
+          }
+        ],
+        "reason_code": null,
+        "as_of": null
+      }
+    },
+    {
+      "case_id": "d03",
+      "kind": "full",
+      "answer": {
+        "status": "answered",
+        "text": "Напряжение питания Лира-21 составляет 24 В. [1]\nНапряжение питания Лира-22 составляет 12 В. [2]",
+        "snapshot_id": "89795e0e635a2d83f0076e6a30a5a26609b2d1e9dd6d1a6a80f46e7859df6527",
+        "claims": [
+          {
+            "id": "c1",
+            "text": "Напряжение питания Лира-21 составляет 24 В.",
+            "evidence": [
+              {
+                "chunk_id": "03ea9837a2e72757971d155ef742c1cf763d56373e4f4ba710e45b35bd091ae4",
+                "quote": "Напряжение питания 24 В"
+              }
+            ]
+          },
+          {
+            "id": "c2",
+            "text": "Напряжение питания Лира-22 составляет 12 В.",
+            "evidence": [
+              {
+                "chunk_id": "d677c7c3bc26676585077ec4e9dffd9161db3cd360f7f128bf5c312521cfe727",
+                "quote": "Напряжение питания 12 В"
+              }
+            ]
+          }
+        ],
+        "questions": [],
+        "sources": [
+          {
+            "number": 1,
+            "chunk_id": "03ea9837a2e72757971d155ef742c1cf763d56373e4f4ba710e45b35bd091ae4",
+            "url": "https://example.invalid/rag-diagnostic/lira21.html",
+            "title": "lira21",
+            "content_sha256": "cee802e861a62922777115cd623f60df84877d128ff38336328deab5a8155ece",
+            "page": null
+          },
+          {
+            "number": 2,
+            "chunk_id": "d677c7c3bc26676585077ec4e9dffd9161db3cd360f7f128bf5c312521cfe727",
+            "url": "https://example.invalid/rag-diagnostic/lira22.html",
+            "title": "lira22",
+            "content_sha256": "000bac4472659b33ec9720c35fb471dd06b66a703ee9ee495ac95d7a2fcc28ed",
+            "page": null
+          }
+        ],
+        "reason_code": null,
+        "as_of": null
+      }
+    },
+    {
+      "case_id": "d04",
+      "kind": "full",
+      "answer": {
+        "status": "answered",
+        "text": "Межповерочный интервал Орион-110 составляет 12 месяцев. [1]",
+        "snapshot_id": "89795e0e635a2d83f0076e6a30a5a26609b2d1e9dd6d1a6a80f46e7859df6527",
+        "claims": [
+          {
+            "id": "c1",
+            "text": "Межповерочный интервал Орион-110 составляет 12 месяцев.",
+            "evidence": [
+              {
+                "chunk_id": "0ccfad939dd29d4686b90884e1471858bd707fd80077b9bb31be2a1d513b8807",
+                "quote": "Межповерочный интервал 12 месяцев."
+              }
+            ]
+          }
+        ],
+        "questions": [],
+        "sources": [
+          {
+            "number": 1,
+            "chunk_id": "0ccfad939dd29d4686b90884e1471858bd707fd80077b9bb31be2a1d513b8807",
+            "url": "https://example.invalid/rag-diagnostic/orion.html",
+            "title": "orion",
+            "content_sha256": "195b34d7e4ecb2f8e178c10bfbb9fe345ed1912c7a6b3580aac41e105b762efe",
+            "page": null
+          }
+        ],
+        "reason_code": null,
+        "as_of": null
+      }
+    },
+    {
+      "case_id": "d05",
+      "kind": "full",
+      "answer": {
+        "status": "answered",
+        "text": "Диапазон давления у Вега, модификации А: от 0 до 10 бар. [1]",
+        "snapshot_id": "89795e0e635a2d83f0076e6a30a5a26609b2d1e9dd6d1a6a80f46e7859df6527",
+        "claims": [
+          {
+            "id": "c1",
+            "text": "Диапазон давления у Вега, модификации А: от 0 до 10 бар.",
+            "evidence": [
+              {
+                "chunk_id": "208b1211fae937d34a3a63504c7c0d2ba85c3c2b9ef27951ee3d2916780313a8",
+                "quote": "Диапазон давления от 0 до 10 бар."
+              }
+            ]
+          }
+        ],
+        "questions": [],
+        "sources": [
+          {
+            "number": 1,
+            "chunk_id": "208b1211fae937d34a3a63504c7c0d2ba85c3c2b9ef27951ee3d2916780313a8",
+            "url": "https://example.invalid/rag-diagnostic/vega-a.html",
+            "title": "vega-a",
+            "content_sha256": "7e5bca4aa8bee11f906c12bb0a408a3d88392a54d3b40f532178ee7848c6b10b",
+            "page": null
+          }
+        ],
+        "reason_code": null,
+        "as_of": null
+      }
+    },
+    {
+      "case_id": "d06",
+      "kind": "partial",
+      "answer": {
+        "status": "partial",
+        "text": "Интерфейс Лира-21 — RS-485. [1]\nПоддерживает ли Лира-21 BACnet?\nВ доступных материалах подтверждения недостаточно. Для уточнения свяжитесь с поддержкой компании.",
+        "snapshot_id": "89795e0e635a2d83f0076e6a30a5a26609b2d1e9dd6d1a6a80f46e7859df6527",
+        "claims": [
+          {
+            "id": "c1",
+            "text": "Интерфейс Лира-21 — RS-485.",
+            "evidence": [
+              {
+                "chunk_id": "03ea9837a2e72757971d155ef742c1cf763d56373e4f4ba710e45b35bd091ae4",
+                "quote": "Интерфейс RS-485."
+              }
+            ]
+          }
+        ],
+        "questions": [
+          "Поддерживает ли Лира-21 BACnet?"
+        ],
+        "sources": [
+          {
+            "number": 1,
+            "chunk_id": "03ea9837a2e72757971d155ef742c1cf763d56373e4f4ba710e45b35bd091ae4",
+            "url": "https://example.invalid/rag-diagnostic/lira21.html",
+            "title": "lira21",
+            "content_sha256": "cee802e861a62922777115cd623f60df84877d128ff38336328deab5a8155ece",
+            "page": null
+          }
+        ],
+        "reason_code": null,
+        "as_of": null
+      }
+    },
+    {
+      "case_id": "d07",
+      "kind": "partial",
+      "answer": {
+        "status": "partial",
+        "text": "Лира-22 имеет напряжение питания 12 В. [1]\nПри какой температуре работает Лира-22?\nВ доступных материалах подтверждения недостаточно. Для уточнения свяжитесь с поддержкой компании.",
+        "snapshot_id": "89795e0e635a2d83f0076e6a30a5a26609b2d1e9dd6d1a6a80f46e7859df6527",
+        "claims": [
+          {
+            "id": "c1",
+            "text": "Лира-22 имеет напряжение питания 12 В.",
+            "evidence": [
+              {
+                "chunk_id": "d677c7c3bc26676585077ec4e9dffd9161db3cd360f7f128bf5c312521cfe727",
+                "quote": "Напряжение питания 12 В."
+              }
+            ]
+          }
+        ],
+        "questions": [
+          "При какой температуре работает Лира-22?"
+        ],
+        "sources": [
+          {
+            "number": 1,
+            "chunk_id": "d677c7c3bc26676585077ec4e9dffd9161db3cd360f7f128bf5c312521cfe727",
+            "url": "https://example.invalid/rag-diagnostic/lira22.html",
+            "title": "lira22",
+            "content_sha256": "000bac4472659b33ec9720c35fb471dd06b66a703ee9ee495ac95d7a2fcc28ed",
+            "page": null
+          }
+        ],
+        "reason_code": null,
+        "as_of": null
+      }
+    },
+    {
+      "case_id": "d08",
+      "kind": "partial",
+      "answer": {
+        "status": "partial",
+        "text": "Орион-110 предназначен для измерения температуры. [1]\nКакой гарантийный срок у Орион-110?\nВ доступных материалах подтверждения недостаточно. Для уточнения свяжитесь с поддержкой компании.",
+        "snapshot_id": "89795e0e635a2d83f0076e6a30a5a26609b2d1e9dd6d1a6a80f46e7859df6527",
+        "claims": [
+          {
+            "id": "c1",
+            "text": "Орион-110 предназначен для измерения температуры.",
+            "evidence": [
+              {
+                "chunk_id": "0ccfad939dd29d4686b90884e1471858bd707fd80077b9bb31be2a1d513b8807",
+                "quote": "Предназначен для измерения температуры."
+              }
+            ]
+          }
+        ],
+        "questions": [
+          "Какой гарантийный срок у Орион-110?"
+        ],
+        "sources": [
+          {
+            "number": 1,
+            "chunk_id": "0ccfad939dd29d4686b90884e1471858bd707fd80077b9bb31be2a1d513b8807",
+            "url": "https://example.invalid/rag-diagnostic/orion.html",
+            "title": "orion",
+            "content_sha256": "195b34d7e4ecb2f8e178c10bfbb9fe345ed1912c7a6b3580aac41e105b762efe",
+            "page": null
+          }
+        ],
+        "reason_code": null,
+        "as_of": null
+      }
+    },
+    {
+      "case_id": "d09",
+      "kind": "partial",
+      "answer": {
+        "status": "partial",
+        "text": "Диапазон давления Вега, модификация Б: от 0 до 16 бар. [1]\nКакая точность у Вега модификации Б?\nВ доступных материалах подтверждения недостаточно. Для уточнения свяжитесь с поддержкой компании.",
+        "snapshot_id": "89795e0e635a2d83f0076e6a30a5a26609b2d1e9dd6d1a6a80f46e7859df6527",
+        "claims": [
+          {
+            "id": "c1",
+            "text": "Диапазон давления Вега, модификация Б: от 0 до 16 бар.",
+            "evidence": [
+              {
+                "chunk_id": "5b009f975dddf2cffdaf5e9153de06ed67b2dda83db003eaf64c4336b3ddc314",
+                "quote": "Диапазон давления от 0 до 16 бар."
+              }
+            ]
+          }
+        ],
+        "questions": [
+          "Какая точность у Вега модификации Б?"
+        ],
+        "sources": [
+          {
+            "number": 1,
+            "chunk_id": "5b009f975dddf2cffdaf5e9153de06ed67b2dda83db003eaf64c4336b3ddc314",
+            "url": "https://example.invalid/rag-diagnostic/vega-b.html",
+            "title": "vega-b",
+            "content_sha256": "9ff776ca267a1fa8989ebd32a5b5a3edcc6a4ee00768c267d211cd0af1e7c464",
+            "page": null
+          }
+        ],
+        "reason_code": null,
+        "as_of": null
+      }
+    },
+    {
+      "case_id": "d10",
+      "kind": "missing",
+      "answer": {
+        "status": "needs_support",
+        "text": "Какие характеристики у Лира-999?\nВ доступных материалах подтверждения недостаточно. Для уточнения свяжитесь с поддержкой компании.",
+        "snapshot_id": "89795e0e635a2d83f0076e6a30a5a26609b2d1e9dd6d1a6a80f46e7859df6527",
+        "claims": [],
+        "questions": [
+          "Какие характеристики у Лира-999?"
+        ],
+        "sources": [],
+        "reason_code": null,
+        "as_of": null
+      }
+    },
+    {
+      "case_id": "d11",
+      "kind": "missing",
+      "answer": {
+        "status": "needs_support",
+        "text": "Есть ли у Лира-21 взрывозащита?\nВ доступных материалах подтверждения недостаточно. Для уточнения свяжитесь с поддержкой компании.",
+        "snapshot_id": "89795e0e635a2d83f0076e6a30a5a26609b2d1e9dd6d1a6a80f46e7859df6527",
+        "claims": [],
+        "questions": [
+          "Есть ли у Лира-21 взрывозащита?"
+        ],
+        "sources": [],
+        "reason_code": null,
+        "as_of": null
+      }
+    },
+    {
+      "case_id": "d12",
+      "kind": "missing",
+      "answer": {
+        "status": "needs_support",
+        "text": "Сколько стоит Орион-110?\nВ доступных материалах подтверждения недостаточно. Для уточнения свяжитесь с поддержкой компании.",
+        "snapshot_id": "89795e0e635a2d83f0076e6a30a5a26609b2d1e9dd6d1a6a80f46e7859df6527",
+        "claims": [],
+        "questions": [
+          "Сколько стоит Орион-110?"
+        ],
+        "sources": [],
+        "reason_code": null,
+        "as_of": null
+      }
+    },
+    {
+      "case_id": "d13",
+      "kind": "ambiguous",
+      "answer": {
+        "status": "partial",
+        "text": "У модификации А Вега диапазон давления от 0 до 10 бар. [1]\nУ модификации Б Вега диапазон давления от 0 до 16 бар. [2]\nУточните, пожалуйста, какую модификацию Вега вы имеете в виду — А или Б?\nВ доступных материалах подтверждения недостаточно. Для уточнения свяжитесь с поддержкой компании.",
+        "snapshot_id": "89795e0e635a2d83f0076e6a30a5a26609b2d1e9dd6d1a6a80f46e7859df6527",
+        "claims": [
+          {
+            "id": "c1",
+            "text": "У модификации А Вега диапазон давления от 0 до 10 бар.",
+            "evidence": [
+              {
+                "chunk_id": "208b1211fae937d34a3a63504c7c0d2ba85c3c2b9ef27951ee3d2916780313a8",
+                "quote": "Диапазон давления от 0 до 10 бар."
+              }
+            ]
+          },
+          {
+            "id": "c2",
+            "text": "У модификации Б Вега диапазон давления от 0 до 16 бар.",
+            "evidence": [
+              {
+                "chunk_id": "5b009f975dddf2cffdaf5e9153de06ed67b2dda83db003eaf64c4336b3ddc314",
+                "quote": "Диапазон давления от 0 до 16 бар."
+              }
+            ]
+          }
+        ],
+        "questions": [
+          "Уточните, пожалуйста, какую модификацию Вега вы имеете в виду — А или Б?"
+        ],
+        "sources": [
+          {
+            "number": 1,
+            "chunk_id": "208b1211fae937d34a3a63504c7c0d2ba85c3c2b9ef27951ee3d2916780313a8",
+            "url": "https://example.invalid/rag-diagnostic/vega-a.html",
+            "title": "vega-a",
+            "content_sha256": "7e5bca4aa8bee11f906c12bb0a408a3d88392a54d3b40f532178ee7848c6b10b",
+            "page": null
+          },
+          {
+            "number": 2,
+            "chunk_id": "5b009f975dddf2cffdaf5e9153de06ed67b2dda83db003eaf64c4336b3ddc314",
+            "url": "https://example.invalid/rag-diagnostic/vega-b.html",
+            "title": "vega-b",
+            "content_sha256": "9ff776ca267a1fa8989ebd32a5b5a3edcc6a4ee00768c267d211cd0af1e7c464",
+            "page": null
+          }
+        ],
+        "reason_code": null,
+        "as_of": null
+      }
+    },
+    {
+      "case_id": "d14",
+      "kind": "ambiguous",
+      "answer": {
+        "status": "partial",
+        "text": "Для Лира-21 напряжение питания составляет 24 В. [1]\nДля Лира-22 напряжение питания составляет 12 В. [2]\nУточните, пожалуйста, о какой модели прибора Лира идёт речь: Лира-21 или Лира-22?\nВ доступных материалах подтверждения недостаточно. Для уточнения свяжитесь с поддержкой компании.",
+        "snapshot_id": "89795e0e635a2d83f0076e6a30a5a26609b2d1e9dd6d1a6a80f46e7859df6527",
+        "claims": [
+          {
+            "id": "c1",
+            "text": "Для Лира-21 напряжение питания составляет 24 В.",
+            "evidence": [
+              {
+                "chunk_id": "03ea9837a2e72757971d155ef742c1cf763d56373e4f4ba710e45b35bd091ae4",
+                "quote": "Напряжение питания 24 В."
+              }
+            ]
+          },
+          {
+            "id": "c2",
+            "text": "Для Лира-22 напряжение питания составляет 12 В.",
+            "evidence": [
+              {
+                "chunk_id": "d677c7c3bc26676585077ec4e9dffd9161db3cd360f7f128bf5c312521cfe727",
+                "quote": "Напряжение питания 12 В."
+              }
+            ]
+          }
+        ],
+        "questions": [
+          "Уточните, пожалуйста, о какой модели прибора Лира идёт речь: Лира-21 или Лира-22?"
+        ],
+        "sources": [
+          {
+            "number": 1,
+            "chunk_id": "03ea9837a2e72757971d155ef742c1cf763d56373e4f4ba710e45b35bd091ae4",
+            "url": "https://example.invalid/rag-diagnostic/lira21.html",
+            "title": "lira21",
+            "content_sha256": "cee802e861a62922777115cd623f60df84877d128ff38336328deab5a8155ece",
+            "page": null
+          },
+          {
+            "number": 2,
+            "chunk_id": "d677c7c3bc26676585077ec4e9dffd9161db3cd360f7f128bf5c312521cfe727",
+            "url": "https://example.invalid/rag-diagnostic/lira22.html",
+            "title": "lira22",
+            "content_sha256": "000bac4472659b33ec9720c35fb471dd06b66a703ee9ee495ac95d7a2fcc28ed",
+            "page": null
+          }
+        ],
+        "reason_code": null,
+        "as_of": null
+      }
+    },
+    {
+      "case_id": "d15",
+      "kind": "conflict",
+      "answer": {
+        "status": "clarification",
+        "text": "Какое напряжение питания у Ультра-8 редакции 1: 24 В или 48 В?\nВ доступных материалах подтверждения недостаточно. Для уточнения свяжитесь с поддержкой компании.",
+        "snapshot_id": "89795e0e635a2d83f0076e6a30a5a26609b2d1e9dd6d1a6a80f46e7859df6527",
+        "claims": [],
+        "questions": [
+          "Какое напряжение питания у Ультра-8 редакции 1: 24 В или 48 В?"
+        ],
+        "sources": [],
+        "reason_code": null,
+        "as_of": null
+      }
+    }
+  ],
+  "status": "awaiting_human_review"
+}

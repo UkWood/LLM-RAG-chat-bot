@@ -1,0 +1,58 @@
+{
+  "report_kind": "public_synthetic_saved_verification_request",
+  "source_commit": "a83888e86e1f2778e1b3516af2e9608e39c71c7e",
+  "system_prompt_sha256": "6931694200e4633f087ba1a633759631f5c9d0d9ff447d564d7a4fc9bc672d3e",
+  "request_sha256": "ed6ed73261db2489fb7e6cbfb8412abc6eb43a434401819949fd7537a9ee5455",
+  "request": {
+    "question": "Какой диапазон давления у Вега?",
+    "evidence": [
+      {
+        "chunk_id": "208b1211fae937d34a3a63504c7c0d2ba85c3c2b9ef27951ee3d2916780313a8",
+        "title": "vega-a",
+        "text": "Вега, модификация А. Диапазон давления от 0 до 10 бар."
+      },
+      {
+        "chunk_id": "5b009f975dddf2cffdaf5e9153de06ed67b2dda83db003eaf64c4336b3ddc314",
+        "title": "vega-b",
+        "text": "Вега, модификация Б. Диапазон давления от 0 до 16 бар."
+      },
+      {
+        "chunk_id": "367bbde35935db33dd40af18cad5696ff8ba49a5525cf2e1f17dd4a675c266e9",
+        "title": "ultra-manual",
+        "text": "Ультра-8. Редакция 1. Напряжение питания 48 В."
+      },
+      {
+        "chunk_id": "a1f6d8da570521bc777772e885a5448e0897b8898cb565cb7e5796b00f5c9bee",
+        "title": "ultra-card",
+        "text": "Ультра-8. Редакция 1. Напряжение питания 24 В."
+      },
+      {
+        "chunk_id": "d677c7c3bc26676585077ec4e9dffd9161db3cd360f7f128bf5c312521cfe727",
+        "title": "lira22",
+        "text": "Лира-22. Напряжение питания 12 В. Интерфейс Ethernet."
+      }
+    ],
+    "claims": [
+      {
+        "id": "c1",
+        "text": "У Веги модификации А диапазон давления от 0 до 10 бар.",
+        "evidence": [
+          {
+            "chunk_id": "208b1211fae937d34a3a63504c7c0d2ba85c3c2b9ef27951ee3d2916780313a8",
+            "quote": "Диапазон давления от 0 до 10 бар."
+          }
+        ]
+      },
+      {
+        "id": "c2",
+        "text": "У Веги модификации Б диапазон давления от 0 до 16 бар.",
+        "evidence": [
+          {
+            "chunk_id": "5b009f975dddf2cffdaf5e9153de06ed67b2dda83db003eaf64c4336b3ddc314",
+            "quote": "Диапазон давления от 0 до 16 бар."
+          }
+        ]
+      }
+    ]
+  }
+}

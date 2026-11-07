@@ -67,16 +67,18 @@ config/publication-policy.example.json, .env.example, deploy/refresh.service+tim
 
 ## Task5 — small diagnostic and usable operator documentation
 
-- [ ] Author15new exposed diagnostic questions (5full/4partial/3missing/2ambiguous/1conflict) and synthetic ordinary-text fixtures, before any model tuning; expected facts/gaps/evidence are human-reviewable, no intent schema.
-- [ ] Add retrieval-only, oracle-context+generator/checker, full-path runs. Record IDs/metrics/source/model identities; no raw production logs. Human grading separate from model self-check; real quality NOT_RUN if endpoint/key is absent.
-- [ ] Run configured real-provider compatibility smoke with a public synthetic prompt only if owner-supplied runtime is ready; then diagnostic only within actual admitted scope. If missing, persist concrete blocker and complete independent code/tests without another surrogate planner.
-- [ ] Operator docs cover source scope, daily/manual command, model API settings, PDF/OCR/size limits and quarantine, last-success/staleness, actual deployment not started. Add meaningful full-flow tests; commit.
+- [x] Author15new exposed diagnostic questions (5full/4partial/3missing/2ambiguous/1conflict) and synthetic ordinary-text fixtures, before any model tuning; expected facts/gaps/evidence are human-reviewable, no intent schema.
+- [x] Add retrieval-only, oracle-context+generator/checker, full-path runs. Record IDs/metrics/source/model identities; no raw production logs. Human grading separate from model self-check; real quality NOT_RUN if endpoint/key is absent.
+- [x] Run configured real-provider compatibility smoke with a public synthetic prompt only if owner-supplied runtime is ready; then diagnostic only within actual admitted scope. If missing, persist concrete blocker and complete independent code/tests without another surrogate planner.
+- [x] Operator docs cover source scope, daily/manual command, model API settings, PDF/OCR/size limits and quarantine, last-success/staleness, actual deployment not started. Add meaningful full-flow tests; commit.
+
+- [ ] Human answer assessment: reviewer fills separate per-case reviews bound to actual report SHA256; distinguish correct full/partial, false refusals, unsupported claims, citations, missed parts and support questions. Fixture approval is complete and does not replace answer assessment. Task5 overall stays pending until this independent assessment and disposition of observed failures.
 
 ## Task6 — one final review, verification and publication
 
-- [ ] One fresh whole-branch reviewer; re-grade findings; one Critical/Important fix pass RED→GREEN, minor limitations disclosed. No repeated reviewer loop.
-- [ ] Run final base+ONNX verify_offline once per final source; repeat only after relevant failures/changes. Docs checker+whitespace check. Old quality reports remain immutable.
-- [ ] Update ADR/status/handoff/stage/README with actual code, tests, live-call/diagnostic results or explicit NOT_RUN blocker. Update existing PR13 title/body around final implementation (avoid another docs/implementation PR cycle), push and verify exact-head offline/ONNX CI. No automatic merge/deploy.
+- [x] One fresh whole-branch reviewer; re-grade findings; one Critical/Important fix pass RED→GREEN, minor limitations disclosed. No repeated reviewer loop.
+- [x] Run final base+ONNX verify_offline once per final source; repeat only after relevant failures/changes. Docs checker+whitespace check. Old quality reports remain immutable.
+- [x] Update ADR/status/handoff/stage/README with actual code, tests, live-call/diagnostic results or explicit NOT_RUN blocker. Update existing PR13 title/body around final implementation (avoid another docs/implementation PR cycle), push and verify exact-head offline/ONNX CI. No automatic merge/deploy.
 
 Self-review: tasks1→2 share PublishedSource/PublishedSnapshot/store eligibility; tasks1→4 use existing IndexSet/RetrievalService with strict snapshot dispatch; tasks3→4 share complete(system,user)->dict; task5 uses the same application and separately injected oracle context. Scope is one first CLI implementation with three independently testable components, not a production migration. New real-policy pathway is explicit and does not weaken legacy synthetic validation.
 
@@ -94,3 +96,6 @@ Live correction continuation2026-11-07: owner confirmed fixture/context review, 
 
 
 Requested-scope correction2026-11-07 explicitly required by owner: f41c25f generation/verification relevance+irrelevant backend suppression,4new RED→GREEN tests,40targetedPASS, final base/ONNX5project+228backendPASS (12/1skips). [Stage/results](../../stages/2026-11-07-grounded-rag-relevance.md): oracle15/15; full path12cases without error, d13 provider response error, remaining2NOT_RUN. Former extra facts removed in measured d10–d12 and partial cases. No prompt-specific question routing, provider/model change or retry. Task5 overall/human acceptance remains pending; do not mark all quality work complete.
+
+
+Current continuation2026-11-07: sourceac4d289 fixed safe provider diagnostics after exact saved d13 payload reproduced finish length/content null at2048. One new profile4096 oracle/end-to-end each15/15/0errors, no provider/model/prompt/fixture changes or retries; [stage/review forms](../../stages/2026-11-07-grounded-rag-provider-budget.md).42targetedPASS, base/ONNX5project+230backendPASS (12/1skips). Technical Task5 tooling/smoke/docs checkboxes updated with explicit remaining human answer assessment. Task6 technical review/source checks/publication complete; exact current-head CI recorded inPR13 after push. Fixture approval, self-verifier and runtime states are not human answer acceptance. No merge/deploy.

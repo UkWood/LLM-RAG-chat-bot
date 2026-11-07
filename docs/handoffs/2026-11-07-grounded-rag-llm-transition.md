@@ -1,5 +1,13 @@
 # Checkpoint: переход к среде с LLM variables
 
+## Последний checkpoint: profile4096 complete, human review pending — 2026-11-07
+
+Адресный d13 probe воспроизвёл finish_reason=length/content=null на2048. Sourceac4d289 различает fixed output_truncated/timeout/transport/envelope/content reasons без раскрытия body/key/header. Один новый tested process profile LLM_MAX_TOKENS=4096: oracle и end-to-end каждый15/15,0infrastructure errors, те же API/model/prompts/fixtures/local bundles, без retry. D13–d15 обработаны, d10–d12 без посторонних factual claims/citations.
+
+Base/ONNX5project+230backendPASS (12/1skips),42targetedPASS. Generic default2048 в коде не менялся: tested operator profile4096 задаётся явно. Task5 technical checklist и Task6 technical work выполнены; human answer assessment всех15cases/двух режимов отдельно pending. Runtime states/self-verifier не human quality grades, prototype/production не приняты. Старые reports/dataset неизменны; предыдущие blockers ниже исторические.
+
+[Responses/evidence/human forms](../stages/2026-11-07-grounded-rag-budget4096-responses.md), [root cause/tests/run details](../stages/2026-11-07-grounded-rag-provider-budget.md). Следующий вход — независимая human answer assessment; повторный smoke/набор без причины не нужен. Current-head CI см.PR13. Source unchanged послеac4d289, следующий commit docs/evidence. Old dirty checkout/прежние отчёты не трогать, no merge/deploy/real ingestion/site operation.
+
 ## Последнее продолжение: только сведения по вопросу — 2026-11-07
 
 User: «Сведения вне вопроса нужно исключить». Sourcef41c25f добавляет explicit requested scope в generation/verification и verdict irrelevant; backend не публикует extras и не превращает их удаление в искусственную неполноту.4новых RED→GREEN tests,40targetedPASS; final base/ONNX5project+228backendPASS (12/1skips).

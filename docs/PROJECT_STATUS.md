@@ -1,5 +1,13 @@
 # Состояние проекта
 
+## Task5: оба прогона15/15, human answer review pending — 2026-11-07
+
+Адресный d13 probe воспроизвёл finish_reason=length/content=null на2048. Sourceac4d289 различает fixed output_truncated/timeout/transport/envelope/content reasons без раскрытия body/key/header. Один новый tested process profile LLM_MAX_TOKENS=4096: oracle и end-to-end каждый15/15,0infrastructure errors, те же API/model/prompts/fixtures/local bundles, без retry. D13–d15 обработаны, d10–d12 без посторонних factual claims/citations.
+
+Base/ONNX5project+230backendPASS (12/1skips),42targetedPASS. Generic default2048 в коде не менялся: tested operator profile4096 задаётся явно. Task5 technical checklist и Task6 technical work выполнены; human answer assessment всех15cases/двух режимов отдельно pending. Runtime states/self-verifier не human quality grades, prototype/production не приняты. Старые reports/dataset неизменны; предыдущие blockers ниже исторические.
+
+[Последние ответы/review forms](stages/2026-11-07-grounded-rag-budget4096-responses.md), [probe/source/проверки](stages/2026-11-07-grounded-rag-provider-budget.md).
+
 ## Исключены сведения вне вопроса — 2026-11-07
 
 Владелец прямо потребовал исключить сведения вне вопроса. Sourcef41c25f: generation ограничена requested scope, verification имеет irrelevant, backend убирает такие claims/citations без искусственного gap в полном ответе.4регрессии RED→GREEN,40targetedPASS; base/ONNX5project+228backendPASS (12/1skips).

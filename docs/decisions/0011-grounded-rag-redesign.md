@@ -32,3 +32,6 @@ Correction6f7e728: context-backed exact identifiers отделены от изм
 
 
 Прямое требование владельца «Сведения вне вопроса нужно исключить» реализовано вf41c25f: evidence support необходим, но недостаточен; каждый clause должен отвечать requested part, иначе verifier выдает irrelevant. Backend не публикует такой claim/citation; удаление только extras не создаёт искусственного missing part. Нет planner/keyword rules/третьего LLM pass. [Регрессии и реальные outputs](../stages/2026-11-07-grounded-rag-relevance.md): d10–d12 без factual claims/sources в oracle и full path; общий human assessment pending, full path остановлен отдельным provider response error наd13. Семантическую relevance оценивает модель, абсолютная гарантия не заявляется.
+
+
+Operator profile после actual d13 truncation: выбранный ready API/model испытан с max_tokens4096, generic default2048 сохранён. Это bounded process setting, не смена архитектуры/модели. Sourceac4d289 сохраняет strict finish/JSON guards и добавляет безопасные отдельные reason codes. Новые oracle/end-to-end15/15/0errors; [evidence](../stages/2026-11-07-grounded-rag-provider-budget.md). Human answer assessment остаётся обязательной отдельно от runtime успеха.
