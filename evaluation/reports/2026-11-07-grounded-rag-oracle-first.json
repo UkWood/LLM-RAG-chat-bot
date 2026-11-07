@@ -1,0 +1,365 @@
+{
+  "report_kind": "public_synthetic_open_rag_diagnostic",
+  "schema_version": 1,
+  "mode": "oracle",
+  "test_only": true,
+  "identities": {
+    "snapshot_id": "89795e0e635a2d83f0076e6a30a5a26609b2d1e9dd6d1a6a80f46e7859df6527",
+    "dataset_sha256": "e5b5a8174e06bc23fa0c5d38a0f25c1f6eaf078bb238c810ed19d12b84cd0e5a",
+    "provider": {
+      "kind": "openai-compatible",
+      "base_url": "https://api.aitunnel.ru/v1",
+      "model": "deepseek-v4.1-flash-1017",
+      "max_tokens": 2048,
+      "json_mode": true
+    },
+    "embedding": null,
+    "reranker": null
+  },
+  "case_count": 15,
+  "fixture_review": "operator_attested",
+  "human_review": "pending",
+  "generation_quality": "pending_human_review",
+  "mean_gold_quote_recall": null,
+  "infrastructure_errors": 0,
+  "cases": [
+    {
+      "case_id": "d01",
+      "kind": "full",
+      "answer": {
+        "status": "needs_support",
+        "text": "Какие именно утверждения о питании и интерфейсе Лира-21 нужно проверить?\nВ доступных материалах подтверждения недостаточно. Для уточнения свяжитесь с поддержкой компании.",
+        "snapshot_id": "89795e0e635a2d83f0076e6a30a5a26609b2d1e9dd6d1a6a80f46e7859df6527",
+        "claims": [],
+        "questions": [
+          "Какие именно утверждения о питании и интерфейсе Лира-21 нужно проверить?"
+        ],
+        "sources": [],
+        "reason_code": null,
+        "as_of": null
+      }
+    },
+    {
+      "case_id": "d02",
+      "kind": "full",
+      "answer": {
+        "status": "needs_support",
+        "text": "Не предоставлены проверяемые утверждения; какой протокол поддерживает Лира-21?\nВ доступных материалах подтверждения недостаточно. Для уточнения свяжитесь с поддержкой компании.",
+        "snapshot_id": "89795e0e635a2d83f0076e6a30a5a26609b2d1e9dd6d1a6a80f46e7859df6527",
+        "claims": [],
+        "questions": [
+          "Не предоставлены проверяемые утверждения; какой протокол поддерживает Лира-21?"
+        ],
+        "sources": [],
+        "reason_code": null,
+        "as_of": null
+      }
+    },
+    {
+      "case_id": "d03",
+      "kind": "full",
+      "answer": {
+        "status": "needs_support",
+        "text": "Какое утверждение о сравнении напряжения питания Лира-21 и Лира-22 нужно проверить?\nВ доступных материалах подтверждения недостаточно. Для уточнения свяжитесь с поддержкой компании.",
+        "snapshot_id": "89795e0e635a2d83f0076e6a30a5a26609b2d1e9dd6d1a6a80f46e7859df6527",
+        "claims": [],
+        "questions": [
+          "Какое утверждение о сравнении напряжения питания Лира-21 и Лира-22 нужно проверить?"
+        ],
+        "sources": [],
+        "reason_code": null,
+        "as_of": null
+      }
+    },
+    {
+      "case_id": "d04",
+      "kind": "full",
+      "answer": {
+        "status": "needs_support",
+        "text": "Какой межповерочный интервал установлен для Орион-110?\nВ доступных материалах подтверждения недостаточно. Для уточнения свяжитесь с поддержкой компании.",
+        "snapshot_id": "89795e0e635a2d83f0076e6a30a5a26609b2d1e9dd6d1a6a80f46e7859df6527",
+        "claims": [],
+        "questions": [
+          "Какой межповерочный интервал установлен для Орион-110?"
+        ],
+        "sources": [],
+        "reason_code": null,
+        "as_of": null
+      }
+    },
+    {
+      "case_id": "d05",
+      "kind": "full",
+      "answer": {
+        "status": "answered",
+        "text": "Диапазон давления у Вега, модификация А: от 0 до 10 бар. [1]",
+        "snapshot_id": "89795e0e635a2d83f0076e6a30a5a26609b2d1e9dd6d1a6a80f46e7859df6527",
+        "claims": [
+          {
+            "id": "c1",
+            "text": "Диапазон давления у Вега, модификация А: от 0 до 10 бар.",
+            "evidence": [
+              {
+                "chunk_id": "208b1211fae937d34a3a63504c7c0d2ba85c3c2b9ef27951ee3d2916780313a8",
+                "quote": "Диапазон давления от 0 до 10 бар"
+              }
+            ]
+          }
+        ],
+        "questions": [],
+        "sources": [
+          {
+            "number": 1,
+            "chunk_id": "208b1211fae937d34a3a63504c7c0d2ba85c3c2b9ef27951ee3d2916780313a8",
+            "url": "https://example.invalid/rag-diagnostic/vega-a.html",
+            "title": "vega-a",
+            "content_sha256": "7e5bca4aa8bee11f906c12bb0a408a3d88392a54d3b40f532178ee7848c6b10b",
+            "page": null
+          }
+        ],
+        "reason_code": null,
+        "as_of": null
+      }
+    },
+    {
+      "case_id": "d06",
+      "kind": "partial",
+      "answer": {
+        "status": "partial",
+        "text": "Поддерживаемый протокол — Modbus RTU. [1]\nКакой интерфейс у Лира-21?\nПоддерживает ли Лира-21 BACnet?\nВ доступных материалах подтверждения недостаточно. Для уточнения свяжитесь с поддержкой компании.",
+        "snapshot_id": "89795e0e635a2d83f0076e6a30a5a26609b2d1e9dd6d1a6a80f46e7859df6527",
+        "claims": [
+          {
+            "id": "c2",
+            "text": "Поддерживаемый протокол — Modbus RTU.",
+            "evidence": [
+              {
+                "chunk_id": "03ea9837a2e72757971d155ef742c1cf763d56373e4f4ba710e45b35bd091ae4",
+                "quote": "Поддерживаемый протокол Modbus RTU"
+              }
+            ]
+          }
+        ],
+        "questions": [
+          "Какой интерфейс у Лира-21?",
+          "Поддерживает ли Лира-21 BACnet?"
+        ],
+        "sources": [
+          {
+            "number": 1,
+            "chunk_id": "03ea9837a2e72757971d155ef742c1cf763d56373e4f4ba710e45b35bd091ae4",
+            "url": "https://example.invalid/rag-diagnostic/lira21.html",
+            "title": "lira21",
+            "content_sha256": "cee802e861a62922777115cd623f60df84877d128ff38336328deab5a8155ece",
+            "page": null
+          }
+        ],
+        "reason_code": null,
+        "as_of": null
+      }
+    },
+    {
+      "case_id": "d07",
+      "kind": "partial",
+      "answer": {
+        "status": "needs_support",
+        "text": "При какой температуре работает Лира-22?\nВ доступных материалах подтверждения недостаточно. Для уточнения свяжитесь с поддержкой компании.",
+        "snapshot_id": "89795e0e635a2d83f0076e6a30a5a26609b2d1e9dd6d1a6a80f46e7859df6527",
+        "claims": [],
+        "questions": [
+          "При какой температуре работает Лира-22?"
+        ],
+        "sources": [],
+        "reason_code": null,
+        "as_of": null
+      }
+    },
+    {
+      "case_id": "d08",
+      "kind": "partial",
+      "answer": {
+        "status": "needs_support",
+        "text": "Какой гарантийный срок у Орион-110?\nВ доступных материалах подтверждения недостаточно. Для уточнения свяжитесь с поддержкой компании.",
+        "snapshot_id": "89795e0e635a2d83f0076e6a30a5a26609b2d1e9dd6d1a6a80f46e7859df6527",
+        "claims": [],
+        "questions": [
+          "Какой гарантийный срок у Орион-110?"
+        ],
+        "sources": [],
+        "reason_code": null,
+        "as_of": null
+      }
+    },
+    {
+      "case_id": "d09",
+      "kind": "partial",
+      "answer": {
+        "status": "partial",
+        "text": "Диапазон давления Вега модификации Б составляет от 0 до 16 бар. [1]\nКакова точность Вега модификации Б?\nВ доступных материалах подтверждения недостаточно. Для уточнения свяжитесь с поддержкой компании.",
+        "snapshot_id": "89795e0e635a2d83f0076e6a30a5a26609b2d1e9dd6d1a6a80f46e7859df6527",
+        "claims": [
+          {
+            "id": "c1",
+            "text": "Диапазон давления Вега модификации Б составляет от 0 до 16 бар.",
+            "evidence": [
+              {
+                "chunk_id": "5b009f975dddf2cffdaf5e9153de06ed67b2dda83db003eaf64c4336b3ddc314",
+                "quote": "Диапазон давления от 0 до 16 бар."
+              }
+            ]
+          }
+        ],
+        "questions": [
+          "Какова точность Вега модификации Б?"
+        ],
+        "sources": [
+          {
+            "number": 1,
+            "chunk_id": "5b009f975dddf2cffdaf5e9153de06ed67b2dda83db003eaf64c4336b3ddc314",
+            "url": "https://example.invalid/rag-diagnostic/vega-b.html",
+            "title": "vega-b",
+            "content_sha256": "9ff776ca267a1fa8989ebd32a5b5a3edcc6a4ee00768c267d211cd0af1e7c464",
+            "page": null
+          }
+        ],
+        "reason_code": null,
+        "as_of": null
+      }
+    },
+    {
+      "case_id": "d10",
+      "kind": "missing",
+      "answer": {
+        "status": "needs_support",
+        "text": "Какие характеристики у Лира-999? В предоставленных данных есть сведения только о Лира-21 и Лира-22, но отсутствует информация о Лира-999?\nВ доступных материалах подтверждения недостаточно. Для уточнения свяжитесь с поддержкой компании.",
+        "snapshot_id": "89795e0e635a2d83f0076e6a30a5a26609b2d1e9dd6d1a6a80f46e7859df6527",
+        "claims": [],
+        "questions": [
+          "Какие характеристики у Лира-999? В предоставленных данных есть сведения только о Лира-21 и Лира-22, но отсутствует информация о Лира-999?"
+        ],
+        "sources": [],
+        "reason_code": null,
+        "as_of": null
+      }
+    },
+    {
+      "case_id": "d11",
+      "kind": "missing",
+      "answer": {
+        "status": "needs_support",
+        "text": "Есть ли в документации на Лира-21 сведения о взрывозащите (маркировка, сертификат или класс взрывозащиты)?\nВ доступных материалах подтверждения недостаточно. Для уточнения свяжитесь с поддержкой компании.",
+        "snapshot_id": "89795e0e635a2d83f0076e6a30a5a26609b2d1e9dd6d1a6a80f46e7859df6527",
+        "claims": [],
+        "questions": [
+          "Есть ли в документации на Лира-21 сведения о взрывозащите (маркировка, сертификат или класс взрывозащиты)?"
+        ],
+        "sources": [],
+        "reason_code": null,
+        "as_of": null
+      }
+    },
+    {
+      "case_id": "d12",
+      "kind": "missing",
+      "answer": {
+        "status": "needs_support",
+        "text": "Сколько стоит Орион-110?\nВ доступных материалах подтверждения недостаточно. Для уточнения свяжитесь с поддержкой компании.",
+        "snapshot_id": "89795e0e635a2d83f0076e6a30a5a26609b2d1e9dd6d1a6a80f46e7859df6527",
+        "claims": [],
+        "questions": [
+          "Сколько стоит Орион-110?"
+        ],
+        "sources": [],
+        "reason_code": null,
+        "as_of": null
+      }
+    },
+    {
+      "case_id": "d13",
+      "kind": "ambiguous",
+      "answer": {
+        "status": "partial",
+        "text": "У Веги модификации А диапазон давления от 0 до 10 бар. [1]\nУ Веги модификации Б диапазон давления от 0 до 16 бар. [2]\nУточните, пожалуйста, какую модификацию Веги вы имеете в виду: А или Б?\nВ доступных материалах подтверждения недостаточно. Для уточнения свяжитесь с поддержкой компании.",
+        "snapshot_id": "89795e0e635a2d83f0076e6a30a5a26609b2d1e9dd6d1a6a80f46e7859df6527",
+        "claims": [
+          {
+            "id": "c1",
+            "text": "У Веги модификации А диапазон давления от 0 до 10 бар.",
+            "evidence": [
+              {
+                "chunk_id": "208b1211fae937d34a3a63504c7c0d2ba85c3c2b9ef27951ee3d2916780313a8",
+                "quote": "Диапазон давления от 0 до 10 бар."
+              }
+            ]
+          },
+          {
+            "id": "c2",
+            "text": "У Веги модификации Б диапазон давления от 0 до 16 бар.",
+            "evidence": [
+              {
+                "chunk_id": "5b009f975dddf2cffdaf5e9153de06ed67b2dda83db003eaf64c4336b3ddc314",
+                "quote": "Диапазон давления от 0 до 16 бар."
+              }
+            ]
+          }
+        ],
+        "questions": [
+          "Уточните, пожалуйста, какую модификацию Веги вы имеете в виду: А или Б?"
+        ],
+        "sources": [
+          {
+            "number": 1,
+            "chunk_id": "208b1211fae937d34a3a63504c7c0d2ba85c3c2b9ef27951ee3d2916780313a8",
+            "url": "https://example.invalid/rag-diagnostic/vega-a.html",
+            "title": "vega-a",
+            "content_sha256": "7e5bca4aa8bee11f906c12bb0a408a3d88392a54d3b40f532178ee7848c6b10b",
+            "page": null
+          },
+          {
+            "number": 2,
+            "chunk_id": "5b009f975dddf2cffdaf5e9153de06ed67b2dda83db003eaf64c4336b3ddc314",
+            "url": "https://example.invalid/rag-diagnostic/vega-b.html",
+            "title": "vega-b",
+            "content_sha256": "9ff776ca267a1fa8989ebd32a5b5a3edcc6a4ee00768c267d211cd0af1e7c464",
+            "page": null
+          }
+        ],
+        "reason_code": null,
+        "as_of": null
+      }
+    },
+    {
+      "case_id": "d14",
+      "kind": "ambiguous",
+      "answer": {
+        "status": "clarification",
+        "text": "Уточните, пожалуйста, о какой модели идёт речь: Лира-21 (24 В) или Лира-22 (12 В)?\nВ доступных материалах подтверждения недостаточно. Для уточнения свяжитесь с поддержкой компании.",
+        "snapshot_id": "89795e0e635a2d83f0076e6a30a5a26609b2d1e9dd6d1a6a80f46e7859df6527",
+        "claims": [],
+        "questions": [
+          "Уточните, пожалуйста, о какой модели идёт речь: Лира-21 (24 В) или Лира-22 (12 В)?"
+        ],
+        "sources": [],
+        "reason_code": null,
+        "as_of": null
+      }
+    },
+    {
+      "case_id": "d15",
+      "kind": "conflict",
+      "answer": {
+        "status": "clarification",
+        "text": "Какое напряжение питания верно для Ультра-8 редакции 1: 24 В или 48 В?\nВ доступных материалах подтверждения недостаточно. Для уточнения свяжитесь с поддержкой компании.",
+        "snapshot_id": "89795e0e635a2d83f0076e6a30a5a26609b2d1e9dd6d1a6a80f46e7859df6527",
+        "claims": [],
+        "questions": [
+          "Какое напряжение питания верно для Ультра-8 редакции 1: 24 В или 48 В?"
+        ],
+        "sources": [],
+        "reason_code": null,
+        "as_of": null
+      }
+    }
+  ],
+  "status": "awaiting_human_review"
+}

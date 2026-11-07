@@ -20,3 +20,9 @@ Saturn-Main-Site read-only, source/privacy/cloud boundaries сохраняютс
 ## Implementation checkpoint2026-11-07
 
 Task4 publication-backed ask/runtime и Task5 synthetic diagnostic tooling реализованы, один whole-branch review/fix pass выполнен. См. [resume report](../stages/2026-11-07-grounded-rag-resume.md) и [operator runbook](../runbooks/grounded-rag-operator.md). Fresh environment не содержит API bindings; smoke provider_configuration_required до HTTP. Actual generation/semantic support quality NOT_RUN, human fixture/answer review pending; synthetic retrieval12/12gold-containing cases не является acceptance консультанта. Publication parser v2 имеет offset IDs, старые stores требуют отдельного refresh. Deployment egress against DNS rebinding остаётся обязательной внешней границей до real ingestion. Решение о готовности к prototype/production не принято.
+
+
+Обновление2026-11-07: в текущей среде network destination/protected key scope исправлены, fresh ready/current/enforced подтверждены. Одна AITunnel public synthetic smoke на505a266 → exit0 compatible (HTTP/JSON only), см. [stage evidence](../stages/2026-11-07-grounded-rag-resume.md#aitunnel-smoke-после-исправления-destination-scope--2026-11-07). Это закрывает API compatibility prerequisite, но human fixture/context review pending; oracle/end-to-end generation и human answer assessment NOT_RUN/pending. Acceptance и архитектурные границы не меняются.
+
+
+После подтверждённого владельцем fixture/context review выполнены первые реальные diagnostics на505a266: oracle15/15 без infrastructure errors; end-to-end остановлен на d03 pipeline_unavailable, остальные12NOT_RUN. Измерения сохранены неизменными; наблюдаются пропуски подтверждённых фактов, human answer review pending. [Ответы/оценка](../stages/2026-11-07-grounded-rag-first-responses.md). Compatibility не стала quality acceptance; перед расширением нужно локализовать ошибку и потерю claims. Новых архитектурных решений/допуска production нет.

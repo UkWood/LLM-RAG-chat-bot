@@ -63,3 +63,34 @@ Fresh environment status: observations_current=true, network restricted/enforced
 Обнаруженный исходный checkout находится на feat/embedding-model-preparation, HEAD 2a13a29, с незакоммиченными изменениями; он сохранён без изменений. Для продолжения клонирована существующая удалённая docs/grounded-rag-redesign в /workspace/work/grounded-rag-resume, без reset/force/worktree. Исходный checkpoint 7b53a22f79dc86a40a40d73b05e27f6488468bef: [PR CI42333295909](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42333295909) completed/success по fresh GitHub read. Это не CI последующего docs commit.
 
 Не восстанавливались модели/venvs и не повторялись прежние benchmarks ради docs-only blocker. Saturn-Main-Site не читался и не изменялся, merge/deploy не выполнялись.
+
+
+## AITunnel smoke после исправления destination scope — 2026-11-07
+
+Продолжение из remote checkpoint `505a266beed5d51f0ad1b49672eea29b7a6c25fa` в `/workspace/work/grounded-rag-resume`, ветка docs/grounded-rag-redesign / PR13. Старый dirty checkout feat/embedding-model-preparation сохранён; worktree/reset/force не применялись.
+
+Fresh status относится к текущему executor: observations_current=true, spec_revision=observed_spec_revision=1, network restricted/enforced. api.aitunnel.ru теперь разрешён, protected LLM_API_KEY ready и scoped к api.aitunnel.ru; LLM_BASE_URL/LLM_MODEL ready. Presence-only probe подтвердил все три переменные, URL/model совпадают с owner-selected настройками. Startup network-policy также содержит api.aitunnel.ru. Credential values/header не выводились; inherited proxy/CA сохранены. Это устраняет прежний destination mismatch, но сама readiness не была принята за успешный API-вызов.
+
+Единственная команда `PYTHONPATH=backend/src python3 -m saturn_ai.rag smoke` на этом checkpoint → **exit0**, `status=compatible`, `scope=HTTP/JSON contract only`; provider https://api.aitunnel.ru/v1, model deepseek-v4.1-flash-1017, max_tokens512, json_mode=true. Отправлен только небольшой публичный synthetic prompt с ожидаемым объектом `{"ready":true}`. Повторных запросов, смены provider/model и отправки материалов сайта не было.
+
+Это первая фактическая API compatibility проверка, **не generation quality и не prototype acceptance**. Human fixture/context review остаётся pending: владельцу передан конкретный15-case набор с evidence/gaps/oracle_sources и вопрос о фактической проверке. `--reviewed-fixtures` не установлен; oracle/end-to-end NOT_RUN. После подтверждения человеком — восстановить только нужные runtime dependencies/pinned bundles и выполнить диагностику по runbook, останавливая последующие calls при первой infrastructure error. Затем отдельная human assessment реальных ответов. Не повторять smoke без новой причины.
+
+Изменения этого checkpoint только документальные; модели/venvs и прежние benchmarks не восстанавливались/не повторялись. Saturn-Main-Site не читался и не изменялся. Merge/deploy, real ingestion и service activation не выполнялись. Local docs/whitespace checks и exact-head CI фиксируются при публикации в PR13.
+
+
+## Human fixture review подтверждён — 2026-11-07
+
+Владелец ответил «Проверил: сценарии и контекст пригодны» на конкретный вопрос со ссылкой на grounded-rag-open-v1.json и перечислением evidence/gaps/oracle_sources. Это основание для `--reviewed-fixtures` в текущем запуске; оно не является оценкой будущих ответов. Dataset/fixtures не менялись. Oracle запущен один раз с public/cloud flags; его результат и дальнейший end-to-end записываются ниже после фактического завершения. Предыдущие pending записи выше исторические.
+
+## Первые LLM diagnostics после human fixture review — 2026-11-07
+
+Владелец подтвердил: «Проверил: сценарии и контекст пригодны» для15сценариев/evidence/gaps/oracle_sources. Поэтому оба запуска использовали `--reviewed-fixtures --allow-cloud --public-questions`; dataset/fixtures неизменны. Locked ONNX venv установлен; official pinned E5/reranker восстановлены, model/tokenizer SHA256 и manifest SHA2568457aec437dc0c9a70d48a80e12f1b6911cddfbb84387ac24279785977e4ba77/a64e3c0397020fbb6820af70cdf5d82754db28adecb51246aa4d1189e72bc368 точно совпали с прежним handoff. Повторного retrieval benchmark не было.
+
+- Oracle: одна команда по runbook с `--mode oracle`, report `work/rag-oracle-2026-11-07.json` → exit0;15/15cases обработаны, infrastructure_errors0. [Неизменный measured report](../../evaluation/reports/2026-11-07-grounded-rag-oracle-first.json), SHA256 `e4b5893458686fb133245c9eb8f025c13d1597fb96c1b14b704e7d02be4cda03`. Raw statuses: answered1, partial3, needs_support9, clarification2. Это статусы runtime, не оценки правильности.
+- End-to-end: одна команда с `--mode end-to-end`, pinned local bundles и report `work/rag-end-to-end-2026-11-07.json` → exit2; d01/d02 needs_support, d03 error `pipeline_unavailable`, d04–d15 NOT_RUN/earlier_infrastructure_error. [Неизменный measured report](../../evaluation/reports/2026-11-07-grounded-rag-end-to-end-first.json), SHA256 `74f4bc3f330a22f61ed1cb69b08446c18ade01f349428f98e464e9b9bf875e0b`. Runner остановил последующие calls при первой ошибке; повторных прогонов/provider/model switches нет.
+
+Оба measured reports получены на source/checkpoint505a266; последующие изменения только documentation/evidence. Status awaiting_human_review в JSON не означает завершённый end-to-end: случай d03 ошибочный,12последующих не запускались. Report не сохраняет исходные generation/verification drafts или exception details, поэтому точная причина pipeline_unavailable пока неизвестна; не объявлять её network/provider error без evidence.
+
+[Читаемая страница всех фактических ответов, evidence/gaps и review templates](2026-11-07-grounded-rag-first-responses.md). Human answer assessment pending, шаблоны привязаны к SHA256 measured reports и оставлены null. Oracle показывает пропуски доступных сведений (например d01–d04, d07/d08); d06 даёт Modbus RTU вместо требуемого интерфейса. Это технические наблюдения, не заполненная за человека оценка. Отдельный offline mechanism probe: numbers('Напряжение питания Лира-21 составляет 24 В.')={21,24}, numbers('Напряжение питания 24 В.')={24}; текущий deterministic filter отклоняет такую пару. Это подтверждает ограничение на контрольном примере, но не доказывает происхождение всех measured отказов без draft trace. Product code/prompts/фильтры/fixtures не менялись ради результата.
+
+Следующее действие: человек оценивает фактические ответы; затем локализовать pipeline error и потерю подтверждённых claims с безопасным synthetic trace и воспроизводимыми regression tests. Не повторять платный набор без изменения проверяемого компонента или конкретного диагностического основания. Generation quality/prototype/production **не приняты**; API compatibility подтверждена отдельно. Saturn-Main-Site READ-ONLY и не читался, real ingestion/merge/deploy/service activation не выполнялись.

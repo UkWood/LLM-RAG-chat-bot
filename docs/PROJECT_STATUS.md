@@ -1,5 +1,13 @@
 # Состояние проекта
 
+## Первые реальные ответы сохранены; качество не принято — 2026-11-07
+
+Human fixture/context review подтверждён владельцем. AITunnel smoke compatible (HTTP/JSON only). Oracle exit0:15/15cases,0infrastructure errors, но наблюдаются пропуски подтверждённых фактов. End-to-end exit2: d01/d02 needs_support, d03 pipeline_unavailable, d04–d15 NOT_RUN; дальнейшие calls остановлены, retries/model switches не было. [Ответы и формы human review](stages/2026-11-07-grounded-rag-first-responses.md), [stage evidence](stages/2026-11-07-grounded-rag-resume.md#первые-llm-diagnostics-после-human-fixture-review--2026-11-07). Human answer assessment pending; следующий шаг — оценить ответы и локализовать pipeline error/потерю claims, без повторного smoke/подгонки dataset. Pinned local bundles/venv восстановлены. Предыдущие pending fixture/runtime записи ниже исторические.
+
+## AITunnel API compatibility проверена — 2026-11-07
+
+В текущей среде исправлены network destination и protected key scope: api.aitunnel.ru разрешён, все LLM bindings ready, observations current, restricted policy enforced. Одна public synthetic smoke на checkpoint505a266 → **exit0, compatible (HTTP/JSON contract only)** с выбранными https://api.aitunnel.ru/v1 и deepseek-v4.1-flash-1017. Это не приёмка качества. Human fixture/context review pending, oracle/end-to-end **NOT_RUN**; до подтверждения фактической проверки15сценариев не ставить `--reviewed-fixtures`. Следующий шаг — review, затем реальные diagnostic runs и отдельная human answer assessment; smoke без новой причины не повторять. [Evidence](stages/2026-11-07-grounded-rag-resume.md#aitunnel-smoke-после-исправления-destination-scope--2026-11-07). Предыдущие записи ниже исторические.
+
 ## Новая среда: LLM destination scope заблокирован — 2026-11-07
 
 Ветка docs/grounded-rag-redesign восстановлена отдельно от старого dirty checkout. Все три LLM variables присутствуют и ready, network restricted/enforced, observations current. Но выбранный api.aitunnel.ru отсутствует в сетевых разрешениях, а LLM_API_KEY scoped только к api.deepseek.com. Smoke **NOT_RUN до HTTP**, API compatibility/quality не проверены. Требуется исправление destination policy и protected AITunnel binding через настройки среды, затем fresh readiness/одна smoke. Human fixture/context review остаётся pending. [Фактические проверки и checkpoint CI](stages/2026-11-07-grounded-rag-resume.md#проверка-новой-среды-destination-mismatch--2026-11-07). Старый checkout и consumed данные не менялись; merge/deploy нет.

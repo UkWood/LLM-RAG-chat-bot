@@ -1,0 +1,178 @@
+{
+  "report_kind": "public_synthetic_open_rag_diagnostic",
+  "schema_version": 1,
+  "mode": "end-to-end",
+  "test_only": true,
+  "identities": {
+    "snapshot_id": "89795e0e635a2d83f0076e6a30a5a26609b2d1e9dd6d1a6a80f46e7859df6527",
+    "dataset_sha256": "e5b5a8174e06bc23fa0c5d38a0f25c1f6eaf078bb238c810ed19d12b84cd0e5a",
+    "provider": {
+      "kind": "openai-compatible",
+      "base_url": "https://api.aitunnel.ru/v1",
+      "model": "deepseek-v4.1-flash-1017",
+      "max_tokens": 2048,
+      "json_mode": true
+    },
+    "embedding": {
+      "kind": "local_onnx",
+      "dimensions": 384,
+      "max_length": 512,
+      "model_id": "intfloat/multilingual-e5-small",
+      "model_sha256": "ca456c06b3a9505ddfd9131408916dd79290368331e7d76bb621f1cba6bc8665",
+      "output_name": "last_hidden_state",
+      "pad_id": 0,
+      "passage_prefix": "passage: ",
+      "pooling": "mean",
+      "query_prefix": "query: ",
+      "revision": "614241f622f53c4eeff9890bdc4f31cfecc418b3",
+      "schema_version": 1,
+      "tokenizer_sha256": "0b44a9d7b51c3c62626640cda0e2c2f70fdacdc25bbbd68038369d14ebdf4c39"
+    },
+    "reranker": {
+      "activation": "identity",
+      "kind": "local_onnx_pair_scorer",
+      "license_id": "Apache-2.0",
+      "license_sha256": "5e05dfca6eeba9772cf92c589149b62c0fd75573469b8801649008df8f8e8f5f",
+      "max_length": 512,
+      "model_card_sha256": "474736a65d6393a060119a8dc304563af67af4d8d86ccfee4a05dd0df107fc11",
+      "model_id": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+      "model_sha256": "3e9a03ed1e966f7c5288dd4230e3d6a9bf5e3a170a06f1f4241c5bca12c6487c",
+      "output_name": "logits",
+      "pad_id": 1,
+      "purpose": "semantic_candidate",
+      "review_reference": "docs/stages/2026-11-06-local-reranking.md; official card/config reviewed; Apache-2.0 metadata declaration only, no standalone LICENSE; local experiment, not redistribution clearance",
+      "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+      "schema_version": 1,
+      "source_url": "https://huggingface.co/cross-encoder/mmarco-mMiniLMv2-L12-H384-v1/tree/1427fd652930e4ba29e8149678df786c240d8825",
+      "tokenizer_sha256": "62c24cdc13d4c9952d63718d6c9fa4c287974249e16b7ade6d5a85e7bbb75626"
+    }
+  },
+  "case_count": 15,
+  "fixture_review": "operator_attested",
+  "human_review": "pending",
+  "generation_quality": "pending_human_review",
+  "mean_gold_quote_recall": null,
+  "infrastructure_errors": 1,
+  "cases": [
+    {
+      "case_id": "d01",
+      "kind": "full",
+      "answer": {
+        "status": "needs_support",
+        "text": "В запросе отсутствуют проверяемые утверждения (claims). Предоставьте утверждения о питании и интерфейсе Лира-21 для проверки?\nВ доступных материалах подтверждения недостаточно. Для уточнения свяжитесь с поддержкой компании.",
+        "snapshot_id": "89795e0e635a2d83f0076e6a30a5a26609b2d1e9dd6d1a6a80f46e7859df6527",
+        "claims": [],
+        "questions": [
+          "В запросе отсутствуют проверяемые утверждения (claims). Предоставьте утверждения о питании и интерфейсе Лира-21 для проверки?"
+        ],
+        "sources": [],
+        "reason_code": null,
+        "as_of": null
+      }
+    },
+    {
+      "case_id": "d02",
+      "kind": "full",
+      "answer": {
+        "status": "needs_support",
+        "text": "В черновике отсутствуют утверждения; следует ли подтвердить, что Лира-21 поддерживает Modbus RTU?\nВ доступных материалах подтверждения недостаточно. Для уточнения свяжитесь с поддержкой компании.",
+        "snapshot_id": "89795e0e635a2d83f0076e6a30a5a26609b2d1e9dd6d1a6a80f46e7859df6527",
+        "claims": [],
+        "questions": [
+          "В черновике отсутствуют утверждения; следует ли подтвердить, что Лира-21 поддерживает Modbus RTU?"
+        ],
+        "sources": [],
+        "reason_code": null,
+        "as_of": null
+      }
+    },
+    {
+      "case_id": "d03",
+      "kind": "full",
+      "answer": {
+        "status": "error",
+        "text": "Не удалось проверить материалы. Попробуйте позже или свяжитесь с поддержкой компании.",
+        "snapshot_id": "89795e0e635a2d83f0076e6a30a5a26609b2d1e9dd6d1a6a80f46e7859df6527",
+        "claims": [],
+        "questions": [],
+        "sources": [],
+        "reason_code": "pipeline_unavailable",
+        "as_of": null
+      },
+      "infrastructure_error": "pipeline_unavailable"
+    },
+    {
+      "case_id": "d04",
+      "kind": "full",
+      "status": "not_run",
+      "reason_code": "earlier_infrastructure_error"
+    },
+    {
+      "case_id": "d05",
+      "kind": "full",
+      "status": "not_run",
+      "reason_code": "earlier_infrastructure_error"
+    },
+    {
+      "case_id": "d06",
+      "kind": "partial",
+      "status": "not_run",
+      "reason_code": "earlier_infrastructure_error"
+    },
+    {
+      "case_id": "d07",
+      "kind": "partial",
+      "status": "not_run",
+      "reason_code": "earlier_infrastructure_error"
+    },
+    {
+      "case_id": "d08",
+      "kind": "partial",
+      "status": "not_run",
+      "reason_code": "earlier_infrastructure_error"
+    },
+    {
+      "case_id": "d09",
+      "kind": "partial",
+      "status": "not_run",
+      "reason_code": "earlier_infrastructure_error"
+    },
+    {
+      "case_id": "d10",
+      "kind": "missing",
+      "status": "not_run",
+      "reason_code": "earlier_infrastructure_error"
+    },
+    {
+      "case_id": "d11",
+      "kind": "missing",
+      "status": "not_run",
+      "reason_code": "earlier_infrastructure_error"
+    },
+    {
+      "case_id": "d12",
+      "kind": "missing",
+      "status": "not_run",
+      "reason_code": "earlier_infrastructure_error"
+    },
+    {
+      "case_id": "d13",
+      "kind": "ambiguous",
+      "status": "not_run",
+      "reason_code": "earlier_infrastructure_error"
+    },
+    {
+      "case_id": "d14",
+      "kind": "ambiguous",
+      "status": "not_run",
+      "reason_code": "earlier_infrastructure_error"
+    },
+    {
+      "case_id": "d15",
+      "kind": "conflict",
+      "status": "not_run",
+      "reason_code": "earlier_infrastructure_error"
+    }
+  ],
+  "status": "awaiting_human_review"
+}

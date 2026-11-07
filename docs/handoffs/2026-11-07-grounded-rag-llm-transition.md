@@ -1,5 +1,17 @@
 # Checkpoint: переход к среде с LLM variables
 
+## Актуальная точка: первые ответы, диагностика остановлена — 2026-11-07
+
+Human fixture/context review подтверждён владельцем («Проверил: сценарии и контекст пригодны»); API smoke compatible. Oracle один раз: exit0,15/15cases,0infrastructure errors, видны пропуски подтверждённых сведений. End-to-end один раз: exit2, d03 pipeline_unavailable, d04–d15 NOT_RUN; d01/d02 needs_support. Никаких retries/model switches. [Measured evidence и команды](../stages/2026-11-07-grounded-rag-resume.md#первые-llm-diagnostics-после-human-fixture-review--2026-11-07), [ответы и human review forms](../stages/2026-11-07-grounded-rag-first-responses.md). Оба отчёта измерены на505a266 и сохранены неизменными с SHA256.
+
+Human answer assessment pending; quality/prototype не приняты. Следующий шаг — оценить фактические ответы и локализовать pipeline error/потерю claims, а не снова запускать smoke/весь набор. Исходные drafts в report не сохраняются, точная причина pipeline_unavailable неизвестна. Offline probe выявил отклонение claim с цифрами в имени изделия при короткой quote без этих цифр; это не доказательство причины каждого measured отказа. Source/prompts/filters/fixtures не менялись. work/venv и pinned E5/reranker восстановлены, все прежние model/tokenizer/manifest hashes совпали. Старый dirty checkout сохранён. Ниже исторические checkpoints; их pending fixture/runtime blockers не актуальны.
+
+## Текущее продолжение: smoke compatible — 2026-11-07
+
+Destination mismatch исправлен в текущем executor: api.aitunnel.ru разрешён и совпадает с protected key scope, все bindings ready, observations current, restricted network enforced. На remote checkpoint505a266 выполнена одна public synthetic smoke: **exit0, compatible, HTTP/JSON contract only**, без retries/provider/model switches. [Фактическое evidence](../stages/2026-11-07-grounded-rag-resume.md#aitunnel-smoke-после-исправления-destination-scope--2026-11-07). Smoke не повторять без новой причины.
+
+Следующий блокирующий вход — фактический human fixture/context review15сценариев, evidence/gaps/oracle_sources; владельцу задан конкретный вопрос со ссылкой на набор. Пока подтверждения нет, oracle/end-to-end NOT_RUN, `--reviewed-fixtures` не ставить. Natural generation quality/human answer assessment/prototype acceptance остаются pending. Checkout восстановлен в /workspace/work/grounded-rag-resume, прежний dirty checkout сохранён. Runtime bundles/venvs не восстановлены в этом продолжении; проверить наличие перед следующей диагностикой. Ниже исторические checkpoints и исходные инструкции перехода; старые network/variables blockers больше не описывают текущую среду.
+
 ## Обновление после фактического resume — 2026-11-07
 
 Переменные теперь присутствуют, все bindings ready; observations current, restricted network enforced. Однако api.aitunnel.ru не разрешён сетью, secret binding LLM_API_KEY разрешён только для api.deepseek.com. **Smoke NOT_RUN до HTTP**, ключ не отправлялся. В настройках среды нужны разрешение api.aitunnel.ru и действительный AITunnel credential с этим domain scope; затем fresh status/presence и одна smoke. Provider/model не переключались. Human fixture/context review всё ещё pending. [Stage evidence](../stages/2026-11-07-grounded-rag-resume.md#проверка-новой-среды-destination-mismatch--2026-11-07).
