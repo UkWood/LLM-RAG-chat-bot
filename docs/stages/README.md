@@ -28,3 +28,5 @@
 - [Bounded semantic planner proposal](2026-11-06-semantic-planner-design.md)
 
 - [Semantic Planner V3 experiment and blinded protocol](2026-11-06-semantic-planner-v3.md)
+
+- [2026-11-07: V3 first independent outcome — target FAILED, 2/24positive answers](2026-11-06-semantic-planner-v3.md)

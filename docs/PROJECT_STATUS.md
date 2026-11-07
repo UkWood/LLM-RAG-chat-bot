@@ -1,8 +1,10 @@
 # Состояние проекта
 
-## Semantic Planner V3: qualified calibration — 2026-11-07
+## Semantic Planner V3: independent target FAILED — 2026-11-07
 
-Owner-approved semantic V3 implementation is in [PR12](https://github.com/UkWood/LLM-RAG-chat-bot/pull/12), draft/unmerged; docs-only11 closed as superseded. [Stage](stages/2026-11-06-semantic-planner-v3.md), [plan](superpowers/plans/2026-11-06-semantic-planner-v3.md). Corrected calibration e792e13 qualifies:35/36 positives+24/24 negative/ambiguity, unsafe0/errors0, no regression across8 gold-correct V1 positives, selected -2.0/1.0 fully replayed. NON-independent only. Both full verifiers5project+206backend PASS, final review Important fixes complete; two Minor limitations documented. Fresh blind SHA6f48fdbad02761fac30c1950e3a9f8c3a0b77ed0fbc3eb5c854a1315fb23dbe0 remains unread/unconsumed by implementer before freeze/START. Next: exact freeze+single blind attempt, then outcome/current-headCI. V1 default, V2 unchanged, V3 explicit opt-in; no new dependency/model/source/cloud approval. Saturn-Main-Site strictly READ-ONLY. Earlier entries are historical.
+[Draft PR12](https://github.com/UkWood/LLM-RAG-chat-bot/pull/12), unmerged. [Stage/audit](stages/2026-11-06-semantic-planner-v3.md), [first report](../evaluation/reports/2026-11-07-planner-v3-first-blind.json). Frozen f0144f7, blind SHA6f48fdbad02761fac30c1950e3a9f8c3a0b77ed0fbc3eb5c854a1315fb23dbe0 consumed ONCE after exclusiveSTART. Valid80system-run/40case comparison: V3 fully correct2/24positives+16/16negative/ambiguity (18/40); correctedV2 4/24+16/16 (20/40). Unsafe0/errors0/emitted canonical support1.0, but quality target24/24+16/16 FAILED and prototype NOT accepted. Exposed calibration35/36 did not generalize. No post-result runtime/config/grader tuning, relabeling or rerun. Earlier current-calibration/pending entries below are historical.
+
+V1 default; V2 unchanged; V3 explicit experimental opt-in. Final base+ONNX verification5project+206backend PASS (base12optional skips/ONNX0); independent review Important fixes done, two Minor limitations documented. Docs-only11 closed as superseded without merge. Next: separate coverage redesign and fresh independent data before any further runtime quality claim; do not tune on this consumed set. Real sources/cloud/dependencies/models unchanged; Saturn-Main-Site strictly READ-ONLY. Final current-head CI is tracked in PR12.
 
 
 ## After PR10 merge: semantic planning proposal — 2026-11-06

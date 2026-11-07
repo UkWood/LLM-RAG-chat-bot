@@ -109,4 +109,6 @@ Post-review corrective revision rejects `нет`, unsupported literal Modbus/TCP
 
 ## Experimental V3
 
+**First independent target FAILED:** V3 fully correct2/24positive answers, corrected V2 4/24; both16/16negative/ambiguity outcomes. Calibration35/36 did not generalize. V3 remains experimental and the prototype is not accepted. [Frozen first report](evaluation/reports/2026-11-07-planner-v3-first-blind.json).
+
 Owner-approved [V3 design](docs/superpowers/specs/2026-11-06-semantic-planner-design.md): role-bound local predicate proposals, per-need search and locked complete-group evidence. V1 stays default, V3 requires `--planner-version v3`; optional `--v3-settings` reads an explicit calibration report's selected settings. No new model/dependency or source/cloud approval. [Stage/protocol/outcomes](docs/stages/2026-11-06-semantic-planner-v3.md). Feasibility and independent quality must be read from actual reports; code tests are not quality acceptance.

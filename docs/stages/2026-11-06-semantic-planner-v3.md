@@ -45,3 +45,26 @@ A further implementer audit before any blind attempt found the legacy regression
 Selected actual replay setup24.27s, warm p50=2.40s/p95=3.54s on this shared CPU environment; no SLA or35-full-run claim. General-rule and evaluator audit history above remains visible. Blind payload/manifest unchanged, root has never opened the payload; no V3 START at this checkpoint.
 
 Final source verification: `work/base-venv/bin/python scripts/verify_offline.py` and `work/venv/bin/python scripts/verify_offline.py`:5project+206backend PASS in both (base12optional skips/ONNX0). Existing lexical baseline17/20 remains an expected measured target failure. Independent whole-branch review and Important fix pass completed; two Minor limitations above remain. [Implementation PR12](https://github.com/UkWood/LLM-RAG-chat-bot/pull/12) is draft/unmerged; docs-only11 closed as superseded without merge. Next: exact clean freeze and the single first blind attempt, then result/CI publication. No runtime/config/grader tuning after that first result.
+
+## First independent blind outcome — target FAILED, 2026-11-07
+
+[Immutable first report](../../evaluation/reports/2026-11-07-planner-v3-first-blind.json), [exclusive START](../../evaluation/experiments/6f48fdbad02761fac30c1950e3a9f8c3a0b77ed0fbc3eb5c854a1315fb23dbe0.START.json). Exact freeze `f0144f7945c5d22e87325fefc85491f2eabc4d88`, runtime SHA `cc0c271bb5cb2eebc69c88c7b076535bbbd4dcc182135743c513bd3d02a47a14`, dataset SHA `6f48fdbad02761fac30c1950e3a9f8c3a0b77ed0fbc3eb5c854a1315fb23dbe0`, selected -2.0/1.0. START persisted2026-11-07T00:43:27.689388Z before model setup and payload parsing. Implementer never inspected blind questions before freeze; final reviewer never opened them.
+
+Valid completed experiment:80system runs/40cases, unexecuted0, errors0. CLI with `--require-planner-target` returned1 because the quality target was not met. No rerun, data relabeling or runtime/config/grader change after the first result.
+
+| Measured outcome | Corrected V2 | V3 |
+| --- | ---: | ---: |
+| Fully correct positive answers | 4/24 | 2/24 |
+| Correct refusal/clarification | 16/16 | 16/16 |
+| All fully correct outcomes | 20/40 | 18/40 |
+| Wrong answered bindings / unsafe answers | 0 | 0 |
+| Runtime errors | 0 | 0 |
+| Emitted canonical validity / verbatim support | 1.0 / 1.0 | 1.0 / 1.0 |
+
+V3 positives:2/8single-field;0/4multi-need,0/4source-scoped,0/4document-reference,0/4relationship/type. It falsely refused20positive cases and asked clarification for2. Failure reason counts:8unknown_predicate,7unsupported_qualifier,4unsupported_symbol,1unknown_entity,1ambiguous_predicate,1ambiguous_entity. This measures severe coverage failure; it does not establish universal safety from16negative examples. Corrected V2's4/24 is a new measurement on this dataset, not the historical old8/24 result.
+
+The35/36calibration gain did not generalize; V3 performed worse than V2 on this independent set. The24/24+16/16target and full prototype acceptance remain FALSE. Latency medians in this report are dominated by early refusals and do not show a useful answer-speed gain. Preserve V1 default and explicit experimental V3 opt-in. Next is a separate redesign of language/role/predicate coverage with fresh independent evaluation before any new quality claim; this consumed dataset must not become a tuning set.
+
+[PR12](https://github.com/UkWood/LLM-RAG-chat-bot/pull/12) remains draft/unmerged to make the failed quality result explicit. Accepted design and audit are retained, docs-only11 closed as superseded without merge. Two deferred Minor findings remain exactly as documented: relevance preference/tie pruning and missing per-need retrieval diagnostics. No new model/dependency/source/cloud permission; Saturn-Main-Site unchanged/read-only. Final publication/CI evidence follows separately.
+
+Commands: final base/ONNX `scripts/verify_offline.py` both5project+206backend PASS; `scripts/check_project.py` and `git diff --check` PASS. Actual calibration used `--stage v3-calibration --mode hybrid --require-feasibility`, existing `work/multilingual-e5-small` + `work/mmarco-reranker`. Freeze used `scripts/freeze_planner_v3.py`; first comparison used `--stage v3-blind --freeze work/planner-v3/freeze-final.json --planner-report evaluation/reports/2026-11-07-planner-v3-first-blind.json --require-planner-target`. The numeric CI contracts are separate from these semantic measurements.
