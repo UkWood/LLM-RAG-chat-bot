@@ -1,0 +1,262 @@
+{
+  "schema_version": 1,
+  "scope": "public_synthetic_open_diagnostic",
+  "fixture_review": "pending_human",
+  "cases": [
+    {
+      "id": "d01",
+      "kind": "full",
+      "question": "Какие питание и интерфейс у Лира-21?",
+      "evidence": [
+        {
+          "source": "lira21.html",
+          "quote": "Напряжение питания 24 В."
+        },
+        {
+          "source": "lira21.html",
+          "quote": "Интерфейс RS-485."
+        }
+      ],
+      "gaps": [],
+      "oracle_sources": [
+        "lira21.html"
+      ]
+    },
+    {
+      "id": "d02",
+      "kind": "full",
+      "question": "Какой протокол поддерживает Лира-21?",
+      "evidence": [
+        {
+          "source": "lira21.html",
+          "quote": "Поддерживаемый протокол Modbus RTU."
+        }
+      ],
+      "gaps": [],
+      "oracle_sources": [
+        "lira21.html"
+      ]
+    },
+    {
+      "id": "d03",
+      "kind": "full",
+      "question": "Сравните напряжение питания Лира-21 и Лира-22.",
+      "evidence": [
+        {
+          "source": "lira21.html",
+          "quote": "Напряжение питания 24 В."
+        },
+        {
+          "source": "lira22.html",
+          "quote": "Напряжение питания 12 В."
+        }
+      ],
+      "gaps": [],
+      "oracle_sources": [
+        "lira21.html",
+        "lira22.html"
+      ]
+    },
+    {
+      "id": "d04",
+      "kind": "full",
+      "question": "Как часто поверяют Орион-110?",
+      "evidence": [
+        {
+          "source": "orion.html",
+          "quote": "Межповерочный интервал 12 месяцев."
+        }
+      ],
+      "gaps": [],
+      "oracle_sources": [
+        "orion.html"
+      ]
+    },
+    {
+      "id": "d05",
+      "kind": "full",
+      "question": "Какой диапазон давления у Вега модификации А?",
+      "evidence": [
+        {
+          "source": "vega-a.html",
+          "quote": "Диапазон давления от 0 до 10 бар."
+        }
+      ],
+      "gaps": [],
+      "oracle_sources": [
+        "vega-a.html"
+      ]
+    },
+    {
+      "id": "d06",
+      "kind": "partial",
+      "question": "Назовите интерфейс Лира-21 и скажите, поддерживает ли он BACnet.",
+      "evidence": [
+        {
+          "source": "lira21.html",
+          "quote": "Интерфейс RS-485."
+        }
+      ],
+      "gaps": [
+        "Поддержка BACnet неизвестна, отсутствие сведений не доказывает отсутствие поддержки."
+      ],
+      "oracle_sources": [
+        "lira21.html"
+      ]
+    },
+    {
+      "id": "d07",
+      "kind": "partial",
+      "question": "Как питается Лира-22 и при какой температуре работает?",
+      "evidence": [
+        {
+          "source": "lira22.html",
+          "quote": "Напряжение питания 12 В."
+        }
+      ],
+      "gaps": [
+        "Рабочая температура Лира-22 неизвестна."
+      ],
+      "oracle_sources": [
+        "lira22.html"
+      ]
+    },
+    {
+      "id": "d08",
+      "kind": "partial",
+      "question": "Что измеряет Орион-110 и какой у него гарантийный срок?",
+      "evidence": [
+        {
+          "source": "orion.html",
+          "quote": "Предназначен для измерения температуры."
+        }
+      ],
+      "gaps": [
+        "Гарантийный срок неизвестен."
+      ],
+      "oracle_sources": [
+        "orion.html"
+      ]
+    },
+    {
+      "id": "d09",
+      "kind": "partial",
+      "question": "Диапазон и точность Вега модификации Б?",
+      "evidence": [
+        {
+          "source": "vega-b.html",
+          "quote": "Диапазон давления от 0 до 16 бар."
+        }
+      ],
+      "gaps": [
+        "Точность неизвестна."
+      ],
+      "oracle_sources": [
+        "vega-b.html"
+      ]
+    },
+    {
+      "id": "d10",
+      "kind": "missing",
+      "question": "Какие характеристики у Лира-999?",
+      "evidence": [],
+      "gaps": [
+        "Лира-999 отсутствует в материалах. Не переносить сведения Лира-21/22."
+      ],
+      "oracle_sources": [
+        "lira21.html",
+        "lira22.html"
+      ]
+    },
+    {
+      "id": "d11",
+      "kind": "missing",
+      "question": "Есть ли у Лира-21 взрывозащита?",
+      "evidence": [],
+      "gaps": [
+        "Взрывозащита неизвестна. Не утверждать её наличие или отсутствие."
+      ],
+      "oracle_sources": [
+        "lira21.html"
+      ]
+    },
+    {
+      "id": "d12",
+      "kind": "missing",
+      "question": "Сколько стоит Орион-110?",
+      "evidence": [],
+      "gaps": [
+        "Цена неизвестна."
+      ],
+      "oracle_sources": [
+        "orion.html"
+      ]
+    },
+    {
+      "id": "d13",
+      "kind": "ambiguous",
+      "question": "Какой диапазон давления у Вега?",
+      "evidence": [
+        {
+          "source": "vega-a.html",
+          "quote": "Диапазон давления от 0 до 10 бар."
+        },
+        {
+          "source": "vega-b.html",
+          "quote": "Диапазон давления от 0 до 16 бар."
+        }
+      ],
+      "gaps": [
+        "Нужно уточнить модификацию А/Б; нельзя выдать один диапазон как общий."
+      ],
+      "oracle_sources": [
+        "vega-a.html",
+        "vega-b.html"
+      ]
+    },
+    {
+      "id": "d14",
+      "kind": "ambiguous",
+      "question": "Какое питание нужно прибору Лира?",
+      "evidence": [
+        {
+          "source": "lira21.html",
+          "quote": "Напряжение питания 24 В."
+        },
+        {
+          "source": "lira22.html",
+          "quote": "Напряжение питания 12 В."
+        }
+      ],
+      "gaps": [
+        "Нужно уточнить Лира-21/Лира-22; допустимо показать различия с обозначениями."
+      ],
+      "oracle_sources": [
+        "lira21.html",
+        "lira22.html"
+      ]
+    },
+    {
+      "id": "d15",
+      "kind": "conflict",
+      "question": "Какое напряжение питания нужно Ультра-8 редакции 1?",
+      "evidence": [
+        {
+          "source": "ultra-card.html",
+          "quote": "Напряжение питания 24 В."
+        },
+        {
+          "source": "ultra-manual.html",
+          "quote": "Напряжение питания 48 В."
+        }
+      ],
+      "gaps": [
+        "Источники одной редакции противоречат друг другу; не выбирать одно напряжение и не советовать подключение."
+      ],
+      "oracle_sources": [
+        "ultra-card.html",
+        "ultra-manual.html"
+      ]
+    }
+  ]
+}

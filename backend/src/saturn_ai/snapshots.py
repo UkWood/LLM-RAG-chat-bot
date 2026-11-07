@@ -157,9 +157,10 @@ class SnapshotBundle:
 
 
 def _checked_bundle(bundle):
-    if (not isinstance(bundle, SnapshotBundle) or not isinstance(bundle.snapshot, KnowledgeSnapshot)
-            or bundle.snapshot != build_snapshot(bundle.snapshot.ingestion, bundle.snapshot.registry)):
+    if not isinstance(bundle, SnapshotBundle):
         raise ValueError('Invalid snapshot payload')
+    from .retrieval.validation import checked_snapshot
+    checked_snapshot(bundle.snapshot)
     expected = {c.chunk_id for c in bundle.snapshot.chunks}
     for descriptor, kind in ((bundle.dense, 'dense'), (bundle.lexical, 'lexical')):
         if (not isinstance(descriptor, IndexDescriptor) or descriptor.kind != kind

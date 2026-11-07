@@ -1,0 +1,35 @@
+{
+  "report_kind": "targeted_public_synthetic_provider_probe",
+  "scope": "exact_saved_d13_verification_request",
+  "source_commit": "a83888e86e1f2778e1b3516af2e9608e39c71c7e",
+  "attempts": 1,
+  "elapsed_seconds": 13.122,
+  "status": "error",
+  "reason_code": "invalid_or_unavailable_response",
+  "metadata": {
+    "response_bytes": 21195,
+    "response_sha256": "ada15e5f991d3e390a3f8995228d2cde3a6c55b60d1b5902b4344033b6235164",
+    "choices_type": "list",
+    "choices_count": 1,
+    "finish_reason": "length",
+    "content_type": "NoneType",
+    "tool_calls_present": false
+  },
+  "events": [
+    {
+      "function": "loopback",
+      "line": 16,
+      "exception_type": "ValueError"
+    },
+    {
+      "function": "complete",
+      "line": 82,
+      "exception_type": "ValueError"
+    },
+    {
+      "function": "complete",
+      "line": 92,
+      "exception_type": "ProviderError"
+    }
+  ]
+}

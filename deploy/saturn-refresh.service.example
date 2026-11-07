@@ -1,0 +1,16 @@
+# Example only. Install/configure on the AI server, never in Saturn-Main-Site.
+[Unit]
+Description=Refresh Saturn consultant publication snapshot
+After=network-online.target
+Wants=network-online.target
+[Service]
+Type=oneshot
+User=saturn-ai
+WorkingDirectory=/opt/saturn-ai
+Environment=PYTHONPATH=/opt/saturn-ai/backend/src
+ExecStart=/opt/saturn-ai/venv/bin/python -m saturn_ai.publication --policy /etc/saturn-ai/publication-policy.json --store /var/lib/saturn-ai/publications refresh --model-dir /var/lib/saturn-ai/multilingual-e5-small
+UMask=0077
+NoNewPrivileges=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/saturn-ai/publications

@@ -1,0 +1,173 @@
+{
+  "review_kind": "human_grounded_rag_assessment",
+  "reviewer": null,
+  "report_sha256": "74f4bc3f330a22f61ed1cb69b08446c18ade01f349428f98e464e9b9bf875e0b",
+  "status": "pending",
+  "cases": [
+    {
+      "case_id": "d01",
+      "correct_full_or_partial": null,
+      "false_refusal": null,
+      "unsupported_claims": null,
+      "citations_correct": null,
+      "missing_requested_parts": null,
+      "support_questions_correct": null,
+      "infrastructure_error": null,
+      "notes": null
+    },
+    {
+      "case_id": "d02",
+      "correct_full_or_partial": null,
+      "false_refusal": null,
+      "unsupported_claims": null,
+      "citations_correct": null,
+      "missing_requested_parts": null,
+      "support_questions_correct": null,
+      "infrastructure_error": null,
+      "notes": null
+    },
+    {
+      "case_id": "d03",
+      "correct_full_or_partial": null,
+      "false_refusal": null,
+      "unsupported_claims": null,
+      "citations_correct": null,
+      "missing_requested_parts": null,
+      "support_questions_correct": null,
+      "infrastructure_error": null,
+      "notes": null
+    },
+    {
+      "case_id": "d04",
+      "correct_full_or_partial": null,
+      "false_refusal": null,
+      "unsupported_claims": null,
+      "citations_correct": null,
+      "missing_requested_parts": null,
+      "support_questions_correct": null,
+      "infrastructure_error": null,
+      "notes": null
+    },
+    {
+      "case_id": "d05",
+      "correct_full_or_partial": null,
+      "false_refusal": null,
+      "unsupported_claims": null,
+      "citations_correct": null,
+      "missing_requested_parts": null,
+      "support_questions_correct": null,
+      "infrastructure_error": null,
+      "notes": null
+    },
+    {
+      "case_id": "d06",
+      "correct_full_or_partial": null,
+      "false_refusal": null,
+      "unsupported_claims": null,
+      "citations_correct": null,
+      "missing_requested_parts": null,
+      "support_questions_correct": null,
+      "infrastructure_error": null,
+      "notes": null
+    },
+    {
+      "case_id": "d07",
+      "correct_full_or_partial": null,
+      "false_refusal": null,
+      "unsupported_claims": null,
+      "citations_correct": null,
+      "missing_requested_parts": null,
+      "support_questions_correct": null,
+      "infrastructure_error": null,
+      "notes": null
+    },
+    {
+      "case_id": "d08",
+      "correct_full_or_partial": null,
+      "false_refusal": null,
+      "unsupported_claims": null,
+      "citations_correct": null,
+      "missing_requested_parts": null,
+      "support_questions_correct": null,
+      "infrastructure_error": null,
+      "notes": null
+    },
+    {
+      "case_id": "d09",
+      "correct_full_or_partial": null,
+      "false_refusal": null,
+      "unsupported_claims": null,
+      "citations_correct": null,
+      "missing_requested_parts": null,
+      "support_questions_correct": null,
+      "infrastructure_error": null,
+      "notes": null
+    },
+    {
+      "case_id": "d10",
+      "correct_full_or_partial": null,
+      "false_refusal": null,
+      "unsupported_claims": null,
+      "citations_correct": null,
+      "missing_requested_parts": null,
+      "support_questions_correct": null,
+      "infrastructure_error": null,
+      "notes": null
+    },
+    {
+      "case_id": "d11",
+      "correct_full_or_partial": null,
+      "false_refusal": null,
+      "unsupported_claims": null,
+      "citations_correct": null,
+      "missing_requested_parts": null,
+      "support_questions_correct": null,
+      "infrastructure_error": null,
+      "notes": null
+    },
+    {
+      "case_id": "d12",
+      "correct_full_or_partial": null,
+      "false_refusal": null,
+      "unsupported_claims": null,
+      "citations_correct": null,
+      "missing_requested_parts": null,
+      "support_questions_correct": null,
+      "infrastructure_error": null,
+      "notes": null
+    },
+    {
+      "case_id": "d13",
+      "correct_full_or_partial": null,
+      "false_refusal": null,
+      "unsupported_claims": null,
+      "citations_correct": null,
+      "missing_requested_parts": null,
+      "support_questions_correct": null,
+      "infrastructure_error": null,
+      "notes": null
+    },
+    {
+      "case_id": "d14",
+      "correct_full_or_partial": null,
+      "false_refusal": null,
+      "unsupported_claims": null,
+      "citations_correct": null,
+      "missing_requested_parts": null,
+      "support_questions_correct": null,
+      "infrastructure_error": null,
+      "notes": null
+    },
+    {
+      "case_id": "d15",
+      "correct_full_or_partial": null,
+      "false_refusal": null,
+      "unsupported_claims": null,
+      "citations_correct": null,
+      "missing_requested_parts": null,
+      "support_questions_correct": null,
+      "infrastructure_error": null,
+      "notes": null
+    }
+  ]
+}

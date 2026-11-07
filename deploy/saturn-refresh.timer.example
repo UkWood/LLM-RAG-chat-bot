@@ -1,0 +1,9 @@
+# Example time: 02:00 UTC. Match publication-policy refresh_timezone when changing it.
+[Unit]
+Description=Daily refresh of Saturn consultant sources
+[Timer]
+OnCalendar=*-*-* 02:00:00 UTC
+Persistent=true
+Unit=saturn-refresh.service
+[Install]
+WantedBy=timers.target

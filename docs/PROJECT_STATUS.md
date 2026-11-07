@@ -1,5 +1,75 @@
 # Состояние проекта
 
+## Task5: оба прогона15/15, human answer review pending — 2026-11-07
+
+Адресный d13 probe воспроизвёл finish_reason=length/content=null на2048. Sourceac4d289 различает fixed output_truncated/timeout/transport/envelope/content reasons без раскрытия body/key/header. Один новый tested process profile LLM_MAX_TOKENS=4096: oracle и end-to-end каждый15/15,0infrastructure errors, те же API/model/prompts/fixtures/local bundles, без retry. D13–d15 обработаны, d10–d12 без посторонних factual claims/citations.
+
+Base/ONNX5project+230backendPASS (12/1skips),42targetedPASS. Generic default2048 в коде не менялся: tested operator profile4096 задаётся явно. Task5 technical checklist и Task6 technical work выполнены; human answer assessment всех15cases/двух режимов отдельно pending. Runtime states/self-verifier не human quality grades, prototype/production не приняты. Старые reports/dataset неизменны; предыдущие blockers ниже исторические.
+
+[Последние ответы/review forms](stages/2026-11-07-grounded-rag-budget4096-responses.md), [probe/source/проверки](stages/2026-11-07-grounded-rag-provider-budget.md).
+
+## Исключены сведения вне вопроса — 2026-11-07
+
+Владелец прямо потребовал исключить сведения вне вопроса. Sourcef41c25f: generation ограничена requested scope, verification имеет irrelevant, backend убирает такие claims/citations без искусственного gap в полном ответе.4регрессии RED→GREEN,40targetedPASS; base/ONNX5project+228backendPASS (12/1skips).
+
+[Последние ответы и формы оценки](stages/2026-11-07-grounded-rag-relevance-responses.md), [stage evidence](stages/2026-11-07-grounded-rag-relevance.md). Oracle15/15 без infrastructure errors; в обоих режимах d10–d12 без фактических claims/citations, d06–d08 без прежних посторонних характеристик. End-to-end d01–d12 без error, d13 provider_invalid_or_unavailable_response на verification; d14–d15 NOT_RUN, без retry. Это не успешный full15/15. Human answer assessment/общая приёмка качества pending. Старые reports/dataset неизменны; предыдущие ниже relevance blockers исторические.
+
+## Исправлен числовой фильтр, оба live diagnostics выполнены — 2026-11-07
+
+Source `6f7e728`: цифры в названии изделия больше не подменяют величины и не требуют повтора имени в короткой quote. Exact identifier backing проверяется в цитируемом chunk; выдуманные values/units/другие IDs отклоняются. Добавлены безопасные phase error codes.9новых regression tests,36targetedPASS; final base/ONNX verify_offline5project+224backendPASS (12/1skips). Один focused review,2findings воспроизведены RED→GREEN и исправлены одним pass.
+
+Новые oracle и end-to-end: каждый15/15cases,0infrastructure errors, без retries; [ответы и SHA-bound human review forms](stages/2026-11-07-grounded-rag-corrected-responses.md), [полное evidence](stages/2026-11-07-grounded-rag-numeric-correction.md). Первые reports/dataset неизменны. D01–d04 теперь содержат прежние пропущенные факты; d11/d12 ещё показывают сведения вне заданного вопроса. Human answer assessment pending, качество/прототип не приняты. Исходный d03 pipeline_unavailable не воспроизведён, его причина неизвестна; не называть исправленным исходный error. Следующий шаг — оценка ответов и релевантности. Предыдущие записи ниже исторические.
+
+## Первые реальные ответы сохранены; качество не принято — 2026-11-07
+
+Human fixture/context review подтверждён владельцем. AITunnel smoke compatible (HTTP/JSON only). Oracle exit0:15/15cases,0infrastructure errors, но наблюдаются пропуски подтверждённых фактов. End-to-end exit2: d01/d02 needs_support, d03 pipeline_unavailable, d04–d15 NOT_RUN; дальнейшие calls остановлены, retries/model switches не было. [Ответы и формы human review](stages/2026-11-07-grounded-rag-first-responses.md), [stage evidence](stages/2026-11-07-grounded-rag-resume.md#первые-llm-diagnostics-после-human-fixture-review--2026-11-07). Human answer assessment pending; следующий шаг — оценить ответы и локализовать pipeline error/потерю claims, без повторного smoke/подгонки dataset. Pinned local bundles/venv восстановлены. Предыдущие pending fixture/runtime записи ниже исторические.
+
+## AITunnel API compatibility проверена — 2026-11-07
+
+В текущей среде исправлены network destination и protected key scope: api.aitunnel.ru разрешён, все LLM bindings ready, observations current, restricted policy enforced. Одна public synthetic smoke на checkpoint505a266 → **exit0, compatible (HTTP/JSON contract only)** с выбранными https://api.aitunnel.ru/v1 и deepseek-v4.1-flash-1017. Это не приёмка качества. Human fixture/context review pending, oracle/end-to-end **NOT_RUN**; до подтверждения фактической проверки15сценариев не ставить `--reviewed-fixtures`. Следующий шаг — review, затем реальные diagnostic runs и отдельная human answer assessment; smoke без новой причины не повторять. [Evidence](stages/2026-11-07-grounded-rag-resume.md#aitunnel-smoke-после-исправления-destination-scope--2026-11-07). Предыдущие записи ниже исторические.
+
+## Новая среда: LLM destination scope заблокирован — 2026-11-07
+
+Ветка docs/grounded-rag-redesign восстановлена отдельно от старого dirty checkout. Все три LLM variables присутствуют и ready, network restricted/enforced, observations current. Но выбранный api.aitunnel.ru отсутствует в сетевых разрешениях, а LLM_API_KEY scoped только к api.deepseek.com. Smoke **NOT_RUN до HTTP**, API compatibility/quality не проверены. Требуется исправление destination policy и protected AITunnel binding через настройки среды, затем fresh readiness/одна smoke. Human fixture/context review остаётся pending. [Фактические проверки и checkpoint CI](stages/2026-11-07-grounded-rag-resume.md#проверка-новой-среды-destination-mismatch--2026-11-07). Старый checkout и consumed данные не менялись; merge/deploy нет.
+
+## Сохранение для следующей среды с LLM — 2026-11-07
+
+Владелец попросил сохранить рабочую точку и перейти в среду с LLM variables. Продолжать **docs/grounded-rag-redesign / PR13**, см. [новый handoff](handoffs/2026-11-07-grounded-rag-llm-transition.md). Tasks1–4 и diagnostic tooling реализованы, один whole-branch review и3Important RED→GREEN fixes выполнены. API smoke здесь exit2 provider_configuration_required до HTTP: переменных/secret нет. Actual LLM oracle/end-to-end и human fixture/answer review **NOT_RUN/pending**. Первое действие в новой среде — fresh readiness/presence-only probe, затем одна smoke. Подход/inline метод не пересогласовывать; не повторять final review/дорогие модели для docs-only checkpoint. Saturn-Main-Site READ-ONLY, merge/deploy не выполнялись. Source fixes `7da1afa`; final base/ONNX5project+215backend PASS (12/1skips), отдельный outer PDF1/1PASS. Точный checkpoint/current CI — в PR13.
+
+
+## Продолжение в свежей среде — 2026-11-07
+
+Рабочая ветка `docs/grounded-rag-redesign`, [PR13](https://github.com/UkWood/LLM-RAG-chat-bot/pull/13), checkpoint `d8bf8de` восстановлен. Task4 runtime/`ask` добавлен в `bb94725`: проверка persisted hybrid index и model identities, live eligibility, captured as_of, явные operator public/cloud flags. Task5: новый открытый synthetic15case набор и retrieval/oracle/end-to-end runner, runbook и отдельный human review template. Это WIP без приёмки генерации/прототипа.
+
+Fresh environment status: current/enforced, но `source_config_id=null`, secrets/runtime_variables пусты; процесс не содержит `LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY`. Одна команда smoke завершилась exit2 `provider_configuration_required` **до HTTP**. Владелец получил инструкции по применению конфигурации через настройки; ключ в чат не запрашивался. Реальный API/LLM quality NOT_RUN. Human fixture/answer review pending, oracle/end-to-end LLM calls не выполнялись; не ставить `--reviewed-fixtures` до фактической проверки человеком.
+
+Pinned local E5/reranker восстановлены, model/tokenizer/manifest hashes точно совпали с handoff. Actual CPU retrieval diagnostic на15новых вопросах: все gold quotes12/12 evidence-bearing cases в конечном context, mean quote recall1.0;3missing cases recall=null. Это только поиск на synthetic text, не generation/real-site quality. [Отчёт](../evaluation/reports/2026-11-07-grounded-rag-retrieval.json), [operator runbook](runbooks/grounded-rag-operator.md). Исторические datasets/reports не менялись. Saturn-Main-Site не читался и не изменялся; merge/deploy/service installation не выполнялись.
+
+Один whole-branch review завершён:3Important issues исправлены regression RED→GREEN (повторяющиеся chunks, dotted HTML routes, oracle missing-context);30targeted PASS. Parser publication v2 требует явного refresh прежних stores. DNS/actual connection binding — deferred operational limitation: до real ingestion нужны enforced/tested egress controls. Real entity/unit/condition correctness и production readiness не заявляются. Base/ONNX до review5project+210backend PASS (12/1skips); окончательные source checks после fix pass записываются в stage report.
+
+Checkpoint remote CI `d8bf8def78e5f6f4d00ac2afb231d852642712f0`: push42331534674 и PR42331539427 SUCCESS, offline-checks/onnx-contracts оба success. Результат текущего head публикуется по завершении проверок, не наследуется от checkpoint.
+
+
+## Рабочая точка: переход в новую среду — 2026-11-07
+
+Владелец попросил сохранить работу для среды с добавленным API secret. Продолжать в ветке **docs/grounded-rag-redesign**, [PR13](https://github.com/UkWood/LLM-RAG-chat-bot/pull/13), не main и не старый V3. [Полный handoff и точные следующие шаги](handoffs/2026-11-07-grounded-rag-environment.md), [принятый дизайн](superpowers/specs/2026-11-07-grounded-rag-redesign-design.md), [план](superpowers/plans/2026-11-07-grounded-rag-implementation.md). Подход/реализация разрешены, inline метод сохраняется; повторное согласование не требуется.
+
+Реализованы generic text/PDF snapshots и reuse existing retrieval, daily/manual atomic updater/live revocation, generic OpenAI-compatible client и core partial-answer orchestration. CLI пока умеет **только smoke**, full ask/runtime и15-case diagnostic ещё в работе.33targeted tests PASS; полные base+ONNX checkpoint verifiers5project+202backend PASS (12/1skips), отдельный actual OS PDF probe PASS. Реальный API/LLM quality NOT_RUN, final whole-branch review ещё впереди. Это WIP checkpoint, не завершение прототипа/deploy.
+
+Новая среда: LLM_BASE_URL=https://api.aitunnel.ru/v1, LLM_MODEL=deepseek-v4.1-flash-1017, protected LLM_API_KEY. Сначала fresh environment-status/readiness и одна `PYTHONPATH=backend/src python3 -m saturn_ai.rag smoke` без раскрытия секрета. Work venv/model bundles ignored и могут не сохраниться; инструкции/identities в handoff. Saturn-Main-Site строго read-only; никаких live calls/сайтовых изменений до перехода не было. Прежние записи ниже исторические.
+
+
+## Пересмотр: обычный RAG и частичные ответы — 2026-11-07
+
+Владелец выбрал обычный RAG с проверкой подтверждений: отвечать на подтверждённую часть вопроса, пробелы формулировать вопросами с текстом «Для уточнения свяжитесь с поддержкой компании». [Подробный дизайн](superpowers/specs/2026-11-07-grounded-rag-redesign-design.md) и [ADR0011](decisions/0011-grounded-rag-redesign.md) пока PROPOSED; выбор подхода не равен согласию с ещё не рассмотренным документом. [Этап](stages/2026-11-07-grounded-rag-redesign.md).
+
+Дополнение владельца: обновления автоматически; источник — опубликованный содержательный текст страниц и связанные PDF. Нестабильные категории/классификаторы не задают схему знаний. Рабочий дизайн дополнен lifecycle/policy версий; автоматический запуск раз в сутки и принудительный запуск авторизованным администратором согласованы. Используется готовая LLM по API (исходный предпочтительный вариант Qwen), без собственного обучения/дистилляции; обновляется KB, не веса LLM. Product code/registry не менялись.
+
+Без обязательного enum planner перед поиском; исходный вопрос → existing hybrid/reranker → разрешённый context → сменная LLM → проверка утверждений/покрытия → ответ и вопросы к поддержке. Смысловая проверка LLM не является гарантией: первый шаг — малая открытая диагностика retrieval/oracle-context/end-to-end с настоящим разрешённым provider и оценкой человеком. Fake/mock только для code contracts; без runtime natural-generation quality NOT_RUN. Нового provider/model/sample/cloud допуска нет.
+
+Отдельный fresh builder-check: важных вопросов, мешающих составить план, не осталось. Следующий шаг — принятие подробного документа, затем план небольшого диагностического этапа; product code/dataset/model runs ещё не начаты. Ветка docs/grounded-rag-redesign от main bb16530; [PR этой ветки](https://github.com/UkWood/LLM-RAG-chat-bot/pulls?q=is%3Apr+head%3Adocs%2Fgrounded-rag-redesign). V3 остаётся неслитым [draft PR12](https://github.com/UkWood/LLM-RAG-chat-bot/pull/12), его2/24+16/16и consumed dataset/START/report неизменны; не переносить его implementation в main. Saturn-Main-Site строго READ-ONLY. Исторические сведения ниже не отменяют новый выбор направления.
+
+
 ## Planner V2 corrective revision — 2026-11-06
 
 Owner requested continuing after PR10 merge review found two Important blockers: discarded `нет` and protocol qualifiers. Corrections reject negation, unsupported Modbus/TCP/RTU qualification and modification requests outside supported lookup bindings before generation; unqualified protocol queries remain supported, V1 default unchanged. [Corrective report](stages/2026-11-06-planner-v2-corrections.md), [plan addendum](superpowers/plans/2026-11-06-typed-planner-v2.md). Final local verification5project+168backend PASS in both environments (base11optional skips/optional0), calibration14/14 positives20/20statuses without V1-positive regression; independent review fix pass complete. Current-head remote CI/merge outcome must be checked in PR10.

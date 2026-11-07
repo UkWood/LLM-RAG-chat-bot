@@ -17,8 +17,8 @@ def bm25_term_score(tf, df, count, length, average, k1=1.2, b=0.75):
 
 class BM25Index:
     def __init__(self, snapshot):
-        if snapshot != build_snapshot(snapshot.ingestion, snapshot.registry):
-            raise ValueError('Invalid snapshot')
+        from .validation import checked_snapshot
+        checked_snapshot(snapshot)
         self.snapshot = snapshot
         self._documents = self._expected_documents()
         self._descriptor = IndexDescriptor(snapshot.snapshot_id, 'lexical',

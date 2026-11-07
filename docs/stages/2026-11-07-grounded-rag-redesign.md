@@ -1,0 +1,33 @@
+# Пересмотр архитектуры: обычный RAG — 2026-11-07
+
+## Запрос и выбранное направление
+
+Владелец попросил brainstorm из-за циклов «зелёные тесты → хороший calibration → провал независимой проверки» и уточнил исходную цель: вопрос по сайту/архиву → конкретный ответ по материалам без фантазий. Выбрано обычное RAG-решение с проверкой подтверждений. При частичном покрытии дать подтверждённую часть; пробел/полное отсутствие подтверждения обозначить конкретным вопросом и предложить связаться с поддержкой компании.
+
+[Подробный дизайн](../superpowers/specs/2026-11-07-grounded-rag-redesign-design.md), [ADR0011](../decisions/0011-grounded-rag-redesign.md). Статус документа PROPOSED, направление выбрано; продуктовая реализация/подробный implementation plan ещё не согласованы.
+
+## Результат работы
+
+Документ убирает обязательную классификацию каждого вопроса до поиска. Сохраняет ingestion/snapshots/source policy/hybrid/reranker, предлагает отдельный путь натуральной генерации и проверки утверждений, не ослабляя старые exact-quote contracts. Различает реальную генерацию, её смысловую проверку, детерминированные source/citation проверки и измерение человеком. Контакты не придумываются, бот сам не обращается в поддержку.
+
+Две альтернативы обсуждены: связный RAG-ответ с проверкой (выбран владельцем) и преимущественно дословные выдержки (проще происхождение, хуже связность). Выборы автора для первого измерения: существующие5chunks/8000символов, один generation и один verification pass без self-rewrite loop;15открытых diagnostic вопросов с явными фактами/пробелами. Это параметры предложенного документа, не решения, приписанные владельцу. Concrete runtime/sample/contact явно остаются отдельными условными входами перед соответствующими действиями.
+
+Fresh-context builder-check прочитал документ и релевантные contracts: важных вопросов, без которых нельзя составить план, не осталось. Итерации implementer/reviewer по коду не проводились. Проверка не является подтверждением качества ещё не реализованной системы.
+
+## Границы и происхождение
+
+Ветка docs/grounded-rag-redesign от main `bb16530e5b9a4943abae5c1b0f526cb218f46b2d`, отдельный checkout не создавался. [PR этой ветки и актуальный CI](https://github.com/UkWood/LLM-RAG-chat-bot/pulls?q=is%3Apr+head%3Adocs%2Fgrounded-rag-redesign). Это docs-only изменение; code/config/dependencies/datasets/reports неизменны. V3 code не переносился из неслитого draft PR12. Его первый результат остаётся [историческим](https://github.com/UkWood/LLM-RAG-chat-bot/blob/2ea295197fffebde354a1e843bac464503dd5724/evaluation/reports/2026-11-07-planner-v3-first-blind.json): V3 2/24положительных, V2 4/24, оба16/16negative/ambiguity. Новый дизайн не исправляет эти оценки задним числом и не использует потреблённый набор для tuning.
+
+Никаких model inference/download, API/cloud calls, source approvals, dataset authoring, merge или deploy. Saturn-Main-Site строго read-only. Принимается подробный дизайн; затем пишется план малого диагностического этапа, а не новый большой planner. Без разрешённой настоящей LLM generation quality остаётся NOT_RUN.
+
+## Проверки и публикация
+
+Локально: `work/base-venv/bin/python scripts/check_project.py`, `work/base-venv/bin/python -m unittest discover -s tests -v`, `git diff --check`. Результаты: checker PASS,5project tests PASS, whitespace clean. Remote CI проверяется для точного опубликованного head и записывается в PR. Docs-only правка не требует повторного model benchmark. Существующие GitHub offline/ONNX jobs сохраняются без изменений.
+
+
+Дополнения владельца в ходе обсуждения: автоматическое обновление опубликованных текстов и связанных PDF; текущие категории/классификаторы не являются основой знаний. Запуск updater раз в сутки плюс принудительный запуск администратором в любой момент. Используется готовая модель по API (исходный вариант Qwen), собственное обучение/fine-tuning/дистилляция не планируются. Эти уточнения внесены в рабочую версию дизайна; detailed approval и реализация по-прежнему отдельные шаги.
+
+
+## Implementation checkpoint и перенос среды
+
+Владелец прямо попросил применить обсуждённый подход. Дизайн принят, составлен [план](../superpowers/plans/2026-11-07-grounded-rag-implementation.md), реализация ведётся inline в том же PR13 без нового цикла docs/feature PR. Сделаны publication snapshots/atomic refresh/daily/manual operator path, HTTP ready-model client и core partial-answer engine. CLI smoke готов; full ask/runtime/15-case diagnostic и final review ещё не завершены. По просьбе владельца работа сохраняется для новой среды с API key. [Полный handoff](../handoffs/2026-11-07-grounded-rag-environment.md). Live LLM quality NOT_RUN, source site строго read-only, сервисы не развёрнуты.33targeted tests PASS; оба полных verifier5project+202backend PASS (base12/ONNX1skip), actual OS PDF probe отдельно PASS; docs checker/whitespace PASS.

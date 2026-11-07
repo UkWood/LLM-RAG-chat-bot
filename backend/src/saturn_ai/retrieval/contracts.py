@@ -33,6 +33,9 @@ REPRESENTATION_VERSION = 'title-heading-field-aliases-v1'
 
 
 def passage_text(snapshot, chunk):
+    from ..publication.snapshot import PublishedSnapshot
+    if isinstance(snapshot,PublishedSnapshot):
+        return ' '.join((chunk.source_title,' '.join(chunk.chunk.heading_path),chunk.chunk.text))
     field = chunk.chunk.field_path.split('[')[0]
     record = next(r for r in snapshot.registry.entries if r.source_id == chunk.source_id)
     doc_type = 'руководство инструкция manual' if record.document_type == 'manual' else ''
