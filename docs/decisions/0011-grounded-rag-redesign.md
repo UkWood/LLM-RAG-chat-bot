@@ -15,3 +15,8 @@ Saturn-Main-Site read-only, source/privacy/cloud boundaries сохраняютс
 
 
 Уточнение модели: использовать готовую обученную LLM через сменный API (предпочтительный исходный вариант Qwen), без собственного обучения/fine-tuning/дистилляции. Готовая дистиллированная модель или локальное размещение за совместимым API возможны после отдельной проверки provider. Обновление базы не меняет веса LLM.
+
+
+## Implementation checkpoint2026-11-07
+
+Task4 publication-backed ask/runtime и Task5 synthetic diagnostic tooling реализованы, один whole-branch review/fix pass выполнен. См. [resume report](../stages/2026-11-07-grounded-rag-resume.md) и [operator runbook](../runbooks/grounded-rag-operator.md). Fresh environment не содержит API bindings; smoke provider_configuration_required до HTTP. Actual generation/semantic support quality NOT_RUN, human fixture/answer review pending; synthetic retrieval12/12gold-containing cases не является acceptance консультанта. Publication parser v2 имеет offset IDs, старые stores требуют отдельного refresh. Deployment egress against DNS rebinding остаётся обязательной внешней границей до real ingestion. Решение о готовности к prototype/production не принято.

@@ -6,6 +6,10 @@
 
 **Новое выбранное направление:** обычный RAG с подтверждёнными частичными ответами и вопросами к поддержке при пробелах. [Подробный дизайн](docs/superpowers/specs/2026-11-07-grounded-rag-redesign-design.md) принят; реализация в работе. [Рабочая точка перехода в новую среду](docs/handoffs/2026-11-07-grounded-rag-environment.md). Это не приёмка качества.
 
+Новый operator путь: [runbook](docs/runbooks/grounded-rag-operator.md), `python -m saturn_ai.rag ask` с persisted hybrid store/local bundles и готовой API LLM. Открытая synthetic диагностика: [fixtures](fixtures/rag-diagnostic/README.md),15вопросов; actual retrieval gold quote recall1.0 для12evidence-bearing cases,3missing recall=null. Генерация/real API **NOT_RUN**: текущая среда без API bindings; human fixture/answer review pending. Ничего не развёрнуто.
+
+[Текущий checkpoint для новой среды с LLM variables](docs/handoffs/2026-11-07-grounded-rag-llm-transition.md).
+
 ## Память проекта
 
 - [Продолжение в новой сессии](docs/HANDOFF.md)

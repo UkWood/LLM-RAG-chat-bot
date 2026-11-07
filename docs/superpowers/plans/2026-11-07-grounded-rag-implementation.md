@@ -60,10 +60,10 @@ config/publication-policy.example.json, .env.example, deploy/refresh.service+tim
 
 ## Task4 — ordinary RAG with partial grounded responses
 
-- [ ] RED tests: original natural question reaches search unchanged; two supported facts plus missing fact gives partial with support question; none supported gives no factual answer; malformed model output stays error; invented quote/number/citation rejected; source revoked during generation removes only dependent claims; all-source revoke produces support outcome; provider policy boundary.
-- [ ] Implement one captured search/rerank, bounded evidence, generation draft with exact quote pointers, deterministic checks, one semantic verification pass, final current-policy checks and backend-only citations/contact rendering. JSON values/IDs/cardinality are strictly validated; self-verification is not a truth guarantee.
-- [ ] CLI configured provider + local bundles, explicit trusted-operator public-question/cloud flags before remote calls. No raw-question logs/history-as-evidence; unchanged legacy entrypoints.
-- [ ] GREEN focused tests and CLI mocks; commit.
+- [x] RED tests: original natural question reaches search unchanged; two supported facts plus missing fact gives partial with support question; none supported gives no factual answer; malformed model output stays error; invented quote/number/citation rejected; source revoked during generation removes only dependent claims; all-source revoke produces support outcome; provider policy boundary.
+- [x] Implement one captured search/rerank, bounded evidence, generation draft with exact quote pointers, deterministic checks, one semantic verification pass, final current-policy checks and backend-only citations/contact rendering. JSON values/IDs/cardinality are strictly validated; self-verification is not a truth guarantee.
+- [x] CLI configured provider + local bundles, explicit trusted-operator public-question/cloud flags before remote calls. No raw-question logs/history-as-evidence; unchanged legacy entrypoints.
+- [x] GREEN focused tests and CLI mocks; commit.
 
 ## Task5 — small diagnostic and usable operator documentation
 
@@ -82,3 +82,9 @@ Self-review: tasks1→2 share PublishedSource/PublishedSnapshot/store eligibilit
 
 
 Checkpoint2026-11-07: Tasks1–3 implemented/targeted GREEN. Task4 core application and smoke command GREEN, full runtime/ask CLI incomplete. Tasks5–6 not done. Owner requested environment transition after configuring future runtime key/variables; continue from [handoff](../../handoffs/2026-11-07-grounded-rag-environment.md), no repeated design/method approval. No live API/model-quality measurement yet.
+
+Resume2026-11-07: Task4 complete in bb94725, base5project+205backend PASS (12skips). Task5 code/fixtures/runbook ready; actual local retrieval12/12 gold-containing cases,3missing recall=null. API smoke exit2 provider_configuration_required before network because fresh environment has no variables/secrets; human fixture and answer review pending, oracle/end-to-end NOT_RUN. Task5 overall NOT complete and prototype NOT accepted. Final whole-branch reviewer dispatched, final source checks/publication pending; record actual results in stage report.
+
+Owner requested another environment transition after this resume: [latest handoff](../../handoffs/2026-11-07-grounded-rag-llm-transition.md). Task5 overall remains pending API/human inputs. One final whole-branch review and one3Important regression fix pass completed; no second review loop required for docs-only checkpoint. Final local checks/current-head CI in stage/PR13.
+
+Final source `7da1afa`: base/ONNX5project+215backend PASS (12/1skips), separate OS PDF1/1PASS, docs/whitespace PASS. Task6 code review/fix/local verification complete; publication/current-head checks recorded in PR13. No merge/deploy or runtime-quality acceptance.

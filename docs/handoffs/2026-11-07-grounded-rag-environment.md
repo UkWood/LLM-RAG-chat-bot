@@ -1,5 +1,23 @@
 # Рабочая точка для новой среды — обычный RAG
 
+## Сохранение для следующей среды с LLM — 2026-11-07
+
+Владелец попросил сохранить рабочую точку и перейти в среду с LLM variables. Продолжать **docs/grounded-rag-redesign / PR13**, см. [новый handoff](2026-11-07-grounded-rag-llm-transition.md). Tasks1–4 и diagnostic tooling реализованы, один whole-branch review и3Important RED→GREEN fixes выполнены. API smoke здесь exit2 provider_configuration_required до HTTP: переменных/secret нет. Actual LLM oracle/end-to-end и human fixture/answer review **NOT_RUN/pending**. Первое действие в новой среде — fresh readiness/presence-only probe, затем одна smoke. Подход/inline метод не пересогласовывать; не повторять final review/дорогие модели для docs-only checkpoint. Saturn-Main-Site READ-ONLY, merge/deploy не выполнялись. Source fixes `7da1afa`; final base/ONNX5project+215backend PASS (12/1skips), отдельный outer PDF1/1PASS. Точный checkpoint/current CI — в PR13.
+
+
+## Продолжение в свежей среде — 2026-11-07
+
+Рабочая ветка `docs/grounded-rag-redesign`, [PR13](https://github.com/UkWood/LLM-RAG-chat-bot/pull/13), checkpoint `d8bf8de` восстановлен. Task4 runtime/`ask` добавлен в `bb94725`: проверка persisted hybrid index и model identities, live eligibility, captured as_of, явные operator public/cloud flags. Task5: новый открытый synthetic15case набор и retrieval/oracle/end-to-end runner, runbook и отдельный human review template. Это WIP без приёмки генерации/прототипа.
+
+Fresh environment status: current/enforced, но `source_config_id=null`, secrets/runtime_variables пусты; процесс не содержит `LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY`. Одна команда smoke завершилась exit2 `provider_configuration_required` **до HTTP**. Владелец получил инструкции по применению конфигурации через настройки; ключ в чат не запрашивался. Реальный API/LLM quality NOT_RUN. Human fixture/answer review pending, oracle/end-to-end LLM calls не выполнялись; не ставить `--reviewed-fixtures` до фактической проверки человеком.
+
+Pinned local E5/reranker восстановлены, model/tokenizer/manifest hashes точно совпали с handoff. Actual CPU retrieval diagnostic на15новых вопросах: все gold quotes12/12 evidence-bearing cases в конечном context, mean quote recall1.0;3missing cases recall=null. Это только поиск на synthetic text, не generation/real-site quality. [Отчёт](../../evaluation/reports/2026-11-07-grounded-rag-retrieval.json), [operator runbook](../runbooks/grounded-rag-operator.md). Исторические datasets/reports не менялись. Saturn-Main-Site не читался и не изменялся; merge/deploy/service installation не выполнялись.
+
+Один whole-branch review завершён:3Important issues исправлены regression RED→GREEN (повторяющиеся chunks, dotted HTML routes, oracle missing-context);30targeted PASS. Parser publication v2 требует явного refresh прежних stores. DNS/actual connection binding — deferred operational limitation: до real ingestion нужны enforced/tested egress controls. Real entity/unit/condition correctness и production readiness не заявляются. Base/ONNX до review5project+210backend PASS (12/1skips); окончательные source checks после fix pass записываются в stage report.
+
+Checkpoint remote CI `d8bf8def78e5f6f4d00ac2afb231d852642712f0`: push42331534674 и PR42331539427 SUCCESS, offline-checks/onnx-contracts оба success. Результат текущего head публикуется по завершении проверок, не наследуется от checkpoint.
+
+
 Дата:2026-11-07. **WIP, не приёмка прототипа и не готовый deploy.** Владелец добавил API secret/variables в конфигурацию будущей среды и прямо попросил сохранить работу и подготовить переход. В старой среде реальный API не вызывался.
 
 ## Где продолжать
