@@ -8,7 +8,12 @@ from .v3_contracts import ClauseV3,RoleSpan
 from .projections import norm
 
 DENY=re.compile(r'\b(?:не|ни|нет|без|или|либо|можно|нельзя|почему|зачем|игнор\w*|придум\w*|ignore|reveal|pretend|invent|modbus|tcp|rtu|udp|bacnet)\b|цен[ауы]|стоимост|гаранти|совмест|кот[её]л|котл|рецепт|борщ|самолет|погод|секрет|потребля\w*\s+ток|разниц|рассчита|мощност|ампер|ватт|\bток(?:а|у|ом|и|ов)?\b',re.I)
-SOURCE=re.compile(r'\b(?:по|из|в|согласно)\s+(?:(?:его|ее|учебной|учебному|учебного)\s+)?(?:карточк[а-я]*|руководств[а-я]*|инструкц[а-я]*|таблиц[а-я]*)(?:\s+изделия)?',re.I)
+TEMPERATURE=r'температур(?:а|ы|е|у|ой|ою|ам|ами|ах)?'
+MANUAL=r'руководств(?:о|а|у|ом|е|ам|ами|ах)?'
+INSTRUCTION=r'инструкци(?:я|и|ю|ей|ею|ям|ями|ях|й)'
+CARD=r'карточк(?:а|и|е|у|ой|ою|ам|ами|ах)'
+TABLE=r'таблиц(?:а|ы|е|у|ей|ею|ам|ами|ах)?'
+SOURCE=re.compile(r'\b(?:по|из|в|согласно)\s+(?:(?:его|ее|учебной|учебному|учебного)\s+)?(?:'+CARD+'|'+MANUAL+'|'+INSTRUCTION+'|'+TABLE+r')\b(?:\s+изделия)?',re.I)
 PREFIX=re.compile(r'^\s*(?:(?:пожалуйста|скажите|подскажите|укажите|покажите|перечислите|назовите|сообщите|найдите|дайте|сравните|сравни)\s+)?(?:(?:какое|какие|какой|какая|каков|каковы|какую|каким|какому|сколько|число|количество)\s+)?',re.I)
 
 
@@ -19,6 +24,10 @@ def parse_roles(question,snapshot):
         return GateResult('insufficient','unsupported_symbol')
     text=norm(question)
     if DENY.search(text):return GateResult('insufficient','unsupported_operator')
+    # Related compound nouns are different quantities/topics, not grammatical cases.
+    for stem,pattern in (('температур',TEMPERATURE),('руководств',MANUAL),('инструкци',INSTRUCTION),('карточк',CARD),('таблиц',TABLE)):
+        if any(not re.fullmatch(pattern,w) for w in re.findall(r'\b'+stem+r'[а-я]*\b',text)):
+            return GateResult('insufficient','unsupported_qualifier')
     names={}
     for d in snapshot.documents:
         name=norm(entity_id(d).split('/')[-1])
@@ -27,6 +36,8 @@ def parse_roles(question,snapshot):
     for m in DESIGNATION.finditer(question):
         name=norm(m[0])
         if name in ('rs-485','rs485'):continue
+        if (m.end()<len(question) and question[m.end()] in '-—/' or m.start()>0 and question[m.start()-1] in '-—/'):
+            return GateResult('insufficient','unknown_entity')
         if name not in names:
             near=any(_near(name,n) for n in names)
             return GateResult('ambiguous' if near else 'insufficient','ambiguous_entity' if near else 'unknown_entity')
@@ -63,6 +74,10 @@ def parse_roles(question,snapshot):
                 subjects.append(e);mark(a-start,b-start,'entity')
                 before=raw[:a-start];prep=re.search(r'\b(?:у|для|на)\s*(?:(?:изделия|прибора|устройства)\s*)?$',before,re.I)
                 if prep:mark(prep.start(),a-start,'entity_owner')
+                # Fixture descriptor belongs only to a directly named synthetic entity.
+                training=re.search(r'\bучебн(?:ого|ый|ое|ой)\s*$',before,re.I)
+                if training and any(d.source_id.startswith('synthetic:') and entity_id(d)==e for d in snapshot.documents):
+                    mark(training.start(),a-start,'synthetic_entity_descriptor')
         for m in SOURCE.finditer(raw):
             value=norm(m[0]);mark(m.start(),m.end(),'source_constraint')
             if 'таблиц' in value:representation='markdown_table'
@@ -83,12 +98,18 @@ def parse_roles(question,snapshot):
         if typed:
             phrase='тип сущности';recognized=('entity_type','')
         else:phrase='';recognized=None
+        # The adjective is part of this exact manual noun phrase, never ignored globally.
+        if re.fullmatch(r'\s*учебн(?:ое|ую)\s+(?:'+MANUAL+'|'+INSTRUCTION+r')\s*[?!.:]*',
+                ''.join(' ' if i in marks else c for i,c in enumerate(raw)),re.I):
+            training=re.search(r'\bучебн(?:ое|ую)\b',raw,re.I)
+            mark(training.start(),training.end(),'synthetic_manual_descriptor')
         declaration_clean=''.join(' ' if i in marks else c for i,c in enumerate(raw)).rstrip(' ?!.:')
-        declaration=re.search(r'\b(?:требуется|требуются|указан|указаны|указано|перечислены|поддерживает)\s*$',declaration_clean,re.I)
+        declaration=re.search(r'\b(?:требуется|требуются|указан|указаны|указано|перечислены|предусмотрены|предусмотрен|поддерживает)\s*$',declaration_clean,re.I)
         if declaration:mark(declaration.start(),declaration.end(),'lookup_declaration')
         for i,c in enumerate(raw):
             if c.isspace() or c in '?!.:—…()':marks.setdefault(i,'grammar')
         remaining=[i for i in range(len(raw)) if i not in marks]
+        if typed and remaining:return GateResult('insufficient','unsupported_qualifier')
         if not typed:phrase=norm(''.join(raw[i] if i in remaining else ' ' for i in range(len(raw))))
         phrase=' '.join(phrase.split())
         if not phrase and (declaration or (prefix and re.search('[A-Za-zА-Яа-яЁё]',prefix[0]))):

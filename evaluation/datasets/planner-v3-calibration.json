@@ -1021,7 +1021,7 @@
         {
           "entity_id": "products/edu-config",
           "predicate": "purpose",
-          "selector": "",
+          "selector": "interface=usb",
           "document_kind": "any",
           "representation": "any",
           "evidence": [

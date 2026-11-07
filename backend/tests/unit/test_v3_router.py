@@ -90,6 +90,41 @@ class RolesTests(unittest.TestCase):
         self.assertNotIsInstance(self.plan('Питание EDU-410 и поддерживает EDU-420?'),QueryPlanV3)
         self.assertNotIsInstance(self.plan('Питание EDU-410 и найдите EDU-420?'),QueryPlanV3)
 
+    def test_declared_connector_and_scoped_training_lookup_roles(self):
+        examples=(('Какие разъёмы предусмотрены у EDU-420?', 'interfaces'),
+                  ('Каков статус учебного EDU-430?', 'status'),
+                  ('Найдите учебное руководство EDU-410.', 'document_reference'))
+        for q,predicate in examples:
+            with self.subTest(q=q):
+                plan=self.plan(q)
+                self.assertIsInstance(plan,QueryPlanV3)
+                self.assertEqual(plan.needs[0].predicate,predicate)
+        for q in ('Питание EDU-410 и предусмотрены EDU-420?',
+                  'Найдите беспроводное руководство EDU-410.',
+                  'Каков статус резервного EDU-430?'):
+            with self.subTest(q=q):self.assertIsInstance(parse_roles(q,self.s),GateResult)
+
+    def test_typed_lookup_never_discards_remaining_qualifiers_or_topic(self):
+        self.assertEqual(self.plan('К какому типу относится EDU-410?').needs[0].predicate,'entity_type')
+        for q in ('К какому типу относится EDU-410 беспроводной?',
+                  'К какому типу относится EDU-410 питание?',
+                  'К какому типу относится EDU-410 PROFINET?'):
+            with self.subTest(q=q):self.assertIsInstance(parse_roles(q,self.s),GateResult)
+
+    def test_exact_noun_inflections_do_not_accept_distinct_compound_quantities(self):
+        for q,predicate in (('Диапазон температуры EDU-410?', 'temperature_c'),
+                            ('Найдите инструкцию EDU-410?', 'document_reference')):
+            with self.subTest(q=q):self.assertEqual(self.plan(q).needs[0].predicate,predicate)
+        for q in ('Температуропроводность EDU-410?', 'Температуростойкость EDU-410?',
+                  'Найдите руководствоведение EDU-410?'):
+            with self.subTest(q=q):self.assertIsInstance(parse_roles(q,self.s),GateResult)
+
+    def test_designation_cannot_drop_adjacent_dangling_or_alternate_separators(self):
+        self.assertEqual(self.plan('Питание EDU-410.').needs[0].predicate,'power')
+        for q in ('Питание EDU-410-?', 'Питание EDU-410—?',
+                  'Питание EDU-410—X?', 'Питание EDU-410/?'):
+            with self.subTest(q=q):self.assertIsInstance(parse_roles(q,self.s),GateResult)
+
     def test_shared_entity_comparison_scope_must_not_be_guessed(self):
         p=self.plan('Питание EDU-410 и EDU-420 по таблице?')
         self.assertIsInstance(p,GateResult);self.assertEqual(p.state,'ambiguous')

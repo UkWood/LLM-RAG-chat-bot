@@ -8,7 +8,7 @@ from .v2_contracts import EvidenceNeed,SourceConstraints
 from .v3_contracts import IntentEntry,IntentDecision,QueryPlanV3
 from .v3_config import load_v3_config,checked_settings,revision
 from .v2_config import load_config
-from .roles_v3 import parse_roles
+from .roles_v3 import parse_roles,TEMPERATURE,MANUAL,INSTRUCTION
 from .projections import norm
 
 class IntentRouter:
@@ -47,9 +47,9 @@ def catalogue(snapshot,projections,catalog):
 
 def exact_intent(phrase,entries):
     patterns={'power':r'(?:питани[ея]|напряжени[ея](?: питания)?)','interfaces':r'(?:физические )?(?:интерфейсы?|разъемы?)(?: прибора)?',
-        'protocols':r'протокол(?:ы|ов)?(?: (?:обмена|связи))?','temperature_c':r'(?:диапазон )?температур[а-я]*',
+        'protocols':r'протокол(?:ы|ов)?(?: (?:обмена|связи))?','temperature_c':r'(?:диапазон )?'+TEMPERATURE,
         'status':r'статус(?: выпуска)?','features':r'(?:возможности|функции)','purpose':r'(?:назначение|для чего)',
-        'composition':r'состав','document_reference':r'(?:руководств[а-я]*|инструкц[а-я]*)','entity_type':r'тип(?: сущности)?',
+        'composition':r'состав','document_reference':r'(?:'+MANUAL+'|'+INSTRUCTION+r')','entity_type':r'тип(?: сущности)?',
         'configuration_interface':r'(?:интерфейс|разъем|порт)(?: для)?(?: локальной)? настройки'}
     matches=[]
     for e in entries:

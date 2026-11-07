@@ -25,3 +25,13 @@ If infeasible, publish feasibility failure with independent quality NOT_RUN and 
 ## Verification checkpoint
 
 TDD initial missing modules RED, then concrete operator/Unicode/modifier/multihead/declaration/scope/token/selector and locked-group counterexamples RED→GREEN. Core22tests PASS before evaluator additions. Evaluator/custom temporary freeze/CLI contract tests and full base/optional verifiers are in progress; actual semantic calibration/fresh blind result not yet measured at this checkpoint. Final review, actual outcomes, publication and CI are appended after completion. No numeric graph test is reported as model quality.
+
+## Resume, calibration iteration 1 and final review — 2026-11-07
+
+Restored clean branch f90a83c after the usage-limit interruption; local bundles remained available. Both huggingface.co and us.aws.cdn.hf.co returned HTTP200 through the normal environment network. No download or Saturn mutation.
+
+[First actual calibration](../../evaluation/reports/2026-11-07-planner-v3-calibration-iteration-1.json) on committed f90a83c did **not qualify** any of the35 fixed-grid settings. The permissive probe achieved34/36 fully-correct positives and24/24 negative outcomes, but one answered plan was wrong and legacy V1-positive q008/q018 regressed. These are exposed, non-independent calibration outcomes, not blind quality. No selected configuration, freeze or V3 START was created.
+
+Calibration-only diagnosis justified a general finite declaration lookup and narrowly bound synthetic entity/manual training descriptors. Separately, authoring audit found cal036 omitted the explicit USB selector although both question and canonical evidence require USB: its exposed gold selector changed from empty to `interface=usb`; question, evidence, status and quotas are unchanged. Original failed report/source/data identity is retained. The blind dataset/manifest and all old datasets/reports remain unchanged; question-based dedup remains valid.
+
+Independent fresh-context whole-branch review found three Important issues: typed-lookup residual content, overbroad noun-stem exact recognition, and dangling/alternate designation separators. All three received failing regression tests before the fix, then targeted GREEN. No second reviewer loop. Two Minor findings deferred: relevance preference sums option minima and prunes alternative bindings with the same evidence union; saved diagnostics omit per-need retrieval/pool/selection coverage. They limit preference/diagnosis, not complete canonical sufficiency or policy. Full verifiers and a second actual calibration are next; fresh blind remains hidden and unconsumed.
