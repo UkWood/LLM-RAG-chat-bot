@@ -26,3 +26,5 @@
 - [Planner V2 post-review corrections, historical experiment applicability](2026-11-06-planner-v2-corrections.md)
 
 - [Bounded semantic planner proposal](2026-11-06-semantic-planner-design.md)
+
+- [Semantic Planner V3 experiment and blinded protocol](2026-11-06-semantic-planner-v3.md)

@@ -19,15 +19,26 @@ def main():
     parser=argparse.ArgumentParser(description='Synthetic local grounded answer with offline fake provider')
     for name in ('corpus','model-dir','reranker-dir'):parser.add_argument('--'+name,type=Path,required=True)
     parser.add_argument('--query',required=True)
-    parser.add_argument('--planner-version',choices=['v1','v2'],default='v1')
+    parser.add_argument('--planner-version',choices=['v1','v2','v3'],default='v1')
+    parser.add_argument('--v3-settings',type=Path)
     args=parser.parse_args();dense=None
     try:
+        settings=None
+        if args.v3_settings:
+            if args.planner_version!='v3':raise ValueError('V3 settings require explicit V3 mode')
+            settings=json.loads(args.v3_settings.read_text())
+            if not isinstance(settings,dict):raise ValueError('Invalid V3 settings object')
+            settings=settings.get('selected_settings',settings)
+            if not isinstance(settings,dict):raise ValueError('No qualified V3 settings')
         encoder,_=load_embedding(args.model_dir);scorer,_=load_semantic_reranker(args.reranker_dir)
         registry=load_registry((args.corpus/'registry.json').read_bytes())
         snapshot=build_snapshot(build_fixture(args.corpus,registry,registry.source_snapshot),registry)
         dense=QdrantIndex(snapshot,encoder);service=RetrievalService(SnapshotCatalog(registry))
         service.publish(IndexSet(snapshot,BM25Index(snapshot),dense))
-        if args.planner_version=='v2':
+        if args.planner_version=='v3':
+            from .application_v3 import GroundedConsultantV3
+            app=GroundedConsultantV3(service,scorer,FakeLLMProvider(),settings=settings)
+        elif args.planner_version=='v2':
             from .application_v2 import GroundedConsultantV2
             app=GroundedConsultantV2(service,scorer,FakeLLMProvider())
         else:app=GroundedConsultant(service,scorer,FakeLLMProvider())

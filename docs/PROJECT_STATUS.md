@@ -1,5 +1,10 @@
 # Состояние проекта
 
+## Semantic Planner V3 implementation — 2026-11-06
+
+Owner approved detailed PR11 design and explicitly requested implementation. [Plan](superpowers/plans/2026-11-06-semantic-planner-v3.md), [stage](stages/2026-11-06-semantic-planner-v3.md). Fresh40case blind authored/reviewed/capability-checked before candidate code; finalSHA6f48fdbad02761fac30c1950e3a9f8c3a0b77ed0fbc3eb5c854a1315fb23dbe0, root payload unread. Separate60case calibration NON-independent. Role-bound local proposals, per-need captured search, bounded complete-group cover and exact locked V3 gate implemented behind explicit opt-in; V1 default/V2 behavior/projections unchanged. Calibration feasibility/full verification/final review/first-blind outcome pending; no new quality acceptance. Blind only after qualification+freeze+exclusiveSTART, never replay old consumed data. Saturn-Main-Site READ-ONLY, real-source/cloud approvals/dependencies/models unchanged. Prior proposed entries below are historical.
+
+
 ## After PR10 merge: semantic planning proposal — 2026-11-06
 
 PR10 MERGED in mainbb16530e5b9a4943abae5c1b0f526cb218f46b2d; mainCI42256501265 SUCCESS verified. Corrected V2 rejects dropped negation/protocol qualification/modification intent;168backend tests, V1 default unchanged. Independent quality for corrected runtime NOT_RUN; old8/24+14/16 is historical frozen7bc6f11 only.

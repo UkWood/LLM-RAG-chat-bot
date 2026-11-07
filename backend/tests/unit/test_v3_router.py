@@ -37,6 +37,11 @@ class RouterTests(unittest.TestCase):
         m.identity=dict(m.identity,revision='b'*40)
         with self.assertRaises(ValueError):r.propose('topic',e,cfg)
 
+    def test_one_credible_low_margin_class_is_not_fake_ambiguity(self):
+        e=(IntentEntry('power','','a'),IntentEntry('interfaces','','b'))
+        result=IntentRouter(PairModel((.2,-.1))).propose('topic',e,load_v3_config()[0])
+        self.assertEqual(result.state,'insufficient')
+
 
 class RolesTests(unittest.TestCase):
     @classmethod
@@ -106,6 +111,10 @@ class RolesTests(unittest.TestCase):
         s=power_snapshot(["24 В постоянного тока\nspecs:\n  - name: Цифровые входы\n    value: '4 V'"])
         c=SnapshotCatalog(s.registry);p=build_projections(s)
         self.assertIn('цифровые входы',{e.selector for e in catalogue(s,p,c)})
+
+    def test_other_physical_quantities_are_not_supply_voltage(self):
+        for q in ('Мощность EDU-410?', 'Ток EDU-410?', 'Потребляемый ток EDU-420?'):
+            with self.subTest(q=q):self.assertIsInstance(parse_roles(q,self.s),GateResult)
 
 
 from unit.test_reranker_model import HAS_ONNX,source,profile

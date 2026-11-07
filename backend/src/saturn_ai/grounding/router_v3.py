@@ -30,7 +30,8 @@ class IntentRouter:
         best=order[0];second=scores[order[1]] if len(order)>1 else scores[best]-100
         gap=scores[best]-second
         if scores[best]<settings['score_min']:return GateResult('insufficient','unknown_predicate')
-        if gap<=0 or gap<settings['margin_min']:return GateResult('ambiguous','ambiguous_predicate')
+        if gap<=0 or gap<settings['margin_min']:
+            return GateResult('ambiguous','ambiguous_predicate') if second>=settings['score_min'] else GateResult('insufficient','unknown_predicate')
         e=entries[best];return IntentDecision(e.predicate,e.selector,scores[best],gap,'semantic')
 
 

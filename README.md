@@ -106,3 +106,7 @@ Requires the existing explicitly prepared local bundles; no automatic downloads.
 First frozen40case blind assessment: V2 fully correct8/24 positives and14/16 negative/ambiguity outcomes; V1 0/24 and12/16. V2 emitted support/canonical validity1.0, but the24/24+16/16 quality gate FAILED. Prototype not accepted. No post-result tuning; this set is now exposed regression evidence. Calibration14/14 positives is not blind generalization.
 
 Post-review corrective revision rejects `нет`, unsupported literal Modbus/TCP/RTU qualifiers and modification requests outside supported lookup bindings instead of discarding them. Unqualified protocol questions remain supported. The first blind score above is historical for frozen7bc6f11, not a measurement of this corrected runtime: independent quality NOT_RUN, prototype not accepted. Dataset/START/report unchanged, no blind rerun. [Corrective stage report](docs/stages/2026-11-06-planner-v2-corrections.md).
+
+## Experimental V3
+
+Owner-approved [V3 design](docs/superpowers/specs/2026-11-06-semantic-planner-design.md): role-bound local predicate proposals, per-need search and locked complete-group evidence. V1 stays default, V3 requires `--planner-version v3`; optional `--v3-settings` reads an explicit calibration report's selected settings. No new model/dependency or source/cloud approval. [Stage/protocol/outcomes](docs/stages/2026-11-06-semantic-planner-v3.md). Feasibility and independent quality must be read from actual reports; code tests are not quality acceptance.

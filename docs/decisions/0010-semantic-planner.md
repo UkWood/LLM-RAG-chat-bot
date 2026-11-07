@@ -1,4 +1,4 @@
-# ADR-0010: bounded semantic predicate proposal — proposed
+# ADR-0010: bounded semantic predicate proposal — accepted bounded experiment
 
 Status: accepted bounded experiment; owner approved detailed PR11 design and explicitly requested implementation. [Design](../superpowers/specs/2026-11-06-semantic-planner-design.md), [stage](../stages/2026-11-06-semantic-planner-design.md).
 

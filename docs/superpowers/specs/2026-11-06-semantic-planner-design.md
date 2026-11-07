@@ -1,4 +1,4 @@
-# Bounded semantic planning and need-directed retrieval — proposed design
+# Bounded semantic planning and need-directed retrieval — accepted design
 
 2026-11-06. Status: accepted by owner in chat 2026-11-06, explicit implementation instruction received. Owner selected the approach using the existing local reranker after the alternatives were presented in chat. The concrete contracts below were approved with PR11 design. Base main bb16530e5b9a4943abae5c1b0f526cb218f46b2d, merged PR10; main CI42256501265 SUCCESS verified. Saturn-Main-Site strictly read-only.
 
