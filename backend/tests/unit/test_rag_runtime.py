@@ -78,3 +78,22 @@ class RuntimeTests(unittest.TestCase):
         self.assertEqual(code,2);self.assertEqual(result['reason_code'],'cloud_operator_flags_required')
         code,result=invoke(['--allow-cloud','--public-question'])
         self.assertEqual(code,0);self.assertEqual(result['status'],'answered');self.assertEqual(result['sources'][0]['url'],ROOT)
+    def test_repeated_content_refresh_can_reopen_full_hybrid_runtime(self):
+        from saturn_ai.publication.__main__ import index_builder_for
+        fetch=lambda url,kind:Fetched(url,('<main>'+'Pump24 V. '*300+'</main>').encode(),'text/html',200)
+        result=RefreshController(self.policy,self.store,fetch,index_builder=index_builder_for(self.root/'model')).run(force=True)
+        self.assertEqual(result['status'],'completed')
+        with self.load(Model([])) as runtime:
+            trace=runtime.app.service.search('Pump24',mode='hybrid')
+            self.assertEqual(len(trace.final),2)
+    def test_invalid_bundle_descriptor_is_rejected_before_atomic_promotion(self):
+        from dataclasses import replace
+        from saturn_ai.publication.__main__ import index_builder_for
+        before=self.store.capture().snapshot_id
+        descriptor=BM25Index.descriptor.fget
+        broken=property(lambda index:replace(descriptor(index),configuration_hash='invalid'))
+        fetch=lambda url,kind:Fetched(url,b'<main>New technical version 12 V.</main>','text/html',200)
+        with patch.object(BM25Index,'descriptor',broken):
+            result=RefreshController(self.policy,self.store,fetch,index_builder=index_builder_for(self.root/'model')).run(force=True)
+        self.assertEqual(result['status'],'failed')
+        self.assertEqual(self.store.state()['active'],before)

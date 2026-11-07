@@ -12,12 +12,16 @@ def index_builder_for(model_dir):
     from ..evaluation.reranking import load_embedding
     from ..retrieval.lexical import BM25Index
     from ..retrieval.dense import QdrantIndex
+    from ..retrieval.service import RetrievalService,IndexSet
+    from .snapshot import PublishedCatalog
     encoder,_=load_embedding(model_dir)
     def build(snapshot,directory):
         lexical=BM25Index(snapshot)
         dense=QdrantIndex(snapshot,encoder,path=directory/'dense')
         try:
-            lexical.validate();dense.validate()
+            # Apply the same complete bundle validation as the answer runtime, before promotion.
+            catalog=PublishedCatalog(lambda:{s.url:s.content_hash for s in snapshot.sources})
+            service=RetrievalService(catalog);service.publish(IndexSet(snapshot,lexical,dense))
             atomic_json(directory/'index.json',dict(mode='hybrid',embedding=encoder.identity,
                 lexical=asdict(lexical.descriptor),dense=asdict(dense.descriptor)))
         finally:dense.close()

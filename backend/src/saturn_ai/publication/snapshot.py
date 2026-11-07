@@ -30,13 +30,13 @@ class PublishedSnapshot:
                 or len({s.url for s in self.sources})!=len(self.sources)):raise ValueError('Invalid publication sources')
         documents=[];records=[]
         for source in sorted(self.sources,key=lambda s:s.url):
-            docid=identifier('published-text-v1',source.url,source.content_hash)
+            docid=identifier('published-text-v2',source.url,source.content_hash)
             chunks=[]
             for page,text in source.pages:
                 for start in range(0,len(text),1500):
                     part=text[start:start+1500].strip()
-                    if part:chunks.append(make_chunk(docid,source.url,part,(),'body',page))
-            documents.append(Document(docid,source.url,source.content_hash,'published-text-v1',source.title,
+                    if part:chunks.append(make_chunk(docid,source.url,part,(),f'body[{start}]',page))
+            documents.append(Document(docid,source.url,source.content_hash,'published-text-v2',source.title,
                 source.url,'Document',None,source.url,tuple(chunks)))
             records.append(SimpleNamespace(source_id=source.url,document_type='pdf' if source.media_type=='application/pdf' else 'page'))
         sid=digest([self.policy_revision,[(s.url,s.content_hash) for s in sorted(self.sources,key=lambda s:s.url)],

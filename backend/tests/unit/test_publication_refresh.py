@@ -96,3 +96,9 @@ class RefreshTests(unittest.TestCase):
         self.assertEqual(RefreshController(policy,store,self.site).run(force=True)['status'],'completed')
         snapshot=store.capture()
         self.assertTrue(store.catalog().eligible_snapshot_chunks(snapshot,'cloud_generate'))
+    def test_valid_html_at_dotted_route_is_not_silently_skipped(self):
+        self.site.pages[ROOT]=b'<main><a href="pump-v2.1">Pump</a></main>'
+        self.site.pages[ROOT+'pump-v2.1']=b'<main>Pump version 2.1. Supply 24 V.</main>'
+        self.assertEqual(self.updater.run()['status'],'completed')
+        self.assertIn(ROOT+'pump-v2.1',self.store.current_versions())
+        self.assertIn('Supply 24 V.',' '.join(c.chunk.text for c in self.store.capture().chunks))

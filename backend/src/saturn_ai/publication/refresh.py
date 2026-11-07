@@ -53,9 +53,7 @@ class RefreshController:
                     if kind=='page':
                         for link in source.links:
                             if self.policy.allows_pdf(link):queue.append((link,'pdf',source.url))
-                            elif self.policy.allows_page(link):
-                                path=link.split('?',1)[0].rsplit('/',1)[-1]
-                                if '.' not in path or path.endswith(('.html','.htm')):queue.append((link,'page',source.url))
+                            elif self.policy.allows_page(link):queue.append((link,'page',source.url))
                 snapshot=PublishedSnapshot(tuple(sources.values()),self.policy.revision)
                 return self.store.publish(snapshot,receipts,self.index_builder)
             except Exception as exc:

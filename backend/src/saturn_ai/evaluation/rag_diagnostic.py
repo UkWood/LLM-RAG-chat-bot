@@ -21,11 +21,13 @@ def load_fixture(root,dataset_path):
     snapshot=PublishedSnapshot(sources,'public-synthetic-diagnostic-v1')
     seen=set();cases=[]
     for case in data['cases']:
-        if (not isinstance(case,dict) or set(case)!={'id','kind','question','evidence','gaps'}
+        if (not isinstance(case,dict) or set(case)!={'id','kind','question','evidence','gaps','oracle_sources'}
                 or not isinstance(case['id'],str) or case['id'] in seen
                 or case['kind'] not in ('full','partial','missing','ambiguous','conflict')
                 or not isinstance(case['question'],str) or not 1<=len(case['question'])<=4000
-                or not isinstance(case['evidence'],list) or not isinstance(case['gaps'],list)):
+                or not isinstance(case['evidence'],list) or not isinstance(case['gaps'],list)
+                or not isinstance(case['oracle_sources'],list) or not case['oracle_sources']
+                or any(not isinstance(s,str) for s in case['oracle_sources'])):
             raise ValueError('Invalid diagnostic case')
         seen.add(case['id']);ids=[]
         for evidence in case['evidence']:
@@ -35,7 +37,13 @@ def load_fixture(root,dataset_path):
             found=[c.chunk_id for c in snapshot.chunks if c.source_id==ROOT_URL+evidence['source'] and evidence['quote'] in c.chunk.text]
             if not found:raise ValueError('Gold excerpt not in canonical fixture')
             ids.extend(found)
+        gold_ids=set(ids);ids=[]
+        for source in case['oracle_sources']:
+            found=[c.chunk_id for c in snapshot.chunks if c.source_id==ROOT_URL+source]
+            if not found:raise ValueError('Oracle source absent from canonical fixture')
+            ids.extend(found)
         ids=tuple(dict.fromkeys(ids))
+        if not gold_ids<=set(ids):raise ValueError('Oracle omitted gold evidence')
         if len(ids)>5 or sum(len(c.chunk.text) for c in snapshot.chunks if c.chunk_id in ids)>8000:
             raise ValueError('Oracle exceeds runtime context budget')
         cases.append(dict(case,oracle_ids=ids))

@@ -59,3 +59,12 @@ class PublicationTests(unittest.TestCase):
         bad=replace(snap,chunks=())
         with self.assertRaises(ValueError):BM25Index(bad)
         with self.assertRaises(ValueError):PublishedSource(ROOT+'a.pdf',b'not a PDF','application/pdf')
+    def test_repeated_page_segments_have_unique_ids_and_remain_searchable(self):
+        item=source(('<main>'+'Pump24 V. '*300+'</main>').encode())
+        snapshot=PublishedSnapshot((item,),'policy-a')
+        catalog=PublishedCatalog(lambda:{item.url:item.content_hash})
+        service=RetrievalService(catalog);service.publish(IndexSet(snapshot,BM25Index(snapshot)))
+        result=service.search('Pump24',mode='lexical')
+        self.assertEqual(len(snapshot.chunks),2)
+        self.assertEqual(len({c.chunk_id for c in snapshot.chunks}),2)
+        self.assertEqual(len(result.final),2)
