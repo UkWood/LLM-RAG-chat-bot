@@ -9,20 +9,33 @@ def main():
     parser=argparse.ArgumentParser(description='Synthetic preflight / measured local retrieval')
     parser.add_argument('--corpus',type=Path,required=True)
     parser.add_argument('--dataset',type=Path,required=True)
-    parser.add_argument('--stage',choices=['preflight','retrieval','reranking','grounding','planner-calibration','planner-blind'],default='preflight')
+    parser.add_argument('--stage',choices=['preflight','retrieval','reranking','grounding','planner-calibration','planner-blind','v3-calibration','v3-blind'],default='preflight')
     parser.add_argument('--mode',choices=['lexical','dense','hybrid'],default='lexical')
     parser.add_argument('--model-dir',type=Path)
     parser.add_argument('--reranker-dir',type=Path)
     parser.add_argument('--require-source-hit-target',action='store_true')
     parser.add_argument('--require-grounding-target',action='store_true')
     parser.add_argument('--freeze',type=Path)
+    parser.add_argument('--require-feasibility',action='store_true')
     parser.add_argument('--planner-report',type=Path)
     parser.add_argument('--require-planner-target',action='store_true')
     args=parser.parse_args()
     try:
-        if args.require_planner_target and args.stage!='planner-blind':raise ValueError('Planner target requires frozen blind comparison')
+        if args.require_planner_target and args.stage not in ('planner-blind','v3-blind'):raise ValueError('Planner target requires frozen blind comparison')
         if args.require_grounding_target and args.stage!='grounding':raise ValueError('Grounding target requires grounding stage')
-        if args.stage in ('planner-calibration','planner-blind'):
+        if args.require_feasibility and args.stage!='v3-calibration':raise ValueError('Feasibility requires V3 calibration')
+        if args.stage in ('v3-calibration','v3-blind'):
+            if args.mode!='hybrid' or args.model_dir is None or args.reranker_dir is None or args.require_source_hit_target or args.require_grounding_target:
+                raise ValueError('Explicit local hybrid bundles required for V3 comparison')
+            from .planner_v3 import run_v3_calibration,run_v3_blind
+            if args.stage=='v3-calibration':
+                report=run_v3_calibration(args.corpus,args.dataset,args.model_dir,args.reranker_dir)
+                if args.planner_report:args.planner_report.write_text(json.dumps(report,ensure_ascii=False,indent=2,allow_nan=False)+'\n')
+            else:
+                if args.freeze is None or args.planner_report is None:raise ValueError('V3 frozen attempt/report required')
+                report=run_v3_blind(args.corpus,args.dataset,args.model_dir,args.reranker_dir,args.freeze,args.planner_report)
+        elif args.stage in ('planner-calibration','planner-blind'):
+
             if args.mode!='hybrid' or args.model_dir is None or args.reranker_dir is None or args.require_source_hit_target or args.require_grounding_target:
                 raise ValueError('Explicit hybrid bundles and comparison stage required')
             from .planner_v2 import run_calibration_comparison,run_blind_comparison
@@ -53,6 +66,7 @@ def main():
     except (ValueError,OSError,RecursionError):
         parser.exit(2,'Synthetic evaluation rejected.\n')
     print(json.dumps(report,ensure_ascii=False,indent=2))
+    if args.require_feasibility and not report['feasible']:return 1
     if args.require_planner_target and not report['new_quality_target_met']:return 1
     if args.require_grounding_target and not report['grounding_target_met']:return 1
     return 1 if args.require_source_hit_target and not report['source_hit_target_met'] else 0

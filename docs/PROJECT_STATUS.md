@@ -1,5 +1,19 @@
 # Состояние проекта
 
+## Semantic Planner V3: independent target FAILED — 2026-11-07
+
+[Draft PR12](https://github.com/UkWood/LLM-RAG-chat-bot/pull/12), unmerged. [Stage/audit](stages/2026-11-06-semantic-planner-v3.md), [first report](../evaluation/reports/2026-11-07-planner-v3-first-blind.json). Frozen f0144f7, blind SHA6f48fdbad02761fac30c1950e3a9f8c3a0b77ed0fbc3eb5c854a1315fb23dbe0 consumed ONCE after exclusiveSTART. Valid80system-run/40case comparison: V3 fully correct2/24positives+16/16negative/ambiguity (18/40); correctedV2 4/24+16/16 (20/40). Unsafe0/errors0/emitted canonical support1.0, but quality target24/24+16/16 FAILED and prototype NOT accepted. Exposed calibration35/36 did not generalize. No post-result runtime/config/grader tuning, relabeling or rerun. Earlier current-calibration/pending entries below are historical.
+
+V1 default; V2 unchanged; V3 explicit experimental opt-in. Final base+ONNX verification5project+206backend PASS (base12optional skips/ONNX0); independent review Important fixes done, two Minor limitations documented. Docs-only11 closed as superseded without merge. Next: separate coverage redesign and fresh independent data before any further runtime quality claim; do not tune on this consumed set. Real sources/cloud/dependencies/models unchanged; Saturn-Main-Site strictly READ-ONLY. Final current-head CI is tracked in PR12.
+
+
+## After PR10 merge: semantic planning proposal — 2026-11-06
+
+PR10 MERGED in mainbb16530e5b9a4943abae5c1b0f526cb218f46b2d; mainCI42256501265 SUCCESS verified. Corrected V2 rejects dropped negation/protocol qualification/modification intent;168backend tests, V1 default unchanged. Independent quality for corrected runtime NOT_RUN; old8/24+14/16 is historical frozen7bc6f11 only.
+
+Owner requested continuing and selected existing-local-reranker approach. [Detailed semantic planner design](superpowers/specs/2026-11-06-semantic-planner-design.md) and [ADR0010](decisions/0010-semantic-planner.md) are PROPOSED, not yet approved for implementation; [stage](stages/2026-11-06-semantic-planner-design.md). Role-bound predicate proposals, per-need search, bounded complete evidence cover and fresh blind protocol; no code/new data/model inference yet. After approval write detailed implementation plan. Real sources/cloud unchanged, Saturn-Main-Site READ-ONLY. Earlier pending merge entries below are historical.
+
+
 ## Planner V2 corrective revision — 2026-11-06
 
 Owner requested continuing after PR10 merge review found two Important blockers: discarded `нет` and protocol qualifiers. Corrections reject negation, unsupported Modbus/TCP/RTU qualification and modification requests outside supported lookup bindings before generation; unqualified protocol queries remain supported, V1 default unchanged. [Corrective report](stages/2026-11-06-planner-v2-corrections.md), [plan addendum](superpowers/plans/2026-11-06-typed-planner-v2.md). Final local verification5project+168backend PASS in both environments (base11optional skips/optional0), calibration14/14 positives20/20statuses without V1-positive regression; independent review fix pass complete. Current-head remote CI/merge outcome must be checked in PR10.
@@ -108,3 +122,5 @@ Verified remote CI: [push42168613444](https://github.com/UkWood/LLM-RAG-chat-bot
 ## Publication
 
 [Implementation PR #10](https://github.com/UkWood/LLM-RAG-chat-bot/pull/10), branch feat/typed-planner-v2. PR open/unmerged; implementation freeze7bc6f11, first-result/report commitc0f0f3f. Docs-only PR9 superseded by this implementation including its owner-accepted design. Actual remote checks are available on the current head in PR10; local PASS is not a remote-CI claim or quality acceptance. The24/24+16/16 quality target remains FAILED. No runtime/config/grader change after freeze.
+
+Publication: [proposed design PR #11](https://github.com/UkWood/LLM-RAG-chat-bot/pull/11), feat/semantic-planner-design. Approach selected in chat; detailed contracts await design approval. PR open/unmerged, no implementation/data/quality result. Current-head remote checks are tracked in PR11; do not infer success or design acceptance from local docs checks.

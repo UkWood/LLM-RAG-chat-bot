@@ -1,0 +1,100 @@
+{
+  "schema_version": 1,
+  "profile": "planner_v3_blind",
+  "snapshot_id": "820b9c032a001af50276178bfa765e414667b1e8046ad2070f0a68122af1c680",
+  "registry_revision": "9d1502c38c1557c680cfafd2a717b5aaa325f7bde07b28ef1d296a56393b8cf8",
+  "dataset": "planner-v3-blind.json",
+  "sha256": "6f48fdbad02761fac30c1950e3a9f8c3a0b77ed0fbc3eb5c854a1315fb23dbe0",
+  "raw_bytes": 25589,
+  "counts": {
+    "total": 40,
+    "by_status": {
+      "answered": 24,
+      "refused": 12,
+      "clarification": 4
+    },
+    "by_group": {
+      "single_field": 8,
+      "multi_need": 4,
+      "source_scoped": 4,
+      "document_reference": 4,
+      "relationship_type": 4,
+      "mandatory_refusal": 8,
+      "ambiguous_invalid": 8
+    }
+  },
+  "author_provenance": {
+    "method": "independent_fresh_context_canonical_fixture_author",
+    "author_agent": "/root/v3_blind_author",
+    "knowledge_inputs": [
+      "fixtures/evaluation/registry.json",
+      "fixtures/evaluation/README.md",
+      "fixtures/evaluation/src/content/",
+      "fixtures/evaluation/pdf/",
+      "backend/src/saturn_ai/ingestion/",
+      "backend/src/saturn_ai/snapshots.py"
+    ],
+    "excluded_inputs": [
+      "old_and_candidate_evaluation_datasets_reports_tests",
+      "candidate_grounding_planner_router_gate",
+      "planner_configuration",
+      "implementation_plans_and_full_design",
+      "root_conversation",
+      "calibration"
+    ],
+    "model_or_inference_calls": 0,
+    "new_dependencies": 0,
+    "canonical_parser_validation": "passed",
+    "semantic_author_review": "passed",
+    "duplicate_check": "passed_independent_nondisclosing_reviewer"
+  },
+  "independent_review": {
+    "reviewer_agent": "/root/v3_blind_label_review",
+    "semantic_label_review": "passed",
+    "canonical_source_binding_review": "passed",
+    "deduplication": {
+      "status": "passed",
+      "blind_question_count": 40,
+      "comparison_question_counts": {
+        "synthetic-v1": 30,
+        "planner-v2-blind": 40,
+        "planner-v3-calibration": 60
+      },
+      "internal_collisions": 0,
+      "cross_dataset_collisions": 0,
+      "normalization": [
+        "Unicode NFKC",
+        "casefold",
+        "ё→е",
+        "punctuation→space",
+        "collapse whitespace",
+        "SHA-256"
+      ]
+    },
+    "provenance": {
+      "semantic_inputs": [
+        "fixtures/evaluation/",
+        "canonical registry",
+        "backend/src/saturn_ai/ingestion/",
+        "backend/src/saturn_ai/snapshots.py",
+        "new blind dataset"
+      ],
+      "old_and_calibration_access": "automated question-hash comparison only",
+      "candidate_implementation_access": false,
+      "solver_or_model_calls": 0,
+      "new_dependencies": 0,
+      "writes": "none"
+    }
+  },
+  "baseline_capability_review": {
+    "reviewer_agent": "/root/v3_blind_label_review",
+    "metadata_sha256": "9f3bb7e9d05337408cbaf7326eb03d2a1a346f18070debc7f9511420746dba72",
+    "author_metadata_access": false,
+    "author_candidate_implementation_access": false,
+    "outcome": "canonical_source_supported_replacement_within_original_quota",
+    "final_independent_review": "passed",
+    "metadata_access": "independent_reviewer_only",
+    "evidence_needs_reviewed": 25,
+    "typed_references_reviewed": 6
+  }
+}
