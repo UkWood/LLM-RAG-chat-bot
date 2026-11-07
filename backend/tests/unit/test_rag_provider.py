@@ -64,3 +64,24 @@ class ProviderTests(unittest.TestCase):
         with patch.dict('os.environ',env),redirect_stdout(output):status=main(['smoke'])
         self.assertEqual(status,0);self.assertEqual(json.loads(output.getvalue())['status'],'compatible')
         self.assertNotIn('test-key',output.getvalue())
+
+    def test_response_failures_have_distinct_fixed_reasons_without_body_disclosure(self):
+        cases=[
+            (b'not-json test-key','invalid_response_envelope'),
+            (json.dumps({'choices':[]}).encode(),'invalid_response_envelope'),
+            (json.dumps({'choices':[[]]}).encode(),'invalid_response_envelope'),
+            (json.dumps({'choices':[{'finish_reason':'length','message':{'content':'{}'}}]}).encode(),'output_truncated'),
+            (json.dumps({'choices':[{'finish_reason':'stop','message':{'content':'test-key invalid-json'}}]}).encode(),'invalid_response_content'),
+            (json.dumps({'choices':[{'finish_reason':'tool_calls','message':{'content':'{}','tool_calls':[{}]}}]}).encode(),'unsupported_response_shape'),
+        ]
+        for body,reason in cases:
+            with self.subTest(reason=reason,body=body):
+                self.server.body=body
+                with self.assertRaises(ProviderError) as ctx:self.client().complete('s','u')
+                self.assertEqual(str(ctx.exception),reason)
+                self.assertNotIn('test-key',str(ctx.exception))
+
+    def test_timeout_has_its_own_fixed_reason(self):
+        self.server.delay=.15
+        with self.assertRaises(ProviderError) as ctx:self.client(timeout=.03).complete('s','u')
+        self.assertEqual(str(ctx.exception),'timeout')

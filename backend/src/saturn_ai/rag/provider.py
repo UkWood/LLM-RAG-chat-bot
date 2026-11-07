@@ -75,18 +75,29 @@ class OpenAICompatibleClient:
             with self.opener.open(request,timeout=self.settings.timeout) as response:
                 raw=response.read(1_000_001)
                 if len(raw)>1_000_000:raise ProviderError('response_limit')
-            result=strict_json(raw)
-            choices=result['choices']
-            if not isinstance(choices,list) or len(choices)!=1:raise ValueError()
+            try:
+                result=strict_json(raw)
+            except (ValueError,UnicodeError):raise ProviderError('invalid_response_envelope') from None
+            if not isinstance(result,dict):raise ProviderError('invalid_response_envelope')
+            choices=result.get('choices')
+            if (not isinstance(choices,list) or len(choices)!=1 or not isinstance(choices[0],dict)
+                    or not isinstance(choices[0].get('message'),dict)):
+                raise ProviderError('invalid_response_envelope')
             choice=choices[0];message=choice['message']
-            if choice.get('finish_reason')!='stop' or message.get('tool_calls'):raise ValueError()
-            text=message['content']
-            if not isinstance(text,str):raise ValueError()
-            value=strict_json(text)
-            if not isinstance(value,dict):raise ValueError()
+            if choice.get('finish_reason')=='length':raise ProviderError('output_truncated')
+            if choice.get('finish_reason')!='stop' or message.get('tool_calls'):
+                raise ProviderError('unsupported_response_shape')
+            text=message.get('content')
+            if not isinstance(text,str):raise ProviderError('invalid_response_content')
+            try:
+                value=strict_json(text)
+            except ValueError:raise ProviderError('invalid_response_content') from None
+            if not isinstance(value,dict):raise ProviderError('invalid_response_content')
             return value
         except HTTPError as exc:
             code=exc.code;exc.close();raise ProviderError('http_'+str(code)) from None
         except ProviderError:raise
-        except (OSError,URLError,ValueError,KeyError,TypeError,UnicodeError):
-            raise ProviderError('invalid_or_unavailable_response') from None
+        except TimeoutError:raise ProviderError('timeout') from None
+        except URLError as exc:
+            raise ProviderError('timeout' if isinstance(exc.reason,TimeoutError) else 'transport_unavailable') from None
+        except OSError:raise ProviderError('transport_unavailable') from None
