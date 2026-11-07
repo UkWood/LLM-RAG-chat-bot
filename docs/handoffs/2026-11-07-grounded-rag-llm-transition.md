@@ -1,5 +1,13 @@
 # Checkpoint: переход к среде с LLM variables
 
+## Последний checkpoint: numeric correction и30cases без infrastructure errors — 2026-11-07
+
+Продолжение владельца «продолжай». Source6f7e728 исправляет numeric rejection контекстно подтверждённых names и вводит fixed phase error codes; final base/ONNX5project+224backendPASS (12/1skips),36targetedPASS. Один focused correction reviewer,2finding fixes RED→GREEN, без нового whole-branch reviewer loop.
+
+Новые oracle/end-to-end выполнили каждый15/15cases без infrastructure errors, те же reviewed fixtures/provider/models/prompts. Первые исходные reports не менялись. [Новые responses и отдельные human review forms](../stages/2026-11-07-grounded-rag-corrected-responses.md), [source/tests/measured evidence](../stages/2026-11-07-grounded-rag-numeric-correction.md). Все measured report hashes привязаны к отдельным pending review JSON.
+
+Следующее: human answer assessment и релевантность (d11/d12 приводят подтверждённые факты вне вопроса); d15 conflict presentation проверить отдельно. Runtime statuses/self-verifier не считаются score. Quality/prototype не приняты. Причина первоначального d03 pipeline_unavailable неизвестна: targeted trace и новые runs его не воспроизвели. Новые phase codes диагностируют будущее повторение, это не доказательство исправления старого error. Без новой причины smoke/прогоны не повторять. Source unchanged после6f7e728; последующий commit только docs/evidence. Существующий checkout/venvs/bundles сохраняются, старый dirty checkout не трогать; no merge/deploy/site operations. Ниже исторические checkpoints.
+
 ## Актуальная точка: первые ответы, диагностика остановлена — 2026-11-07
 
 Human fixture/context review подтверждён владельцем («Проверил: сценарии и контекст пригодны»); API smoke compatible. Oracle один раз: exit0,15/15cases,0infrastructure errors, видны пропуски подтверждённых сведений. End-to-end один раз: exit2, d03 pipeline_unavailable, d04–d15 NOT_RUN; d01/d02 needs_support. Никаких retries/model switches. [Measured evidence и команды](../stages/2026-11-07-grounded-rag-resume.md#первые-llm-diagnostics-после-human-fixture-review--2026-11-07), [ответы и human review forms](../stages/2026-11-07-grounded-rag-first-responses.md). Оба отчёта измерены на505a266 и сохранены неизменными с SHA256.

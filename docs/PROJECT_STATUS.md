@@ -1,5 +1,11 @@
 # Состояние проекта
 
+## Исправлен числовой фильтр, оба live diagnostics выполнены — 2026-11-07
+
+Source `6f7e728`: цифры в названии изделия больше не подменяют величины и не требуют повтора имени в короткой quote. Exact identifier backing проверяется в цитируемом chunk; выдуманные values/units/другие IDs отклоняются. Добавлены безопасные phase error codes.9новых regression tests,36targetedPASS; final base/ONNX verify_offline5project+224backendPASS (12/1skips). Один focused review,2findings воспроизведены RED→GREEN и исправлены одним pass.
+
+Новые oracle и end-to-end: каждый15/15cases,0infrastructure errors, без retries; [ответы и SHA-bound human review forms](stages/2026-11-07-grounded-rag-corrected-responses.md), [полное evidence](stages/2026-11-07-grounded-rag-numeric-correction.md). Первые reports/dataset неизменны. D01–d04 теперь содержат прежние пропущенные факты; d11/d12 ещё показывают сведения вне заданного вопроса. Human answer assessment pending, качество/прототип не приняты. Исходный d03 pipeline_unavailable не воспроизведён, его причина неизвестна; не называть исправленным исходный error. Следующий шаг — оценка ответов и релевантности. Предыдущие записи ниже исторические.
+
 ## Первые реальные ответы сохранены; качество не принято — 2026-11-07
 
 Human fixture/context review подтверждён владельцем. AITunnel smoke compatible (HTTP/JSON only). Oracle exit0:15/15cases,0infrastructure errors, но наблюдаются пропуски подтверждённых фактов. End-to-end exit2: d01/d02 needs_support, d03 pipeline_unavailable, d04–d15 NOT_RUN; дальнейшие calls остановлены, retries/model switches не было. [Ответы и формы human review](stages/2026-11-07-grounded-rag-first-responses.md), [stage evidence](stages/2026-11-07-grounded-rag-resume.md#первые-llm-diagnostics-после-human-fixture-review--2026-11-07). Human answer assessment pending; следующий шаг — оценить ответы и локализовать pipeline error/потерю claims, без повторного smoke/подгонки dataset. Pinned local bundles/venv восстановлены. Предыдущие pending fixture/runtime записи ниже исторические.

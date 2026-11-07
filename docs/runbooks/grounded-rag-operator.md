@@ -61,3 +61,8 @@ PYTHONPATH=backend/src work/venv/bin/python -m saturn_ai.evaluation.rag_diagnost
 ## Первые фактические diagnostics — 2026-11-07
 
 Fixture/context review подтверждён владельцем. Oracle15/15 выполнен без infrastructure errors; end-to-end остановлен на d03 pipeline_unavailable, d04–d15 NOT_RUN. [Исходные ответы и SHA-bound human review forms](../stages/2026-11-07-grounded-rag-first-responses.md). Human answer review pending, quality не принята; предыдущая запись pending fixture review выше историческая. Не повторять smoke/набор без новой причины: сначала оценить результаты и локализовать failure. Сохранённый report содержит fixed reason_code, не исходный draft/exception; не выдавать pipeline_unavailable за доказанный provider/network сбой.
+
+
+## После numeric correction6f7e728
+
+Новые oracle/end-to-end оба15/15,0infrastructure errors, [ответы и pending human review](../stages/2026-11-07-grounded-rag-corrected-responses.md). Предыдущая остановка d03 историческая; её причина не установлена. Numeric identifiers требуют exact cited-chunk backing и не становятся numeric/quantity evidence. Backend теперь различает invalid_generation_response/invalid_verification_response и retrieval/generation/verification/render_unavailable; provider_* codes сохраняются. Fixed code не содержит exception/body/credentials; при error остановить последующие calls, не retry автоматически. Human answer review и вопросы релевантности d11/d12 всё ещё pending; повторный smoke не нужен.

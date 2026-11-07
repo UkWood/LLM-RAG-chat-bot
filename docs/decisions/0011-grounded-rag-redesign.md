@@ -26,3 +26,6 @@ Task4 publication-backed ask/runtime и Task5 synthetic diagnostic tooling ре�
 
 
 После подтверждённого владельцем fixture/context review выполнены первые реальные diagnostics на505a266: oracle15/15 без infrastructure errors; end-to-end остановлен на d03 pipeline_unavailable, остальные12NOT_RUN. Измерения сохранены неизменными; наблюдаются пропуски подтверждённых фактов, human answer review pending. [Ответы/оценка](../stages/2026-11-07-grounded-rag-first-responses.md). Compatibility не стала quality acceptance; перед расширением нужно локализовать ошибку и потерю claims. Новых архитектурных решений/допуска production нет.
+
+
+Correction6f7e728: context-backed exact identifiers отделены от измеренных чисел/единиц в numeric guard, при этом источник имени ограничен цитируемыми chunks. Ни общий pool, ни цифры названия/интерфейса не доказывают technical values. Сохраняются semantic verification, live eligibility, backend citations; добавлены fixed phase errors без exception disclosure. [Доказанный дефект/регрессии/measurements](../stages/2026-11-07-grounded-rag-numeric-correction.md): оба новых diagnostic15/15 без infrastructure errors, но нерелевантные дополнительные сведения d11/d12 и human quality assessment остаются открытыми. Это реализационное исправление accepted bounded design, не смена архитектуры/приёмка качества.
