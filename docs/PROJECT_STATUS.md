@@ -1,8 +1,8 @@
 # Состояние проекта
 
-## Semantic Planner V3 implementation — 2026-11-06
+## Semantic Planner V3: qualified calibration — 2026-11-07
 
-Owner approved detailed PR11 design and explicitly requested implementation. [Plan](superpowers/plans/2026-11-06-semantic-planner-v3.md), [stage](stages/2026-11-06-semantic-planner-v3.md). Fresh40case blind authored/reviewed/capability-checked before candidate code; finalSHA6f48fdbad02761fac30c1950e3a9f8c3a0b77ed0fbc3eb5c854a1315fb23dbe0, root payload unread. Separate60case calibration NON-independent. Role-bound local proposals, per-need captured search, bounded complete-group cover and exact locked V3 gate implemented behind explicit opt-in; V1 default/V2 behavior/projections unchanged. Calibration feasibility/full verification/final review/first-blind outcome pending; no new quality acceptance. Blind only after qualification+freeze+exclusiveSTART, never replay old consumed data. Saturn-Main-Site READ-ONLY, real-source/cloud approvals/dependencies/models unchanged. Prior proposed entries below are historical.
+Owner-approved semantic V3 implementation is in [PR12](https://github.com/UkWood/LLM-RAG-chat-bot/pull/12), draft/unmerged; docs-only11 closed as superseded. [Stage](stages/2026-11-06-semantic-planner-v3.md), [plan](superpowers/plans/2026-11-06-semantic-planner-v3.md). Corrected calibration e792e13 qualifies:35/36 positives+24/24 negative/ambiguity, unsafe0/errors0, no regression across8 gold-correct V1 positives, selected -2.0/1.0 fully replayed. NON-independent only. Both full verifiers5project+206backend PASS, final review Important fixes complete; two Minor limitations documented. Fresh blind SHA6f48fdbad02761fac30c1950e3a9f8c3a0b77ed0fbc3eb5c854a1315fb23dbe0 remains unread/unconsumed by implementer before freeze/START. Next: exact freeze+single blind attempt, then outcome/current-headCI. V1 default, V2 unchanged, V3 explicit opt-in; no new dependency/model/source/cloud approval. Saturn-Main-Site strictly READ-ONLY. Earlier entries are historical.
 
 
 ## After PR10 merge: semantic planning proposal — 2026-11-06
