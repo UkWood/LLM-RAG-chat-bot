@@ -1,5 +1,9 @@
 # Состояние проекта
 
+## Новая среда: LLM destination scope заблокирован — 2026-11-07
+
+Ветка docs/grounded-rag-redesign восстановлена отдельно от старого dirty checkout. Все три LLM variables присутствуют и ready, network restricted/enforced, observations current. Но выбранный api.aitunnel.ru отсутствует в сетевых разрешениях, а LLM_API_KEY scoped только к api.deepseek.com. Smoke **NOT_RUN до HTTP**, API compatibility/quality не проверены. Требуется исправление destination policy и protected AITunnel binding через настройки среды, затем fresh readiness/одна smoke. Human fixture/context review остаётся pending. [Фактические проверки и checkpoint CI](stages/2026-11-07-grounded-rag-resume.md#проверка-новой-среды-destination-mismatch--2026-11-07). Старый checkout и consumed данные не менялись; merge/deploy нет.
+
 ## Сохранение для следующей среды с LLM — 2026-11-07
 
 Владелец попросил сохранить рабочую точку и перейти в среду с LLM variables. Продолжать **docs/grounded-rag-redesign / PR13**, см. [новый handoff](handoffs/2026-11-07-grounded-rag-llm-transition.md). Tasks1–4 и diagnostic tooling реализованы, один whole-branch review и3Important RED→GREEN fixes выполнены. API smoke здесь exit2 provider_configuration_required до HTTP: переменных/secret нет. Actual LLM oracle/end-to-end и human fixture/answer review **NOT_RUN/pending**. Первое действие в новой среде — fresh readiness/presence-only probe, затем одна smoke. Подход/inline метод не пересогласовывать; не повторять final review/дорогие модели для docs-only checkpoint. Saturn-Main-Site READ-ONLY, merge/deploy не выполнялись. Source fixes `7da1afa`; final base/ONNX5project+215backend PASS (12/1skips), отдельный outer PDF1/1PASS. Точный checkpoint/current CI — в PR13.

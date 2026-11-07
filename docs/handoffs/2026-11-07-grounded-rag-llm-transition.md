@@ -1,5 +1,11 @@
 # Checkpoint: переход к среде с LLM variables
 
+## Обновление после фактического resume — 2026-11-07
+
+Переменные теперь присутствуют, все bindings ready; observations current, restricted network enforced. Однако api.aitunnel.ru не разрешён сетью, secret binding LLM_API_KEY разрешён только для api.deepseek.com. **Smoke NOT_RUN до HTTP**, ключ не отправлялся. В настройках среды нужны разрешение api.aitunnel.ru и действительный AITunnel credential с этим domain scope; затем fresh status/presence и одна smoke. Provider/model не переключались. Human fixture/context review всё ещё pending. [Stage evidence](../stages/2026-11-07-grounded-rag-resume.md#проверка-новой-среды-destination-mismatch--2026-11-07).
+
+Новая рабочая копия /workspace/work/grounded-rag-resume на docs/grounded-rag-redesign; старый dirty checkout feat/embedding-model-preparation сохранён. Следующие разделы описывают исходную передачу, отсутствие переменных в них историческое.
+
 Владелец2026-11-07попросил сохранить рабочую точку и перейти в новую среду, где будут доступны переменные доступа к LLM. **WIP: generation quality/prototype/production не приняты.**
 
 ## Где продолжать

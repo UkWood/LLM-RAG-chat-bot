@@ -52,3 +52,14 @@ Source fix commit `7da1afacde3260bab756c434fc90de1f24267187` после runtime 
 - Legacy lexical17/20остаётся ожидаемым measured target failure; historical reports/datasets не изменены.
 
 Владелец попросил сохранить этот checkpoint и подготовить переход в среду с доступными API variables. [Новый handoff](../handoffs/2026-11-07-grounded-rag-llm-transition.md) — следующая точка входа, с точными prerequisites и командами. API compatibility/LLM natural generation/human assessment остаются NOT_RUN/pending. Итоговый checkpoint включает отдельный docs commit после source fix; exact-head push/PR CI проверяется и фиксируется в PR13 после публикации. Не наследовать checkpoint CI с d8bf8de и не считать pending результатом success. Merge/deploy/real-site operations не выполнялись.
+
+
+## Проверка новой среды: destination mismatch — 2026-11-07
+
+Fresh environment status: observations_current=true, network restricted/enforced; LLM_BASE_URL, LLM_MODEL и protected LLM_API_KEY имеют state=ready. Presence-only probe подтвердил наличие всех трёх переменных. URL/model совпадают с handoff, но secret binding разрешён только для api.deepseek.com, а api.aitunnel.ru отсутствует в effective_allowed_hosts. Это новый blocker, а не прежнее отсутствие переменных. Smoke **NOT_RUN до HTTP**: credential не отправлялся, retries/provider switches не выполнялись.
+
+Нужно через настройки среды разрешить api.aitunnel.ru и настроить действительный для AITunnel LLM_API_KEY с этим destination scope; значение ключа в чат не передавать. Инструмент request_changes в этом сеансе отсутствует. После применения — fresh readiness и одна smoke по [runbook](../runbooks/grounded-rag-operator.md). Human fixture/context review по-прежнему pending; oracle/end-to-end/quality NOT_RUN. Краткое «Да» на продолжение не считается fixture review.
+
+Обнаруженный исходный checkout находится на feat/embedding-model-preparation, HEAD 2a13a29, с незакоммиченными изменениями; он сохранён без изменений. Для продолжения клонирована существующая удалённая docs/grounded-rag-redesign в /workspace/work/grounded-rag-resume, без reset/force/worktree. Исходный checkpoint 7b53a22f79dc86a40a40d73b05e27f6488468bef: [PR CI42333295909](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42333295909) completed/success по fresh GitHub read. Это не CI последующего docs commit.
+
+Не восстанавливались модели/venvs и не повторялись прежние benchmarks ради docs-only blocker. Saturn-Main-Site не читался и не изменялся, merge/deploy не выполнялись.
