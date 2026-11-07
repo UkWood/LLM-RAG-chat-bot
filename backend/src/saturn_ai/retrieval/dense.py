@@ -21,7 +21,7 @@ def normalized(vector, dimensions):
 
 
 class QdrantIndex:
-    def __init__(self, snapshot, encoder, *, path: Path | None = None):
+    def __init__(self, snapshot, encoder, *, path: Path | None = None, require_existing: bool = False):
         from .validation import checked_snapshot
         checked_snapshot(snapshot)
         self.snapshot, self.encoder = snapshot, encoder
@@ -47,6 +47,7 @@ class QdrantIndex:
         self._client = QdrantClient(path=str(path)) if path is not None else QdrantClient(':memory:')
         try:
             if not self._client.collection_exists(self.collection):
+                if require_existing:raise ValueError('Persisted Qdrant collection missing')
                 self._client.create_collection(self.collection, vectors_config=models.VectorParams(
                     size=self.dimensions, distance=models.Distance.COSINE))
                 if self.point_ids:
