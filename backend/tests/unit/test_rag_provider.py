@@ -51,3 +51,16 @@ class ProviderTests(unittest.TestCase):
     def test_remote_config_requires_https_and_credential(self):
         for base,key in [('http://example.com/v1','k'),('https://user:pw@example.com/v1','k'),('https://example.com/v1?token=x','k'),('https://example.com/v1','')]:
             with self.subTest(base=base),self.assertRaises(ValueError):ProviderSettings(base,'model',key)
+
+    def test_cli_smoke_checks_real_compatible_http_shape_without_exposing_key(self):
+        from contextlib import redirect_stdout
+        from io import StringIO
+        from unittest.mock import patch
+        from saturn_ai.rag.__main__ import main
+        self.server.body=json.dumps({'choices':[{'finish_reason':'stop','message':{'content':'{"ready":true}'}}]}).encode()
+        env={'LLM_BASE_URL':self.base,'LLM_MODEL':'ready-model','LLM_API_KEY':'test-key','LLM_ALLOW_LOCAL_HTTP':'1',
+            'LLM_TIMEOUT_SECONDS':'1','LLM_MAX_TOKENS':'128','LLM_JSON_MODE':'1'}
+        output=StringIO()
+        with patch.dict('os.environ',env),redirect_stdout(output):status=main(['smoke'])
+        self.assertEqual(status,0);self.assertEqual(json.loads(output.getvalue())['status'],'compatible')
+        self.assertNotIn('test-key',output.getvalue())

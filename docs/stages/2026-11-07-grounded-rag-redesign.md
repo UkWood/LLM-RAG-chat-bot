@@ -26,3 +26,8 @@ Fresh-context builder-check прочитал документ и релеван�
 
 
 Дополнения владельца в ходе обсуждения: автоматическое обновление опубликованных текстов и связанных PDF; текущие категории/классификаторы не являются основой знаний. Запуск updater раз в сутки плюс принудительный запуск администратором в любой момент. Используется готовая модель по API (исходный вариант Qwen), собственное обучение/fine-tuning/дистилляция не планируются. Эти уточнения внесены в рабочую версию дизайна; detailed approval и реализация по-прежнему отдельные шаги.
+
+
+## Implementation checkpoint и перенос среды
+
+Владелец прямо попросил применить обсуждённый подход. Дизайн принят, составлен [план](../superpowers/plans/2026-11-07-grounded-rag-implementation.md), реализация ведётся inline в том же PR13 без нового цикла docs/feature PR. Сделаны publication snapshots/atomic refresh/daily/manual operator path, HTTP ready-model client и core partial-answer engine. CLI smoke готов; full ask/runtime/15-case diagnostic и final review ещё не завершены. По просьбе владельца работа сохраняется для новой среды с API key. [Полный handoff](../handoffs/2026-11-07-grounded-rag-environment.md). Live LLM quality NOT_RUN, source site строго read-only, сервисы не развёрнуты.33targeted tests PASS; оба полных verifier5project+202backend PASS (base12/ONNX1skip), actual OS PDF probe отдельно PASS; docs checker/whitespace PASS.

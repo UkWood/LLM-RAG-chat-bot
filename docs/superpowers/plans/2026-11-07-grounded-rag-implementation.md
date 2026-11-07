@@ -40,23 +40,23 @@ config/publication-policy.example.json, .env.example, deploy/refresh.service+tim
 
 ## Task1 — accepted direction and generic publication ingestion
 
-- [ ] Mark design/ADR accepted for bounded implementation; retain pending runtime inputs and historical quality failures. Commit accepted spec+plan.
-- [ ] RED unit tests: HTML content with changed category keys/nav/quotes still yields same technical text, safe source scope, source receipts, PDF isolation failure quarantines. Expected missing publication module/failing assertions.
-- [ ] Implement PublicationPolicy URL scope, bounded HTML/PDF parsing and PublishedSnapshot. Preserve original bytes/hashes/canonical metadata; generic entity identity derives from source, not product taxonomy.
-- [ ] RED generic snapshot adapters and legacy-invalid snapshot cases; add validation dispatch to existing indexes/service and plain passage representation. GREEN focused publication+retrieval contracts; commit.
+- [x] Mark design/ADR accepted for bounded implementation; retain pending runtime inputs and historical quality failures. Commit accepted spec+plan.
+- [x] RED unit tests: HTML content with changed category keys/nav/quotes still yields same technical text, safe source scope, source receipts, PDF isolation failure quarantines. Expected missing publication module/failing assertions.
+- [x] Implement PublicationPolicy URL scope, bounded HTML/PDF parsing and PublishedSnapshot. Preserve original bytes/hashes/canonical metadata; generic entity identity derives from source, not product taxonomy.
+- [x] RED generic snapshot adapters and legacy-invalid snapshot cases; add validation dispatch to existing indexes/service and plain passage representation. GREEN focused publication+retrieval contracts; commit.
 
 ## Task2 — durable refresh and daily/manual operation
 
-- [ ] RED tests edit/add/delete, PDF same-URL replacement/link removal, redirect/private target, failed fetch distinct from delete, two concurrent jobs, failed index promotion, stale/active-policy semantics.
-- [ ] Implement bounded HTTPS fetcher with validated redirects and configured public source origins; updater crawler and durable atomic store. Save version blobs/manifest outside Git; current deny policy separate from active snapshot; protect paths/hashes on load.
-- [ ] Implement due/force/status operator CLI and daily systemd example with explicit timezone/configuration. Filesystem/operator access is admin boundary; no public refresh endpoint. No service installation.
-- [ ] GREEN unit+integration refresh scenarios, one actual PDF sandbox capability probe; commit. If sandbox unavailable, PDFs quarantine with explicit status, never pretend parsed.
+- [x] RED tests edit/add/delete, PDF same-URL replacement/link removal, redirect/private target, failed fetch distinct from delete, two concurrent jobs, failed index promotion, stale/active-policy semantics.
+- [x] Implement bounded HTTPS fetcher with validated redirects and configured public source origins; updater crawler and durable atomic store. Save version blobs/manifest outside Git; current deny policy separate from active snapshot; protect paths/hashes on load.
+- [x] Implement due/force/status operator CLI and daily systemd example with explicit timezone/configuration. Filesystem/operator access is admin boundary; no public refresh endpoint. No service installation.
+- [x] GREEN unit+integration refresh scenarios, one actual PDF sandbox capability probe; commit. If sandbox unavailable, PDFs quarantine with explicit status, never pretend parsed.
 
 ## Task3 — generic ready-model provider
 
-- [ ] RED local mock HTTP tests: configured model/path/auth, no redirects/credential leak, timeout/429/5xx, truncated/duplicate/malformed JSON, invalid config, bounded outputs.
-- [ ] Implement strict OpenAI-compatible chat client (existing HTTP dependency or stdlib), independent of retrieval and no provider/model hardcode. Documentation from actual provider before live integration; key only env.
-- [ ] GREEN mock provider contracts; .env.example with placeholders and model chosen only via configuration; commit.
+- [x] RED local mock HTTP tests: configured model/path/auth, no redirects/credential leak, timeout/429/5xx, truncated/duplicate/malformed JSON, invalid config, bounded outputs.
+- [x] Implement strict OpenAI-compatible chat client (existing HTTP dependency or stdlib), independent of retrieval and no provider/model hardcode. Documentation from actual provider before live integration; key only env.
+- [x] GREEN mock provider contracts; .env.example with placeholders and model chosen only via configuration; commit.
 
 ## Task4 — ordinary RAG with partial grounded responses
 
@@ -79,3 +79,6 @@ config/publication-policy.example.json, .env.example, deploy/refresh.service+tim
 - [ ] Update ADR/status/handoff/stage/README with actual code, tests, live-call/diagnostic results or explicit NOT_RUN blocker. Update existing PR13 title/body around final implementation (avoid another docs/implementation PR cycle), push and verify exact-head offline/ONNX CI. No automatic merge/deploy.
 
 Self-review: tasks1→2 share PublishedSource/PublishedSnapshot/store eligibility; tasks1→4 use existing IndexSet/RetrievalService with strict snapshot dispatch; tasks3→4 share complete(system,user)->dict; task5 uses the same application and separately injected oracle context. Scope is one first CLI implementation with three independently testable components, not a production migration. New real-policy pathway is explicit and does not weaken legacy synthetic validation.
+
+
+Checkpoint2026-11-07: Tasks1–3 implemented/targeted GREEN. Task4 core application and smoke command GREEN, full runtime/ask CLI incomplete. Tasks5–6 not done. Owner requested environment transition after configuring future runtime key/variables; continue from [handoff](../../handoffs/2026-11-07-grounded-rag-environment.md), no repeated design/method approval. No live API/model-quality measurement yet.

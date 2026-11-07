@@ -1,5 +1,14 @@
 # Передача контекста
 
+## Рабочая точка: переход в новую среду — 2026-11-07
+
+Владелец попросил сохранить работу для среды с добавленным API secret. Продолжать в ветке **docs/grounded-rag-redesign**, [PR13](https://github.com/UkWood/LLM-RAG-chat-bot/pull/13), не main и не старый V3. [Полный handoff и точные следующие шаги](handoffs/2026-11-07-grounded-rag-environment.md), [принятый дизайн](superpowers/specs/2026-11-07-grounded-rag-redesign-design.md), [план](superpowers/plans/2026-11-07-grounded-rag-implementation.md). Подход/реализация разрешены, inline метод сохраняется; повторное согласование не требуется.
+
+Реализованы generic text/PDF snapshots и reuse existing retrieval, daily/manual atomic updater/live revocation, generic OpenAI-compatible client и core partial-answer orchestration. CLI пока умеет **только smoke**, full ask/runtime и15-case diagnostic ещё в работе.33targeted tests PASS; полные base+ONNX checkpoint verifiers5project+202backend PASS (12/1skips), отдельный actual OS PDF probe PASS. Реальный API/LLM quality NOT_RUN, final whole-branch review ещё впереди. Это WIP checkpoint, не завершение прототипа/deploy.
+
+Новая среда: LLM_BASE_URL=https://api.aitunnel.ru/v1, LLM_MODEL=deepseek-v4.1-flash-1017, protected LLM_API_KEY. Сначала fresh environment-status/readiness и одна `PYTHONPATH=backend/src python3 -m saturn_ai.rag smoke` без раскрытия секрета. Work venv/model bundles ignored и могут не сохраниться; инструкции/identities в handoff. Saturn-Main-Site строго read-only; никаких live calls/сайтовых изменений до перехода не было. Прежние записи ниже исторические.
+
+
 ## Пересмотр: обычный RAG и частичные ответы — 2026-11-07
 
 Владелец выбрал обычный RAG с проверкой подтверждений: отвечать на подтверждённую часть вопроса, пробелы формулировать вопросами с текстом «Для уточнения свяжитесь с поддержкой компании». [Подробный дизайн](superpowers/specs/2026-11-07-grounded-rag-redesign-design.md) и [ADR0011](decisions/0011-grounded-rag-redesign.md) пока PROPOSED; выбор подхода не равен согласию с ещё не рассмотренным документом. [Этап](stages/2026-11-07-grounded-rag-redesign.md).

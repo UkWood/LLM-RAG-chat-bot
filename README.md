@@ -4,7 +4,7 @@
 
 **Стадия:** M1/ingestion/snapshot baseline слиты в main. Добавлены local indexes и measured BM25: Top-5 source hit17/20=85%; lexical target100% пока не пройден. Actual E5 experiment: dense18/20=90%, hybrid17/20=85%; Actual local reranker достиг20/20 и evidence recall100% на том же synthetic наборе; bounded grounded pipeline измерен:8/20 положительных ответов, обязательные отказ/уточнение10/10; grounding target не пройден. Реальные источники пока не допущены к индексации/облачной отправке. Полная production-архитектура остаётся proposed.
 
-**Новое выбранное направление:** обычный RAG с подтверждёнными частичными ответами и вопросами к поддержке при пробелах. [Подробный дизайн](docs/superpowers/specs/2026-11-07-grounded-rag-redesign-design.md) предложен, реализация ещё не начата; это не новая приёмка качества.
+**Новое выбранное направление:** обычный RAG с подтверждёнными частичными ответами и вопросами к поддержке при пробелах. [Подробный дизайн](docs/superpowers/specs/2026-11-07-grounded-rag-redesign-design.md) принят; реализация в работе. [Рабочая точка перехода в новую среду](docs/handoffs/2026-11-07-grounded-rag-environment.md). Это не приёмка качества.
 
 ## Память проекта
 
