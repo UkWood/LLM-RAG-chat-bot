@@ -7,6 +7,7 @@ from time import perf_counter
 from ..snapshots import KnowledgeSnapshot, SnapshotCatalog, SnapshotBundle, _checked_bundle, build_snapshot
 from .contracts import Candidate, SearchTrace, passage_text
 from .reranking import RerankTrace, validate_pairs, checked_scores
+from .validation import checked_snapshot
 from .lexical import BM25Index
 from .dense import QdrantIndex
 
@@ -25,7 +26,7 @@ class RetrievalService:
         self._lock = RLock()
 
     def publish(self, indexes: IndexSet):
-        if (not isinstance(indexes, IndexSet) or indexes.snapshot != build_snapshot(indexes.snapshot.ingestion, indexes.snapshot.registry)
+        if (not isinstance(indexes, IndexSet) or checked_snapshot(indexes.snapshot) is not indexes.snapshot
                 or indexes.lexical.snapshot != indexes.snapshot):
             raise ValueError('Index set snapshot mismatch')
         indexes.lexical.validate()

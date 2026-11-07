@@ -22,8 +22,8 @@ def normalized(vector, dimensions):
 
 class QdrantIndex:
     def __init__(self, snapshot, encoder, *, path: Path | None = None):
-        if snapshot != build_snapshot(snapshot.ingestion, snapshot.registry):
-            raise ValueError('Invalid snapshot')
+        from .validation import checked_snapshot
+        checked_snapshot(snapshot)
         self.snapshot, self.encoder = snapshot, encoder
         if len(snapshot.chunks) > 10000:
             raise ValueError('Local baseline chunk limit')
