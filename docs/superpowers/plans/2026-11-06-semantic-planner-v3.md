@@ -31,24 +31,24 @@ New evaluation/v3_dataset.py: validate_v3(raw,snapshot,profile)->cases for blind
 
 ## Task1: independent blind data, before candidate implementation
 
-- [ ] Fresh blind author receives capability-only brief and canonical fixture/ingestion contracts, never old data/reports/tests/candidate/catalogue/calibration. Produce evaluation/datasets/planner-v3-blind.json+manifest, profile planner_v3_blind, same requirement schema as V2. Groups8single_field+4multi_need+4source_scoped+4document_reference+4relationship_type+8mandatory_refusal+8ambiguous_invalid; statuses24answered12refused4clarification. Root reads only SHA/counts/manifest.
-- [ ] Separate fresh label reviewer checks semantic/canonical labels and non-disclosing normalized-question duplicate hashes vs old sets and new calibration; fixes before final dataset identity without exposing payload to root. Save reviewed provenance/hash. Root blind-stages dataset without printing payload.
-- [ ] Root authors separate NON-independent calibration60:36positives(12single/8multi/6scoped/4docs/6relations) +24negative(12mandatory/6clarification/6mixed). Complete typed gold/pointers from canonical KB; no blind content access. Validate after Task5; no independent claim.
+- [x] Fresh blind author receives capability-only brief and canonical fixture/ingestion contracts, never old data/reports/tests/candidate/catalogue/calibration. Produce evaluation/datasets/planner-v3-blind.json+manifest, profile planner_v3_blind, same requirement schema as V2. Groups8single_field+4multi_need+4source_scoped+4document_reference+4relationship_type+8mandatory_refusal+8ambiguous_invalid; statuses24answered12refused4clarification. Root reads only SHA/counts/manifest.
+- [x] Separate fresh label reviewer checks semantic/canonical labels and non-disclosing normalized-question duplicate hashes vs old sets and new calibration; fixes before final dataset identity without exposing payload to root. Save reviewed provenance/hash. Root blind-stages dataset without printing payload.
+- [x] Root authors separate NON-independent calibration60:36positives(12single/8multi/6scoped/4docs/6relations) +24negative(12mandatory/6clarification/6mixed). Complete typed gold/pointers from canonical KB; no blind content access. Validate after Task5; no independent claim.
 
 ## Task2: role/parser/router contracts and calibration-independent guards
 
-- [ ] RED tests unknown symbols, operator negation/modification/disjunction, designation suffix/typo, scope propagation/mixed unsupported clause, input limits; exact positive single/spec/refs/software purpose/config lookup and original span coverage.
-- [ ] Implement focused modules/contracts/config above. Router consumes only predicate-phrase role spans, not ignored arbitrary trailing words. Named specs exact eligible labels. No source values in descriptions. Identity/token-length checked before inference with verified tokenizer; refuse any would-truncate pair.
-- [ ] RED tests fake score ordering/ties/nonfinite/wrong length, explicit unknown qualifier vs semantic topic, no more20candidates or4phrases, exact recognition/no inference. GREEN targeted; commit.
+- [x] RED tests unknown symbols, operator negation/modification/disjunction, designation suffix/typo, scope propagation/mixed unsupported clause, input limits; exact positive single/spec/refs/software purpose/config lookup and original span coverage.
+- [x] Implement focused modules/contracts/config above. Router consumes only predicate-phrase role spans, not ignored arbitrary trailing words. Named specs exact eligible labels. No source values in descriptions. Identity/token-length checked before inference with verified tokenizer; refuse any would-truncate pair.
+- [x] RED tests fake score ordering/ties/nonfinite/wrong length, explicit unknown qualifier vs semantic topic, no more20candidates or4phrases, exact recognition/no inference. GREEN targeted; commit.
 
 ## Task3: captured retrieval/complete options/locked gate
 
-- [ ] RED integration for captured publication/current revocation, per-need10/pool30/round-robin fairness, duplicate/source/rank tampering and scoring errors. Implement retrieve_v3 with existing service/encoder/scorer.
-- [ ] RED pure tests complete group vs mixed-source partials, conflict/malformed/open members, wrong entity/selector/scopes, selected option mutation, manual same-source anchor/limit and metadata forgery, group union5/8000 and deterministic state/transition caps. Implement options/selector/evaluate exact canonical reconstruction; GREEN; commit.
+- [x] RED integration for captured publication/current revocation, per-need10/pool30/round-robin fairness, duplicate/source/rank tampering and scoring errors. Implement retrieve_v3 with existing service/encoder/scorer.
+- [x] RED pure tests complete group vs mixed-source partials, conflict/malformed/open members, wrong entity/selector/scopes, selected option mutation, manual same-source anchor/limit and metadata forgery, group union5/8000 and deterministic state/transition caps. Implement options/selector/evaluate exact canonical reconstruction; GREEN; commit.
 
 ## Task4: application/explicit CLI
 
-- [ ] RED no generation before all needs, provider omission/fake quotes, mixed and all-reference path, before/during/after-generation revocation, captured snapshot, model/provider errors and trace count limits. Implement V3 with unchanged V1/V2 behavior; GREEN; commit.
+- [x] RED no generation before all needs, provider omission/fake quotes, mixed and all-reference path, before/during/after-generation revocation, captured snapshot, model/provider errors and trace count limits. Implement V3 with unchanged V1/V2 behavior; GREEN; commit.
 
 ## Task5: data/evaluation/calibration and one-shot experiment
 

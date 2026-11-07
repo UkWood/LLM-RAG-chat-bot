@@ -109,7 +109,7 @@ def parse_roles(question,snapshot):
         for i,c in enumerate(raw):
             if c.isspace() or c in '?!.:—…()':marks.setdefault(i,'grammar')
         remaining=[i for i in range(len(raw)) if i not in marks]
-        if typed and remaining:return GateResult('insufficient','unsupported_qualifier')
+        if typed and (remaining or selector):return GateResult('insufficient','unsupported_qualifier')
         if not typed:phrase=norm(''.join(raw[i] if i in remaining else ' ' for i in range(len(raw))))
         phrase=' '.join(phrase.split())
         if not phrase and (declaration or (prefix and re.search('[A-Za-zА-Яа-яЁё]',prefix[0]))):

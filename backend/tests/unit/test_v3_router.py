@@ -108,7 +108,8 @@ class RolesTests(unittest.TestCase):
         self.assertEqual(self.plan('К какому типу относится EDU-410?').needs[0].predicate,'entity_type')
         for q in ('К какому типу относится EDU-410 беспроводной?',
                   'К какому типу относится EDU-410 питание?',
-                  'К какому типу относится EDU-410 PROFINET?'):
+                  'К какому типу относится EDU-410 PROFINET?',
+                  'К какому типу относится EDU-410 USB?'):
             with self.subTest(q=q):self.assertIsInstance(parse_roles(q,self.s),GateResult)
 
     def test_exact_noun_inflections_do_not_accept_distinct_compound_quantities(self):
