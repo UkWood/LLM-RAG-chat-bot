@@ -23,3 +23,6 @@ Fresh-context builder-check прочитал документ и релеван�
 ## Проверки и публикация
 
 Локально: `work/base-venv/bin/python scripts/check_project.py`, `work/base-venv/bin/python -m unittest discover -s tests -v`, `git diff --check`. Результаты: checker PASS,5project tests PASS, whitespace clean. Remote CI проверяется для точного опубликованного head и записывается в PR. Docs-only правка не требует повторного model benchmark. Существующие GitHub offline/ONNX jobs сохраняются без изменений.
+
+
+Дополнения владельца в ходе обсуждения: автоматическое обновление опубликованных текстов и связанных PDF; текущие категории/классификаторы не являются основой знаний. Запуск updater раз в сутки плюс принудительный запуск администратором в любой момент. Используется готовая модель по API (исходный вариант Qwen), собственное обучение/fine-tuning/дистилляция не планируются. Эти уточнения внесены в рабочую версию дизайна; detailed approval и реализация по-прежнему отдельные шаги.
