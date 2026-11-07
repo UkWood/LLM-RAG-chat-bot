@@ -39,7 +39,8 @@ class PublishedSnapshot:
             documents.append(Document(docid,source.url,source.content_hash,'published-text-v1',source.title,
                 source.url,'Document',None,source.url,tuple(chunks)))
             records.append(SimpleNamespace(source_id=source.url,document_type='pdf' if source.media_type=='application/pdf' else 'page'))
-        sid=digest([self.policy_revision,[(s.url,s.content_hash) for s in sorted(self.sources,key=lambda s:s.url)]])
+        sid=digest([self.policy_revision,[(s.url,s.content_hash) for s in sorted(self.sources,key=lambda s:s.url)],
+            [asdict(d) for d in documents]])
         indexed=tuple(IndexedChunk(c,sid,self.policy_revision,d.content_hash,None,d.locator,d.title,
             'PUBLIC','approved',('local_index','local_generate')) for d in documents for c in d.chunks)
         object.__setattr__(self,'snapshot_id',sid);object.__setattr__(self,'documents',tuple(documents))

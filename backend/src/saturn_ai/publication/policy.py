@@ -33,6 +33,7 @@ class PublicationPolicy:
     max_pages: int=200
     max_pdfs: int=100
     max_age_seconds: int=172800
+    refresh_timezone: str="UTC"
 
     def __post_init__(self):
         root=checked_url(self.site_root)
@@ -43,6 +44,9 @@ class PublicationPolicy:
                 or type(self.max_pdfs) is not int or not 0<=self.max_pdfs<=500
                 or type(self.max_age_seconds) is not int or not 86400<=self.max_age_seconds<=604800):
             raise ValueError('Invalid publication bounds')
+        from zoneinfo import ZoneInfo
+        try:ZoneInfo(self.refresh_timezone)
+        except (ValueError,TypeError,KeyError):raise ValueError('Invalid refresh timezone') from None
         for origin in self.pdf_origins:
             if checked_url(origin+'/').rstrip('/')!=origin or urlsplit(origin).path:
                 raise ValueError('Canonical PDF origin required')
