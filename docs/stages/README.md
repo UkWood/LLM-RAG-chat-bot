@@ -24,3 +24,5 @@
 - [2026-11-06: proposed typed planner expansion and blind evaluation protocol](2026-11-06-planner-expansion-design.md)
 
 - [Planner V2 post-review corrections, historical experiment applicability](2026-11-06-planner-v2-corrections.md)
+
+- [2026-11-07: пересмотр архитектуры — обычный RAG, частичные ответы и поддержка (proposed)](2026-11-07-grounded-rag-redesign.md)

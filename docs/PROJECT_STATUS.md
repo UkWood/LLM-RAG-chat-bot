@@ -1,5 +1,14 @@
 # Состояние проекта
 
+## Пересмотр: обычный RAG и частичные ответы — 2026-11-07
+
+Владелец выбрал обычный RAG с проверкой подтверждений: отвечать на подтверждённую часть вопроса, пробелы формулировать вопросами с текстом «Для уточнения свяжитесь с поддержкой компании». [Подробный дизайн](superpowers/specs/2026-11-07-grounded-rag-redesign-design.md) и [ADR0011](decisions/0011-grounded-rag-redesign.md) пока PROPOSED; выбор подхода не равен согласию с ещё не рассмотренным документом. [Этап](stages/2026-11-07-grounded-rag-redesign.md).
+
+Без обязательного enum planner перед поиском; исходный вопрос → existing hybrid/reranker → разрешённый context → сменная LLM → проверка утверждений/покрытия → ответ и вопросы к поддержке. Смысловая проверка LLM не является гарантией: первый шаг — малая открытая диагностика retrieval/oracle-context/end-to-end с настоящим разрешённым provider и оценкой человеком. Fake/mock только для code contracts; без runtime natural-generation quality NOT_RUN. Нового provider/model/sample/cloud допуска нет.
+
+Отдельный fresh builder-check: важных вопросов, мешающих составить план, не осталось. Следующий шаг — принятие подробного документа, затем план небольшого диагностического этапа; product code/dataset/model runs ещё не начаты. Ветка docs/grounded-rag-redesign от main bb16530; [PR этой ветки](https://github.com/UkWood/LLM-RAG-chat-bot/pulls?q=is%3Apr+head%3Adocs%2Fgrounded-rag-redesign). V3 остаётся неслитым [draft PR12](https://github.com/UkWood/LLM-RAG-chat-bot/pull/12), его2/24+16/16и consumed dataset/START/report неизменны; не переносить его implementation в main. Saturn-Main-Site строго READ-ONLY. Исторические сведения ниже не отменяют новый выбор направления.
+
+
 ## Planner V2 corrective revision — 2026-11-06
 
 Owner requested continuing after PR10 merge review found two Important blockers: discarded `нет` and protocol qualifiers. Corrections reject negation, unsupported Modbus/TCP/RTU qualification and modification requests outside supported lookup bindings before generation; unqualified protocol queries remain supported, V1 default unchanged. [Corrective report](stages/2026-11-06-planner-v2-corrections.md), [plan addendum](superpowers/plans/2026-11-06-typed-planner-v2.md). Final local verification5project+168backend PASS in both environments (base11optional skips/optional0), calibration14/14 positives20/20statuses without V1-positive regression; independent review fix pass complete. Current-head remote CI/merge outcome must be checked in PR10.
