@@ -52,23 +52,26 @@ def _merge_types(values: list[str]) -> tuple[str, bool]:
             else "union[" + "|".join(sorted(types)) + "]"), nullable
 
 
+def _collect_value(collection: str, field_path: str, value, buckets: dict) -> None:
+    buckets[(collection, field_path)].append(_value_type(value))
+    if isinstance(value, Mapping):
+        for child_key, child_value in value.items():
+            if not isinstance(child_key, str) or not child_key.strip():
+                raise ValueError("Nested frontmatter keys must be non-empty strings")
+            _collect_value(collection, f"{field_path}.{child_key}", child_value, buckets)
+    elif isinstance(value, list) and value and all(isinstance(item, Mapping) for item in value):
+        for item in value:
+            for child_key, child_value in item.items():
+                if not isinstance(child_key, str) or not child_key.strip():
+                    raise ValueError("Nested list keys must be non-empty strings")
+                _collect_value(collection, f"{field_path}[].{child_key}", child_value, buckets)
+
+
 def _collect_field_types(collection: str, record: Mapping, buckets: dict) -> None:
     for key, value in record.items():
         if not isinstance(key, str) or not key.strip():
             raise ValueError("Frontmatter keys must be non-empty strings")
-        field_path = key
-        buckets[(collection, field_path)].append(_value_type(value))
-        if isinstance(value, Mapping):
-            for child_key, child_value in value.items():
-                if not isinstance(child_key, str) or not child_key.strip():
-                    raise ValueError("Nested frontmatter keys must be non-empty strings")
-                buckets[(collection, f"{field_path}.{child_key}")].append(_value_type(child_value))
-        elif isinstance(value, list) and value and all(isinstance(item, Mapping) for item in value):
-            for item in value:
-                for child_key, child_value in item.items():
-                    if not isinstance(child_key, str) or not child_key.strip():
-                        raise ValueError("Nested list keys must be non-empty strings")
-                    buckets[(collection, f"{field_path}[].{child_key}")].append(_value_type(child_value))
+        _collect_value(collection, key, value, buckets)
 
 
 def build_schema_inventory(
@@ -82,9 +85,10 @@ def build_schema_inventory(
     if not isinstance(dictionary_files, Mapping):
         raise ValueError("Invalid dictionary file map")
 
-    collections = tuple(sorted(collection_records))
-    if any(not isinstance(name, str) or not name.strip() for name in collections):
+    names = tuple(collection_records.keys())
+    if any(not isinstance(name, str) or not name.strip() for name in names):
         raise ValueError("Invalid collection name")
+    collections = tuple(sorted(names))
 
     buckets = defaultdict(list)
     for collection in collections:
@@ -170,12 +174,12 @@ def compare_file_revisions(
     current: Sequence[SiteFileRevision],
 ) -> FileChangeSet:
     """Return deterministic add/change/delete sets keyed by repository path."""
+    if any(not isinstance(item, SiteFileRevision) for item in (*previous, *current)):
+        raise ValueError("Invalid source file revision")
     old_by_path = {item.path: item for item in previous}
     new_by_path = {item.path: item for item in current}
     if len(old_by_path) != len(previous) or len(new_by_path) != len(current):
         raise ValueError("Duplicate source file path")
-    if any(not isinstance(item, SiteFileRevision) for item in (*previous, *current)):
-        raise ValueError("Invalid source file revision")
     added = tuple(sorted(new_by_path.keys() - old_by_path.keys()))
     deleted = tuple(sorted(old_by_path.keys() - new_by_path.keys()))
     changed = tuple(sorted(
