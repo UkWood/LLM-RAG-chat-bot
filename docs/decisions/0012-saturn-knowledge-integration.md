@@ -1,157 +1,95 @@
 # ADR-0012: интеграция знаний Сатурна с существующим Grounded RAG
 
-Дата: 2026-11-08  
-Статус: **ACCEPTED — owner approval confirmed in PR #16 review and merge**  
-Область: UkWood/LLM-RAG-chat-bot  
-Основание: site-specific v0.1 и ADR-0011.
+Дата: 2026-11-09  
+Статус: **ACCEPTED — owner-approved baseline, updated source trust policy**  
+Область: UkWood/LLM-RAG-chat-bot
 
 ## Контекст
 
-В main 3cd6787db2fe00fd7cea49bce8a355a27f292bf0 находились согласованные site-specific требования и базовые ingestion/snapshot/retrieval/evaluation contracts.
+PR #16 утвердил selective reuse существующего Grounded RAG вместо полного слияния экспериментального PR #13. Read-only аудит реальной схемы Saturn-Main-Site завершён в PR #17.
 
-В открытом Draft PR #13 (head 24a8409b7d5fb65d9f5144019f87f5d1bc75df0c) реализованы дополнительные компоненты:
-- generic publication fetch/extract/store/refresh;
-- hybrid BM25/Qdrant retrieval и reranker integration;
-- OpenAI-compatible provider;
-- bounded generation, verification и backend citations;
-- diagnostic CLI и 15 synthetic diagnostic cases.
-
-PR #13 не слит, основан на прежнем main и не реализует полноценную интеграцию структурированного Markdown/frontmatter/YAML, Support Catalog metadata и отдельно approved PDF как три независимых канала.
-
-Human answer assessment PR #13 остаётся pending. 15/15 диагностических случаев без infrastructure errors и успешный CI не доказывают корректность ответов.
-
-Site-specific v0.1 требует:
-- Saturn-Main-Site строго read-only;
-- отдельные adapters к структуре сайта, Support catalog и PDF;
-- source-level provenance;
-- отдельное approval для каждой source revision;
-- default deny;
-- раздельные local_index, local_generate и cloud_generate permissions;
-- проверяемые evidence и backend-generated citations.
+Владелец подтвердил, что содержимое сайта, его структурированные данные, взаимосвязи сущностей и PDF, опубликованные по ссылкам сайта, проверены специалистами компании и являются доверенными источниками. Сайт остаётся в разработке, поэтому структура и состав данных будут меняться.
 
 ## Решение
 
-### 1. Selective reuse, не wholesale merge
+### 1. Selective reuse
 
-Не сливать PR #13 целиком и не использовать его ветку как base для site-specific v0.2.
-
-После архитектурного approval и review переносить нужные компоненты выборочно:
+Не сливать PR #13 целиком. Выборочно адаптировать после проверки:
 - BM25/Qdrant/RRF;
 - local reranker как измеряемый retrieval component;
 - безопасные fetch/parser механизмы;
 - content-addressed storage и atomic snapshot promotion;
 - OpenAI-compatible provider interface;
-- bounded generation/verification/citation flow;
-- diagnostic harness.
+- bounded generation, verification, citations и diagnostic harness.
 
-Каждый компонент проходит адаптацию к canonical contracts и отдельные тесты. Старые synthetic contracts и historical reports сохраняются.
+Существующие synthetic contracts и historical reports сохраняются. Они не считаются production Saturn schemas.
 
-### 2. Три самостоятельных adapters
+### 2. Три канала источников
 
-Создать:
-1. Site Content Adapter — pinned read-only Git snapshot, Markdown/frontmatter, schema и YAML dictionaries.
-2. Support Catalog Adapter — metadata documents/certificates из approved products/systems, с URL, type, version и всеми owners.
-3. External Document Adapter — exact allowlisted PDF fetch, hash, extraction и physical page provenance после отдельного file approval.
+1. **Site Content Adapter** — read-only Git snapshot, Markdown/frontmatter, Astro schema и YAML dictionaries.
+2. **Support Catalog Adapter** — metadata documents/certificates и все связи с владельцами.
+3. **External Document Adapter** — автоматическая загрузка и извлечение PDF, ссылки на которые присутствуют в доверенном Support Catalog.
 
-Support metadata не является доказательством содержания PDF. Approval страницы не даёт approval PDF.
+Metadata каталога и полнотекстовое содержимое PDF остаются разными evidence types, но отдельного ручного допуска PDF не требуется.
 
-### 3. Canonical knowledge model
+### 3. Доверие и revisions
 
-Хранить раздельно:
-- SourceIdentity;
-- immutable SourceRevision;
-- Entity;
-- Fact;
-- Relation;
-- SupportDocument;
-- DocumentRevision;
-- EvidenceUnit;
-- Citation reference.
+- Текущая main-ветка UkWood/Saturn-Main-Site является trust root.
+- Все записи, связи и справочники сайта, кроме явно draft: true, автоматически считаются пригодными для локального индексирования и генерации.
+- PDF, перечисленные в documents/certificates доверенных записей и доступные по настроенным разрешённым origin/path, автоматически загружаются и индексируются после успешного извлечения.
+- Никаких ручных approval/review workflow для страниц, relations, полей или PDF.
+- Git commit, blob SHA, content SHA-256, field path, URL и PDF hash сохраняются для traceability, воспроизводимости и citations. Hash change создаёт новую техническую revision и запускает re-ingestion, а не новую процедуру подтверждения.
+- Изменения, добавления и удаления автоматически отражаются в следующем Knowledge Snapshot.
 
-Текстовые projections для BM25/vector допустимы, но retrieval обязан возвращать canonical typed evidence с исходным provenance.
+### 4. Эволюция схемы
 
-Семантическое происхождение и review state relations уточняются отдельным ADR-0013 после read-only audit. До принятия ADR-0013 нельзя считать наличие relation в source frontmatter доказательством её инженерной истинности.
+Adapter не должен зависеть от неизменного списка collections или полей:
+- обнаруживать collections и файлы в src/content/;
+- учитывать изменения src/content.config.ts и src/data/*.yaml;
+- сравнивать schema/dictionary fingerprints между sync runs;
+- сохранять неизвестные additive fields в raw extension area и индексировать их как именованные field/value evidence;
+- неизвестную collection импортировать как generic SiteContent, не теряя title/body/frontmatter;
+- новые значения справочников и новые параметры принимать без изменения кода, если структура значения совместима;
+- при несовместимом изменении типа/смысла отключать только устаревшую typed projection, сохранять raw value и выдавать drift report;
+- не интерпретировать неизвестное поле по старому mapping и не терять его молча.
 
-### 4. Approval привязан к exact revision
+Mapping и parser имеют собственные версии в AI-репозитории. Их обновление — штатная инженерная работа, покрываемая fixtures и contract tests.
 
-Approval действует на конкретный source revision/hash и набор allowed_usage.
+### 5. Canonical model и retrieval
 
-Новый commit/path hash или PDF bytes hash создаёт новую pending revision. Approval не наследуется. Изменения можно обнаруживать автоматически, но нельзя автоматически разрешать новую revision.
+Сохранять отдельно Entity, Fact, Relation, SupportDocument, DocumentRevision и EvidenceUnit. Каждая запись должна иметь source revision, field/path/page locator и canonical URL, если он определён.
 
-Pending/UNKNOWN/revoked sources не попадают в active retrieval/generation. Explicit revoke действует немедленно через live policy check.
+Relation импортируется согласно смыслу поля сайта. Не создавать новые engineering relations по совместному упоминанию; не повышать related до compatible_with. System и Category различать. Отсутствующее поле/default не является отрицательным техническим утверждением.
 
-### 5. Unified snapshot и раздельные retrieval outputs
+Retrieval возвращает отдельно:
+- answer evidence: structured facts/relations и текстовые passages сайта/PDF;
+- document matches: metadata каталога для поиска файла.
 
-Создать immutable Knowledge Snapshot, объединяющий:
-- site entities/facts/relations;
-- Support Catalog metadata;
-- approved extracted document passages;
-- source revision and approval manifests;
-- parser/chunker/index descriptors.
+### 6. Grounded answer
 
-Retrieval возвращает два раздельных типа результатов:
-- answer evidence: facts, relations, site passages и PDF passages;
-- document matches: Support Catalog metadata для поиска нужного файла.
+Сохранить bounded flow:
+question → channel-aware retrieval → typed evidence → generation → deterministic verification → backend citations.
 
-Metadata-only document match не может подтверждать техническое утверждение о содержимом PDF.
+Backend проверяет entity identity, evidence IDs, exact source locators, values, units, qualifiers и полноту ответа. LLM не назначает URL, PDF page или citation metadata.
 
-### 6. Не вводить сложный planner до доказанной необходимости
+### 7. Provider boundary
 
-Первый query coordinator выполняет bounded channel-aware retrieval и сохраняет исходный вопрос без потери negation, qualifiers, designations и units.
+Доверие к публичному содержимому сайта не означает автоматического разрешения на передачу контекста внешнему LLM. cloud_generate остаётся отдельным runtime/data-egress permission, зависящим от выбранного provider, endpoint, region и retention policy. Локальная генерация и локальная индексация не требуют per-source approval.
 
-PR #12 Semantic Planner V3 не включать автоматически: его independent blind quality result 2/24 positive и 16/16 negative/ambiguity outcomes. Новый planner может рассматриваться только как отдельная гипотеза с calibration и новым independent evaluation.
+## Неизменные ограничения
 
-### 7. Grounded answer и citations
-
-Сохранить bounded answer flow как кандидата:
-question → retrieval → typed evidence → generation → verification → backend rendering.
-
-LLM предлагает claims и evidence pointers, но не назначает URLs, page numbers, versions или citation numbers. Backend проверяет entity identity, field/quote, numeric values, units, qualifiers, source revision, policy и полноту ответа. Backend формирует citations и повторно проверяет live policy перед rendering.
-
-Предлагаемые статусы: answered, partial, clarification, needs_support, error. Конфликт источников не разрешается догадкой.
-
-## Последствия
-
-Положительные:
-- согласованная модель v0.1 сохраняется;
-- сайт остаётся независимым и read-only;
-- структурированные характеристики не теряются в plain-text chunks;
-- Support metadata и PDF text не смешиваются;
-- approvals и citations становятся revision-aware;
-- существующие retrieval и RAG компоненты можно переиспользовать без wholesale merge.
-
-Затраты и ограничения:
-- потребуется canonical data model и schema mapping;
-- потребуется отдельный source registry/revision lifecycle;
-- три adapters увеличивают число контрактов и тестов;
-- relation mapping и extraction quality требуют ручной проверки;
-- quality на synthetic corpus нельзя переносить на реальные материалы;
-- интеграция PR #13 потребует ручной reconciliation с main и сохранения текущих handoff/status.
-
-## Что остаётся неизменным
-
-- UkWood/Saturn-Main-Site — строго READ-ONLY.
+- UkWood/Saturn-Main-Site строго READ-ONLY; credentials только read-only.
 - Текущие /search/ и /service/search/ сайта не изменяются.
-- Реальные source candidates остаются pending до отдельного допуска.
-- PR #13 и PR #12 не сливаются автоматически.
-- Frozen datasets, START manifests и historical reports не редактируются.
-- Нет автоматического provider/model/region selection.
-- Нет real ingestion, cloud calls, deployment или site widget без отдельного разрешения.
+- User input никогда не становится URL для server-side fetch.
+- Fetch ограничен HTTPS, configured host/path allowlist, size/time/page limits и SSRF/redirect protections. Это техническая безопасность, а не проверка достоверности источника.
+- Ошибка fetch/extraction не превращается в пустой валидный PDF. Metadata остаётся доступной, а содержимое недоступно до успешного извлечения.
+- Никаких provider/model/region, production deployment или публичного widget без отдельных решений.
+- PR #12 и PR #13 не сливаются автоматически.
 
 ## Не решается этим ADR
 
-ADR-0012 не выбирает:
-- конкретную LLM, provider, model или region;
-- embedding/reranker model revision;
-- OCR engine;
-- persistence technology;
-- production hosting/API domain;
-- latency/concurrency targets;
-- точный состав pilot corpus;
-- индивидуальные approvals и allowed_usage.
+ADR-0012 не выбирает конкретную LLM/provider/model, embedding/reranker revision, OCR engine, persistence technology, production hosting, latency/concurrency targets или budget.
 
-Эти решения требуют дополнительных измерений, входных данных и/или отдельного решения владельца.
+## План
 
-## План проверки
-
-[Implementation plan v0.2](../site-specific/v0.2/03-implementation-plan.md), [integration matrix](../site-specific/v0.2/01-integration-matrix.md), [read-only schema audit](../site-specific/v0.2/04-read-only-schema-audit.md), [ADR-0013 — proposed relation provenance rules](0013-saturn-relation-provenance.md).
+[Целевая архитектура v0.2](../site-specific/v0.2/02-architecture.md), [implementation plan](../site-specific/v0.2/03-implementation-plan.md), [read-only schema mapping and evolution rules](../site-specific/v0.2/04-read-only-schema-audit.md), [ADR-0013](0013-saturn-relation-provenance.md).
