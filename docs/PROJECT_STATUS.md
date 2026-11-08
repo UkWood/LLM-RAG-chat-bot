@@ -5,7 +5,7 @@
 ### Согласованная основа проекта
 
 - Site-specific ТЗ и архитектура технического консультанта МНПП «Сатурн» v0.1 согласованы владельцем.
-- PR #14 слит в main. Текущий main commit: `3cd6787db2fe00fd7cea49bce8a355a27f292bf0`.
+- PR #14 слит в main. Main на момент начала подготовки handoff (до PR #15): `3cd6787db2fe00fd7cea49bce8a355a27f292bf0`; после merge PR #15 SHA изменится, перед работой сверять фактический main.
 - Пакет документов: [docs/site-specific/README.md](site-specific/README.md).
 - Рабочая модель: [ChatGPT / Codex Working Agreement](CHATGPT_WORKING_AGREEMENT.md).
 - Инструкции новой сессии: [SESSION_START.md](SESSION_START.md).
