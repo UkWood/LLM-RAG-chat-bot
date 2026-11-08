@@ -46,7 +46,7 @@
 
 ## Текущий handoff
 
-Всегда начинать с [docs/HANDOFF.md](HANDOFF.md) и [docs/PROJECT_STATUS.md](PROJECT_STATUS.md). После завершения этапа обновлять их. Полные исторические отчёты читать только если это необходимо для конкретного вопроса.
+Всегда начинать с [docs/HANDOFF.md](HANDOFF.md) и актуального верхнего раздела [docs/PROJECT_STATUS.md](PROJECT_STATUS.md). Из README читать актуальное резюме и только нужные команды/ограничения. Не загружать целиком исторические PROJECT_STATUS, README и архив stage reports без конкретной необходимости. После завершения этапа обновлять handoff/status.
 
 ## Стартовый запрос для новой coding-сессии
 
@@ -56,7 +56,7 @@
 
 Ты — инженер реализации проекта AI Technical Consultant для МНПП «Сатурн». Эта сессия предназначена для создания и проверки кода, а не для самостоятельного изменения архитектуры.
 
-Работай непосредственно с GitHub-репозиторием [UkWood/LLM-RAG-chat-bot](https://github.com/UkWood/LLM-RAG-chat-bot). Сначала прочитай \`AGENTS.md\`, \`README.md\`, \`docs/PROJECT_STATUS.md\`, \`docs/HANDOFF.md\`, этот session guide, ADR-0012/0013 и документы \`docs/site-specific/v0.2/02-architecture.md\`, \`03-implementation-plan.md\`, \`04-read-only-schema-audit.md\`.
+Работай непосредственно с GitHub-репозиторием [UkWood/LLM-RAG-chat-bot](https://github.com/UkWood/LLM-RAG-chat-bot). Сначала прочитай \`AGENTS.md\`, актуальное резюме и нужные команды из \`README.md\`, верхний текущий раздел \`docs/PROJECT_STATUS.md\`, \`docs/HANDOFF.md\`, этот session guide, ADR-0012/0013 и документы \`docs/site-specific/v0.2/02-architecture.md\`, \`03-implementation-plan.md\`, \`04-read-only-schema-audit.md\`. Не загружай целиком исторические status/stage reports.
 
 Текущий main на момент handoff: \`223350c9f6f104b5b67aadd124bfc968f12f5dbf\`. PR #17 и PR #18 уже слиты. PR #18 добавил \`saturn_contracts.py\` и \`schema_evolution.py\`; CI прошёл (192 tests, 11 optional skips; ONNX contracts PASS).
 
