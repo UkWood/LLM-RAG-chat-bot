@@ -29,7 +29,7 @@ Main содержит offline foundation: ingestion/snapshot contracts, BM25, de
 
 ### Незавершённые ветки
 
-- PR #13 — draft grounded RAG / publication pipeline. На 15 synthetic cases oracle и end-to-end режимы выполнили 15/15 без инфраструктурных ошибок; human answer assessment pending. Branch head `24a8409b7d5fb65d9f5144019f87f5d1bc75df0c`, основан на прежнем main `bb16530`; после PR #14 требуется reconciliation с новым main. Не merge.
+- PR #13 — draft grounded RAG / publication pipeline. На 15 synthetic cases oracle и end-to-end режимы выполнили 15/15 без инфраструктурных ошибок; human answer assessment pending. Branch head `24a8409b7d5fb65d9f5144019f87f5d1bc75df0c`, основан на прежнем main `bb16530`; после PR #14 требуется reconciliation с новым main и обновлёнными README/HANDOFF/PROJECT_STATUS. PR #13 также содержит ADR-0011 с тем же номером, что и новый site-source ADR-0011 в main; при интеграции сохранить main ADR и перенумеровать PR13 ADR на следующий свободный номер, обновив ссылки. Не merge.
 - PR #12 — draft Semantic Planner V3. Независимый blind quality gate failed: 2/24 positives, 16/16 negative/ambiguity outcomes. Не merge и не включать по умолчанию.
 - PR #14 — merged docs-only site-specific package, merge commit `3cd6787`.
 
