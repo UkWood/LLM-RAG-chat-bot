@@ -1,5 +1,7 @@
 # Реестр допуска PUBLIC-источников
 
+> **Область действия:** этот документ и `config/knowledge/public-sources.json` описывают legacy generic source registry. Они не задают политику для `UkWood/Saturn-Main-Site@main`. Для доверенного Saturn site path приоритетны ADR-0012/0013: non-draft records, declared relations, dictionaries и прямые linked PDFs автоматически доверенные, без per-source approval. Новый Saturn adapter не должен читать этот registry или наследовать его approval gates. Cloud egress остаётся отдельным разрешением.
+
 [Реестр](../config/knowledge/public-sources.json) относится только к AI-проекту; его нельзя считать списком разрешённых файлов сайта. Сейчас это четыре проверенных кандидата Markdown и четыре не загруженных PDF-ссылки. Ничего не разрешено для ingestion или cloud автоматически.
 
 ## Состояния и обязательные поля

@@ -27,11 +27,11 @@
 
 ## 3. Последовательность реализации
 
-### Этап 1. Canonical contracts
+### Этап 1. Canonical contracts — COMPLETED (PR #18)
 
-Entity, Fact, Relation, SupportDocument, DocumentRevision, EvidenceUnit, SourceRevision и KnowledgeSnapshot. Provenance служит traceability, не approval. Сохранить совместимость существующих synthetic tests.
+Добавлены immutable contracts: SiteSourceRevision, SiteEntity, SiteFact, SiteRelation, SupportDocument, PdfRevision, EvidenceUnit, schema inventory, drift events, file change set, sync manifest и sync plan. Provenance служит traceability, не approval. Старые synthetic contracts сохранены.
 
-**PASS:** immutable/serializable contracts, стабильные IDs, field/page locators, source commit/hash, тесты identity и serialization.
+**PASS:** exact PR head CI SUCCESS — 192 offline tests (11 existing optional skips) + ONNX contracts. Merge commit: `223350c9f6f104b5b67aadd124bfc968f12f5dbf`. Stage report: [canonical contracts](../../stages/2026-11-09-saturn-canonical-contracts.md).
 
 ### Этап 2. Site Content Adapter
 
@@ -70,6 +70,18 @@ FastAPI и простой интерфейс: одно поле ввода, от
 - Merge выполняется только после review и явного разрешения владельца.
 - Не создавать отдельный документ на каждый этап: решения — в ADR, текущая работа — в PROJECT_STATUS/HANDOFF, детали — в коде и тестах.
 
-## 5. Ближайшая задача
+## 5. Ближайшая задача: Site Content Adapter
 
-Начать с canonical contracts и schema-evolution contracts в AI-репозитории. Не выполнять real site sync, PDF fetch, cloud call или deployment в рамках первой coding task. Сначала доказать модель на synthetic fixtures, затем подключать read-only source snapshot.
+Реализовать отдельный pure/offline adapter, который принимает immutable pinned snapshot (repository/branch/commit/tree SHA + source paths/blob SHA/bytes) и строит canonical Saturn content package.
+
+- Динамически обнаруживать все `src/content/<collection>/*.md`; не зашивать список collections.
+- Safe YAML frontmatter parsing без исполнения Astro/TypeScript/JS.
+- Сохранять исходный frontmatter и Markdown body; каждое поле, включая неизвестное, представлять как raw fact.
+- Явно различать известные entity types и generic `SiteContent`; применять правила из read-only schema audit.
+- Сохранять только source-declared relations с исходным predicate/field path; `pages.groups` — навигация, не состав системы.
+- Строить schema inventory, dictionary fingerprints, file diffs и deterministic manifest через PR #18 contracts.
+- Parser не выполняет сеть и не загружает PDF. Git snapshot provider, Support Catalog/PDF и retrieval — последующие отдельные этапы.
+
+**PASS:** fixtures всех шести текущих collections; unknown collection/fields; draft behavior; nested values/specs/qualifiers; explicit relations; add/update/delete/schema drift; deterministic output; полный regression suite + CI; нулевые изменения Saturn-Main-Site.
+
+Текущий coding handoff и критерии разделения двух ChatGPT-сессий: [HANDOFF.md](../../HANDOFF.md), [CHATGPT_SESSION_GUIDE.md](../../CHATGPT_SESSION_GUIDE.md).

@@ -1,13 +1,16 @@
 # Состояние проекта
 
-## Saturn technical consultant — source trust and schema evolution accepted (2026-11-09)
+## Saturn technical consultant — canonical contracts merged (2026-11-09)
 
-Owner confirmed: all non-draft content, entity relations and linked PDFs in UkWood/Saturn-Main-Site are trusted; no manual source/relation/PDF approval workflow. The site is under development, so the adapter must discover and handle changes to collections, fields, filters/specifications, dictionaries, pages, routes and documents.
+**Current main:** \`223350c9f6f104b5b67aadd124bfc968f12f5dbf\`. PR #17 (trusted source/schema evolution docs) and PR #18 (canonical contracts) are merged.
 
-ADR-0013 is accepted. Source hashes/commits remain for reproducibility and citations only. New/changed/deleted content syncs automatically. Unknown additive fields/collections are preserved as generic evidence; incompatible schema changes disable stale typed projections and produce drift reports until mapping is updated. PDF links from the trusted catalog are automatically fetched/re-extracted under technical host/path and SSRF protections. Cloud provider egress remains a separate runtime decision.
+PR #18 added \`saturn_contracts.py\`, \`schema_evolution.py\` and their tests. Exact PR head CI passed: 192 offline tests (11 existing optional skips) and ONNX contracts. This is a contracts/schema-planning foundation only; no live site import, PDF fetch, retrieval integration, LLM call or deployment exists yet.
 
-The next implementation stage is canonical contracts and schema-evolution contracts, followed by the read-only Site Content Adapter. No changes are permitted in Saturn-Main-Site.
+Owner-approved trust model: all non-draft Saturn site records, declared relations, dictionaries and direct linked PDFs are trusted. Source hashes/commits are provenance, not approval. Site remains strictly READ-ONLY. Automatic sync and schema-drift handling are required; cloud egress remains a separate runtime decision.
 
+**Next stage:** implement the pure/offline Site Content Adapter over a pinned source snapshot. It must dynamically discover collections, safely parse frontmatter, preserve raw fields/body, map known entities and explicit relations, retain unknown collections/fields generically and use PR #18 contracts. Do not route trusted Saturn content through the legacy synthetic \`SourceRecord/Registry\` approval path.
+
+Session split: this chat is architecture/control; the new ChatGPT session is code implementation. See [session guide](CHATGPT_SESSION_GUIDE.md) and [handoff](HANDOFF.md).
 ## Planner V2 corrective revision — 2026-11-06
 
 Owner requested continuing after PR10 merge review found two Important blockers: discarded `нет` and protocol qualifiers. Corrections reject negation, unsupported Modbus/TCP/RTU qualification and modification requests outside supported lookup bindings before generation; unqualified protocol queries remain supported, V1 default unchanged. [Corrective report](stages/2026-11-06-planner-v2-corrections.md), [plan addendum](superpowers/plans/2026-11-06-typed-planner-v2.md). Final local verification5project+168backend PASS in both environments (base11optional skips/optional0), calibration14/14 positives20/20statuses without V1-positive regression; independent review fix pass complete. Current-head remote CI/merge outcome must be checked in PR10.
