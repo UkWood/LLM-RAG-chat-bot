@@ -31,7 +31,7 @@
 
 Добавлены immutable contracts: SiteSourceRevision, SiteEntity, SiteFact, SiteRelation, SupportDocument, PdfRevision, EvidenceUnit, schema inventory, drift events, file change set, sync manifest и sync plan. Provenance служит traceability, не approval. Старые synthetic contracts сохранены.
 
-**PASS:** exact PR head CI SUCCESS — 192 offline tests (11 existing optional skips) + ONNX contracts. Merge commit: `223350c9f6f104b5b67aadd124bfc968f12f5dbf`. Stage report: [canonical contracts](../stages/2026-11-09-saturn-canonical-contracts.md).
+**PASS:** exact PR head CI SUCCESS — 192 offline tests (11 existing optional skips) + ONNX contracts. Merge commit: `223350c9f6f104b5b67aadd124bfc968f12f5dbf`. Stage report: [canonical contracts](../../stages/2026-11-09-saturn-canonical-contracts.md).
 
 ### Этап 2. Site Content Adapter
 
@@ -84,4 +84,4 @@ FastAPI и простой интерфейс: одно поле ввода, от
 
 **PASS:** fixtures всех шести текущих collections; unknown collection/fields; draft behavior; nested values/specs/qualifiers; explicit relations; add/update/delete/schema drift; deterministic output; полный regression suite + CI; нулевые изменения Saturn-Main-Site.
 
-Текущий coding handoff и критерии разделения двух ChatGPT-сессий: [HANDOFF.md](../HANDOFF.md), [CHATGPT_SESSION_GUIDE.md](../CHATGPT_SESSION_GUIDE.md).
+Текущий coding handoff и критерии разделения двух ChatGPT-сессий: [HANDOFF.md](../../HANDOFF.md), [CHATGPT_SESSION_GUIDE.md](../../CHATGPT_SESSION_GUIDE.md).
