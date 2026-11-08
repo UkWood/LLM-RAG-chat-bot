@@ -183,7 +183,7 @@ Citation формирует backend: canonical page URL или original PDF URL,
 
 ### 5.1. Trust root
 
-UkWood/Saturn-Main-Site branch main — доверенный источник. Все non-draft records, declared relations, dictionaries и PDF links из documents/certificates автоматически допускаются к local indexing/local generation. Никаких per-source, per-relation или per-PDF approval workflow нет.
+UkWood/Saturn-Main-Site branch main — доверенный источник. Все non-draft records, declared relations, dictionaries и прямые PDF links из documents/certificates или Markdown body автоматически допускаются к local indexing/local generation. Никаких per-source, per-relation или per-PDF approval workflow нет.
 
 ### 5.2. Revision traceability
 
