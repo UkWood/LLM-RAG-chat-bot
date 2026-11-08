@@ -69,7 +69,7 @@ PR #13:
 | Relation model | Нет полноценной typed relation graph | Явные связи из исходных полей; обратные проекции только с сохранением исходного поля |
 | Support Catalog Adapter | Нет самостоятельного metadata adapter | Импорт documents/certificates, version/type/URL/owners, URL deduplication с сохранением всех owners |
 | External Document Adapter | PDF обнаруживается через HTML crawler | Загрузка только явно разрешённых файлов из Support Catalog по exact allowlist |
-| Per-revision approval registry | Недостаточно: общая publication policy | Trust root + exact source revision/hash для traceability; отдельный cloud egress permission |
+| Trusted source policy and revision manifest | Недостаточно: общая publication policy | Trust root + exact source revision/hash для traceability; отдельный cloud egress permission |
 | Unified Knowledge Snapshot | Generic PublishedSnapshot | Единый immutable snapshot для entities, facts, relations, catalog metadata и PDF evidence |
 | Channel-aware retrieval | Есть lexical/dense hybrid, но нет трёхканального разделения | Разделить answer evidence retrieval и metadata-only document lookup |
 | Structured evidence/citations | Преимущественно chunk quotes | Evidence pointer на Fact/Relation/DocumentChunk; backend citation с field/page/URL/hash |
