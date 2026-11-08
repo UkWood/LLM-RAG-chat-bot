@@ -22,7 +22,7 @@ The source schema was inspected read-only at Saturn-Main-Site revision `084d7594
 - Safely parses Markdown frontmatter and YAML dictionaries with bounded input, token, depth and node limits; rejects aliases, anchors, explicit tags, duplicate keys and non-string mapping keys.
 - Preserves exact raw Markdown source bytes, raw frontmatter text and body. Unknown frontmatter fields and nested values are retained as raw facts.
 - Excludes only records whose parsed `draft` value is the boolean `true`.
-- Maps current entity subtypes and explicit source-declared relations. The `pages.groups` navigation tree is not projected as an engineering relation.
+- Maps current entity subtypes and explicit source-declared relations. Missing `systems.kind` uses the source-declared `system` default; an explicit unknown discriminator remains generic with a warning. The `pages.groups` navigation tree is not projected as an engineering relation.
 - Builds source revisions, schema inventory, dictionary fingerprints, deterministic manifest and add/update/delete + schema-drift plan using the existing Saturn contracts.
 - Per-record parse errors are retained as diagnostics with raw bytes. A package containing errors is not eligible for promotion.
 
@@ -30,9 +30,9 @@ Test file: `backend/tests/unit/test_saturn_site_adapter.py`. Test fixtures: `bac
 
 ## Verification
 
-Implementation commit tested by CI: `b73617ab176edb0a48aa2d24b176d6a18feefb49`. Handoff/status documentation commits followed; the latest PR head must also have green checks before merge.
+Implementation commit tested by CI: `51fb616d0c5d368f0452cab1fe6f1d07f3c78408`. Handoff/status documentation commits followed; the latest PR head must also have green checks before merge.
 
-GitHub Actions [run #205](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42531172049): **SUCCESS**.
+GitHub Actions PR-head [run #214](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42531823934): **SUCCESS**.
 
 - Offline verification: 204 tests passed, 11 existing optional skips.
 - ONNX contracts: SUCCESS.

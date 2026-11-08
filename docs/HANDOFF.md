@@ -11,8 +11,8 @@
 - Текущий main: `934c65e2bc11adf4c2b0b0e3b30717a02d7bb26e`.
 - PR #20 открыт, не слит: [trusted Saturn Site Content Adapter](https://github.com/UkWood/LLM-RAG-chat-bot/pull/20).
 - PR #20 реализует pure/offline адаптер для уже полученного pinned snapshot. GitHub snapshot provider, PDF, retrieval, LLM/API/UI и deployment ещё не реализованы.
-- Кодовый commit `b73617ab176edb0a48aa2d24b176d6a18feefb49` прошёл push CI #205: SUCCESS — 204 теста, 11 существующих optional skips; ONNX contracts SUCCESS.
-- После проверенного кодового commit добавлены только status/handoff документы. Перед review проверить CI на актуальном PR head.
+- Кодовый commit `51fb616d0c5d368f0452cab1fe6f1d07f3c78408` прошёл PR-head CI [#214](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42531823934): SUCCESS — 204 теста, 11 существующих optional skips; ONNX contracts SUCCESS.
+- После кодового commit обновляются только status/handoff документы. Перед merge проверять checks актуального PR head.
 - PR #20 ожидает review владельца. Merge не выполнялся.
 
 ## 2. Решения владельца — обязательны
@@ -37,6 +37,7 @@
 - Safe YAML: YAML 1.2 boolean semantics, запрет anchors/aliases/explicit tags, duplicate keys и non-string keys; ограничены размер, token count, depth и node count.
 - Raw bytes, raw frontmatter text и Markdown body сохраняются. Неизвестные поля и вложенные значения становятся raw facts; неизвестные collections — `SiteContent`.
 - Явные relations берутся только из текущей проверенной схемы. `pages.groups` остаётся navigation data.
+- Для `systems.kind` при отсутствии поля применяется только объявленный в source schema default `system`; явное неизвестное значение остаётся generic `SiteContent` с warning. `pages.kind` default не имеет.
 - Используются PR #18 contracts: source revisions, schema inventory, dictionary fingerprints, deterministic sync manifest и file/schema diff.
 - Ошибка записи диагностируется отдельно. Raw bytes остаются в package; package с error issues не допускается к promotion.
 

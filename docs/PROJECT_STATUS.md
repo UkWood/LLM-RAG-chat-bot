@@ -7,7 +7,7 @@
 
 Implemented the first pure/offline adapter slice over an already pinned Saturn-Main-Site snapshot. It dynamically discovers content collections, safely parses Markdown frontmatter and YAML dictionaries, preserves raw source bytes/frontmatter/body and unknown fields, maps only explicit source relations, and builds canonical revisions/schema inventory/deterministic sync plans using PR #18 contracts. It does not fetch GitHub snapshots itself.
 
-Adapter implementation CI: [run #205](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42531172049) SUCCESS — 204 offline tests (11 existing optional skips) and ONNX contracts SUCCESS. Synthetic baseline remains unchanged: 10 documents, 44 chunks, 30 cases; lexical source-hit@5 0.85, non-blocking for this adapter stage.
+Adapter implementation PR CI: [run #214](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42531823934) SUCCESS — 204 offline tests (11 existing optional skips) and ONNX contracts SUCCESS. Synthetic baseline remains unchanged: 10 documents, 44 chunks, 30 cases; lexical source-hit@5 0.85, non-blocking for this adapter stage.
 
 No legacy SourceRecord/Registry approval path, source-site writes, PDF fetching, retrieval, LLM/provider, API/UI or deployment. See [stage report](stages/2026-11-09-saturn-site-content-adapter.md) and [implementation handoff](HANDOFF.md).
 
