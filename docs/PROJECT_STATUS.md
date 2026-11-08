@@ -1,16 +1,18 @@
 # Состояние проекта
 
-## Saturn technical consultant — canonical contracts merged (2026-11-09)
+## Saturn Site Content Adapter — PR #20 open (2026-11-09)
 
-**Current main:** \`223350c9f6f104b5b67aadd124bfc968f12f5dbf\`. PR #17 (trusted source/schema evolution docs) and PR #18 (canonical contracts) are merged.
+**Current main:** `934c65e2bc11adf4c2b0b0e3b30717a02d7bb26e`. PR #17 and PR #18 are merged.  
+**Implementation:** `feature/saturn-site-content-adapter`; [PR #20](https://github.com/UkWood/LLM-RAG-chat-bot/pull/20) is open and not merged.
 
-PR #18 added \`saturn_contracts.py\`, \`schema_evolution.py\` and their tests. Exact PR head CI passed: 192 offline tests (11 existing optional skips) and ONNX contracts. This is a contracts/schema-planning foundation only; no live site import, PDF fetch, retrieval integration, LLM call or deployment exists yet.
+Implemented the first pure/offline adapter slice over an already pinned Saturn-Main-Site snapshot. It dynamically discovers content collections, safely parses Markdown frontmatter and YAML dictionaries, preserves raw source bytes/frontmatter/body and unknown fields, maps only explicit source relations, and builds canonical revisions/schema inventory/deterministic sync plans using PR #18 contracts. It does not fetch GitHub snapshots itself.
 
-Owner-approved trust model: all non-draft Saturn site records, declared relations, dictionaries and direct linked PDFs are trusted. Source hashes/commits are provenance, not approval. Site remains strictly READ-ONLY. Automatic sync and schema-drift handling are required; cloud egress remains a separate runtime decision.
+Final head CI: [run #205](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42531172049) SUCCESS — 204 offline tests (11 existing optional skips) and ONNX contracts SUCCESS. Synthetic baseline remains unchanged: 10 documents, 44 chunks, 30 cases; lexical source-hit@5 0.85, non-blocking for this adapter stage.
 
-**Next stage:** implement the pure/offline Site Content Adapter over a pinned source snapshot. It must dynamically discover collections, safely parse frontmatter, preserve raw fields/body, map known entities and explicit relations, retain unknown collections/fields generically and use PR #18 contracts. Do not route trusted Saturn content through the legacy synthetic \`SourceRecord/Registry\` approval path.
+No legacy SourceRecord/Registry approval path, source-site writes, PDF fetching, retrieval, LLM/provider, API/UI or deployment. See [stage report](stages/2026-11-09-saturn-site-content-adapter.md) and [implementation handoff](HANDOFF.md).
 
-Session split: this chat is architecture/control; the new ChatGPT session is code implementation. See [session guide](CHATGPT_SESSION_GUIDE.md) and [handoff](HANDOFF.md).
+**Next bounded stage after owner review/merge:** read-only pinned GitHub snapshot provider. Architecture changes remain in the separate «Saturn AI — Архитектура и управление» session.
+
 ## Planner V2 corrective revision — 2026-11-06
 
 Owner requested continuing after PR10 merge review found two Important blockers: discarded `нет` and protocol qualifiers. Corrections reject negation, unsupported Modbus/TCP/RTU qualification and modification requests outside supported lookup bindings before generation; unqualified protocol queries remain supported, V1 default unchanged. [Corrective report](stages/2026-11-06-planner-v2-corrections.md), [plan addendum](superpowers/plans/2026-11-06-typed-planner-v2.md). Final local verification5project+168backend PASS in both environments (base11optional skips/optional0), calibration14/14 positives20/20statuses without V1-positive regression; independent review fix pass complete. Current-head remote CI/merge outcome must be checked in PR10.
