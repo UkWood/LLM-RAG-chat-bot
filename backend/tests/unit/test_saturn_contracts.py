@@ -107,6 +107,9 @@ class SaturnCanonicalContractTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             PdfRevision("doc-1", "https://www.mnppsaturn.ru/files/manual.pdf",
                         CONTENT, "pdf-parser/0.1", "extracted", None, TEXT_HASH)
+        with self.assertRaises(ValueError):
+            PdfRevision("doc-1", "https://www.mnppsaturn.ru/files/manual.pdf",
+                        CONTENT, "pdf-parser/0.1", "discovered")
 
     def test_pdf_evidence_requires_physical_page(self):
         evidence = EvidenceUnit("ev-1", "pdf_passage", "rev-1", "page:3",
