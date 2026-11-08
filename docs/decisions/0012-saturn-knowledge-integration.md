@@ -36,7 +36,7 @@ Metadata каталога и полнотекстовое содержимое P
 
 - Текущая main-ветка UkWood/Saturn-Main-Site является trust root.
 - Все записи, связи и справочники сайта, кроме явно draft: true, автоматически считаются пригодными для локального индексирования и генерации.
-- PDF, перечисленные в documents/certificates доверенных записей и доступные по настроенным разрешённым origin/path, автоматически загружаются и индексируются после успешного извлечения.
+- Все прямые PDF-ссылки, обнаруженные в non-draft содержимом сайта — в documents/certificates и Markdown body, — автоматически попадают в каталог, загружаются с configured trusted origin/path и индексируются после успешного извлечения.
 - Никаких ручных approval/review workflow для страниц, relations, полей или PDF.
 - Git commit, blob SHA, content SHA-256, field path, URL и PDF hash сохраняются для traceability, воспроизводимости и citations. Hash change создаёт новую техническую revision и запускает re-ingestion, а не новую процедуру подтверждения.
 - Изменения, добавления и удаления автоматически отражаются в следующем Knowledge Snapshot.
