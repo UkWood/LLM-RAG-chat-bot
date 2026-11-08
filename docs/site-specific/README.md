@@ -17,7 +17,7 @@
 4. [План реализации](04-implementation-plan.md) — последовательные этапы, зависимости, результаты и контрольные точки.
 5. [Вопросы для ИТ](05-it-questionnaire.md) — вопросы по серверу, сети, доступам, PDF, API модели и эксплуатации.
 6. [План испытаний и приёмки](06-acceptance-plan.md) — тестовый корпус, blind evaluation, метрики и условия допуска к пилоту.
-7. [ADR-0011](../../decisions/0011-site-source-adapters-and-search-boundaries.md) — решение о read-only источниках и сохранении двух поисковых функций.
+7. [ADR-0011](../decisions/0011-site-source-adapters-and-search-boundaries.md) — решение о read-only источниках и сохранении двух поисковых функций.
 
 ## Зафиксированные границы
 
