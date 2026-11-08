@@ -1,13 +1,13 @@
 # ADR-0012: интеграция знаний Сатурна с существующим Grounded RAG
 
 Дата: 2026-11-08  
-Статус: **PROPOSED — ожидает явного утверждения владельцем**  
+Статус: **ACCEPTED — owner approval confirmed in PR #16 review and merge**  
 Область: UkWood/LLM-RAG-chat-bot  
 Основание: site-specific v0.1 и ADR-0011.
 
 ## Контекст
 
-В main 3cd6787db2fe00fd7cea49bce8a355a27f292bf0 находятся согласованные site-specific требования и базовые ingestion/snapshot/retrieval/evaluation contracts.
+В main 3cd6787db2fe00fd7cea49bce8a355a27f292bf0 находились согласованные site-specific требования и базовые ingestion/snapshot/retrieval/evaluation contracts.
 
 В открытом Draft PR #13 (head 24a8409b7d5fb65d9f5144019f87f5d1bc75df0c) реализованы дополнительные компоненты:
 - generic publication fetch/extract/store/refresh;
@@ -29,7 +29,7 @@ Site-specific v0.1 требует:
 - раздельные local_index, local_generate и cloud_generate permissions;
 - проверяемые evidence и backend-generated citations.
 
-## Решение — предлагается к утверждению
+## Решение
 
 ### 1. Selective reuse, не wholesale merge
 
@@ -53,7 +53,7 @@ Site-specific v0.1 требует:
 2. Support Catalog Adapter — metadata documents/certificates из approved products/systems, с URL, type, version и всеми owners.
 3. External Document Adapter — exact allowlisted PDF fetch, hash, extraction и physical page provenance после отдельного file approval.
 
-Support metadata не является доказательством содержания PDF. Approval страницы не даёт approval связанного PDF.
+Support metadata не является доказательством содержания PDF. Approval страницы не даёт approval PDF.
 
 ### 3. Canonical knowledge model
 
@@ -69,6 +69,8 @@ Support metadata не является доказательством содер
 - Citation reference.
 
 Текстовые projections для BM25/vector допустимы, но retrieval обязан возвращать canonical typed evidence с исходным provenance.
+
+Семантическое происхождение и review state relations уточняются отдельным ADR-0013 после read-only audit. До принятия ADR-0013 нельзя считать наличие relation в source frontmatter доказательством её инженерной истинности.
 
 ### 4. Approval привязан к exact revision
 
@@ -152,4 +154,4 @@ ADR-0012 не выбирает:
 
 ## План проверки
 
-Предлагаемая последовательность и measurable acceptance gates находятся в [implementation plan v0.2](../site-specific/v0.2/03-implementation-plan.md). Матрица reuse находится в [integration matrix](../site-specific/v0.2/01-integration-matrix.md).
+[Implementation plan v0.2](../site-specific/v0.2/03-implementation-plan.md), [integration matrix](../site-specific/v0.2/01-integration-matrix.md), [read-only schema audit](../site-specific/v0.2/04-read-only-schema-audit.md), [ADR-0013 — proposed relation provenance rules](0013-saturn-relation-provenance.md).
