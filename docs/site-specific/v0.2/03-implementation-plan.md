@@ -1,7 +1,7 @@
 # План реализации site-specific architecture v0.2
 
 Дата: 2026-11-08  
-Статус: **PROPOSED — план не является разрешением на начало coding**  
+Статус: **ACCEPTED BASELINE — owner approved PR #16; implementation remains gated by schema mapping approval**  
 База для планирования: main 3cd6787db2fe00fd7cea49bce8a355a27f292bf0.
 
 ## 1. Цель
