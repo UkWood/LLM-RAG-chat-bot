@@ -1,7 +1,7 @@
 # Целевая архитектура AI Technical Consultant для Сатурна v0.2
 
 Дата: 2026-11-08  
-Статус: **PROPOSED — требуется утверждение владельцем**  
+Статус: **ACCEPTED BASELINE — owner approved PR #16; relation provenance addendum pending ADR-0013**  
 Основание: site-specific v0.1 и ADR-0011. Это уточнение интеграции, не замена фундаментального ТЗ.
 
 ## 1. Архитектурная цель
