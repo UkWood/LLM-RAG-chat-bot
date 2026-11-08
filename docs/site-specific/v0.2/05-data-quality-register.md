@@ -14,6 +14,7 @@ Snapshot: UkWood/Saturn-Main-Site@084d759487bfab6e111549c9b5469711ac5fc13e.
 |---|---:|---:|
 | Изображения | 203 | 70% |
 | Документы (ссылки) | 151 | 52% |
+| Сертификаты / декларации (coverage report metric) | 1 | 0% (rounded) |
 | Характеристики specs | 154 | 53% |
 | Строк характеристик | 2574 | — |
 | Строк с разделёнными name/value | 2417 | 94% |
@@ -83,6 +84,17 @@ scripts/model/enrich-products.mjs дополнительно формирует:
 - inputs/outputs по эвристикам характеристик, обозначений и клемм.
 
 Следствие: поле в frontmatter не всегда равно manually reviewed relation. Источник не хранит field-level reviewed marker. Наличие relation и успешный check-content подтверждают лишь существование target, не истинность связи.
+
+### Другие миграционно-генерируемые поля
+
+- systems.summary формируется из первого подходящего абзаца body.
+- systems.applications заполняется hard-coded mapping в enrich-systems.mjs.
+- systems.documents извлекаются из отдельных Markdown-ссылок; kind выводится regex по названию/URL, version — из заголовка года.
+- pages.kind=solution выставляется для hard-coded списка из 13 страниц; images переносится из первой картинки body.
+- pages.groups на странице resheniya строится из заголовков и ссылок.
+- groups.system назначается через hard-coded GROUP_SYSTEM mapping или совпадение slug.
+
+Текущий source frontmatter не позволяет установить, какие из этих значений были вручную скорректированы после миграции. До отдельного review сохранять их origin как legacy_frontmatter_origin_unknown либо известный derivation type, а не считать автоматически проверенными.
 
 ### Правила допуска relation types
 
