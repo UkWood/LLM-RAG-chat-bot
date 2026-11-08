@@ -2,6 +2,7 @@
 
 Дата: 2026-11-08  
 Статус: **AUDIT COMPLETE; MAPPING / ADR-0013 OWNER REVIEW PENDING**  
+Review PR: [#17](https://github.com/UkWood/LLM-RAG-chat-bot/pull/17) (Draft).  
 Repository: UkWood/Saturn-Main-Site  
 Pinned source commit: 084d759487bfab6e111549c9b5469711ac5fc13e  
 AI project main after approved PR #16: bf59284b4af9fa9d0a853595ba4fa31d89f53984.
