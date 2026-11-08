@@ -1,3 +1,5 @@
+# Состояние проекта
+
 ## Saturn technical consultant — source trust and schema evolution accepted (2026-11-09)
 
 Owner confirmed: all non-draft content, entity relations and linked PDFs in UkWood/Saturn-Main-Site are trusted; no manual source/relation/PDF approval workflow. The site is under development, so the adapter must discover and handle changes to collections, fields, filters/specifications, dictionaries, pages, routes and documents.
