@@ -70,7 +70,8 @@
 - На 15 synthetic diagnostic cases oracle и end-to-end режимы выполнили по 15/15 случаев без infrastructure errors. Raw statuses в обоих режимах: answered 5, partial 6, needs_support 3, clarification 1.
 - Human answer assessment двух режимов остаётся pending. Runtime status/self-verifier не являются оценкой правильности.
 - Есть SHA-bound human review forms для каждого режима; поля должны быть заполнены человеком, не моделью.
-- Ветка основана на старом main `bb16530e5b9a4943abae5c1b0f526cb218f46b2d`; после PR #14 main продвинулся. GitHub сообщал `mergeable=false`. Не merge/rebase автоматически.
+- Ветка основана на старом main `bb16530e5b9a4943abae5c1b0f526cb218f46b2d`; после PR #14 main продвинулся. PR #13 также меняет `README.md`, `docs/HANDOFF.md` и `docs/PROJECT_STATUS.md`, которые с тех пор обновлены в main, поэтому потребуется ручная reconciliation этих файлов. GitHub сообщал `mergeable=false`. Не merge/rebase автоматически.
+- PR #13 содержит `docs/decisions/0011-grounded-rag-redesign.md`, а main теперь содержит `docs/decisions/0011-site-source-adapters-and-search-boundaries.md`. Это коллизия номера ADR, хотя пути разные. При возможной интеграции сохранить main ADR-0011, перенумеровать ADR PR #13 на следующий свободный номер (после проверки дерева решений) и обновить все ссылки. Не затирать и не дублировать номер.
 
 **Архитектурный вопрос для следующей сессии:** PR #13 строит общий контур опубликованных HTML/PDF. Принятые site-specific документы требуют также отдельного structured adapter для Markdown/frontmatter/YAML словарей сайта и metadata adapter для Support catalog. Нужно сопоставить код PR #13 с утверждённой архитектурой, определить переиспользуемые модули и недостающие адаптеры. Не считать PR #13 полной реализацией site-specific архитектуры.
 
