@@ -1,3 +1,5 @@
+# Передача контекста
+
 ## Saturn technical consultant — current handoff 2026-11-09
 
 ### Owner decisions now accepted
