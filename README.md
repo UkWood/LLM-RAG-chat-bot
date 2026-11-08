@@ -49,7 +49,9 @@ PYTHONPATH=backend/src python3 -m saturn_ai --corpus fixtures/synthetic 'Инт�
 
 API/UI, реальные модели, PDF ingestion, Docker deployment и CD остаются следующими этапами. Текущий CLI не является production сервисом.
 
-## Offline ingestion, этап 2
+## Offline ingestion, этап 2 — legacy generic/fixture path
+
+**Важно:** следующий пример и `config/knowledge/public-sources.json` относятся к старому generic registry/fixture ingestion path. Они не являются источником допуска для нового Saturn adapter. По ADR-0012/0013 `UkWood/Saturn-Main-Site@main` — доверенный источник без per-source approval; новый adapter строится отдельно на `saturn_contracts.py` и `schema_evolution.py`. Не переносить в него pending entries старого registry и не ослаблять legacy approval checks глобально.
 
 ```bash
 PYTHONPATH=backend/src work/venv/bin/python -m saturn_ai.ingestion --registry config/knowledge/public-sources.json
