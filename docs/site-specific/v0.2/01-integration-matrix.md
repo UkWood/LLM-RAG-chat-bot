@@ -1,7 +1,7 @@
 # Матрица интеграции PR #13 с site-specific v0.1
 
 Дата: 2026-11-08  
-Статус: **PROPOSED — архитектурный review**  
+Статус: **ACCEPTED BASELINE — owner approved PR #16**  
 Сравниваемые точки:
 - main: 3cd6787db2fe00fd7cea49bce8a355a27f292bf0;
 - PR #13 head: 24a8409b7d5fb65d9f5144019f87f5d1bc75df0c;
