@@ -1,4 +1,5 @@
 import unittest
+from dataclasses import replace
 
 from saturn_ai.ingestion.saturn_contracts import SiteFileRevision
 from saturn_ai.ingestion.schema_evolution import (
@@ -44,6 +45,11 @@ class SaturnSchemaEvolutionTests(unittest.TestCase):
         self.assertEqual(fields[("products", "specs[].name")], "string")
         self.assertEqual(fields[("products", "specs[].value")], "string")
         self.assertEqual(fields[("products", "mass_kg")], "integer")
+
+    def test_inventory_recurses_through_nested_objects(self):
+        current = inventory({"products": [{"outer": {"inner": {"leaf": "value"}}}]})
+        paths = {item.field_path for item in current.fields}
+        self.assertIn("outer.inner.leaf", paths)
 
     def test_inventory_type_inference_does_not_confuse_boolean_and_integer(self):
         current = inventory({"products": [{"enabled": True, "count": 1},
@@ -119,6 +125,15 @@ class SaturnSchemaEvolutionTests(unittest.TestCase):
                                       adapter_version="adapter/0.1", mapping_version="mapping/0.1")
         self.assertEqual(first, second)
         self.assertNotEqual(first.snapshot_id, changed.snapshot_id)
+
+    def test_manifest_rejects_snapshot_id_mismatch(self):
+        manifest = build_sync_manifest(
+            commit_sha=COMMIT_A, tree_sha=TREE_A, schema_inventory=inventory(),
+            file_revisions=(file("src/content/products/a.md"),),
+            adapter_version="adapter/0.1", mapping_version="mapping/0.1")
+        forged = replace(manifest, tree_sha=TREE_B)
+        with self.assertRaises(ValueError):
+            forged.__post_init__()
 
     def test_sync_plan_initial_and_incremental(self):
         schema = inventory()
