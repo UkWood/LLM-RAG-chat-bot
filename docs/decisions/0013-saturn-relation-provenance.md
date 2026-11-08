@@ -15,7 +15,7 @@
 ### 1. Единая политика доверия
 
 - Trust root: UkWood/Saturn-Main-Site, branch main.
-- Все записи сайта, frontmatter relations, YAML dictionaries и документы из documents/certificates считаются доверенными.
+- Все записи сайта, frontmatter relations, YAML dictionaries и прямые PDF-ссылки из documents/certificates или Markdown body считаются доверенными.
 - draft: true исключается из публичного knowledge corpus; остальные записи автоматически индексируются.
 - Никаких ручных approval, semantic review или отдельного подтверждения PDF.
 - Смысл связи определяется полем источника. Импортированная связь считается достоверной именно в значении этого поля, но не должна переименовываться в более сильное отношение без прямого основания.
@@ -63,7 +63,7 @@ Unknown additive data не должно пропадать молча. Несо�
 
 ### 5. PDF и Support Catalog
 
-- Любая PDF-ссылка из доверенного documents/certificates автоматически попадает в Support Catalog.
+- Любая прямая PDF-ссылка из non-draft content сайта — из documents/certificates или Markdown body — автоматически попадает в Support Catalog с owner link на исходную запись.
 - Файл скачивается с configured trusted origin/path allowlist; отдельного approval нет.
 - Новая ссылка или новый bytes hash запускает fetch и extraction автоматически.
 - Несколько owners сохраняются для одного документа.
