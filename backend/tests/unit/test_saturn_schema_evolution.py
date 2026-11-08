@@ -131,9 +131,8 @@ class SaturnSchemaEvolutionTests(unittest.TestCase):
             commit_sha=COMMIT_A, tree_sha=TREE_A, schema_inventory=inventory(),
             file_revisions=(file("src/content/products/a.md"),),
             adapter_version="adapter/0.1", mapping_version="mapping/0.1")
-        forged = replace(manifest, tree_sha=TREE_B)
         with self.assertRaises(ValueError):
-            forged.__post_init__()
+            replace(manifest, tree_sha=TREE_B)
 
     def test_sync_plan_initial_and_incremental(self):
         schema = inventory()
