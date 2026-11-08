@@ -1,5 +1,13 @@
 # Передача контекста
 
+## Site-specific consultant package — 2026-11-08
+
+Новая согласовательная документация для конкретного сайта МНПП «Сатурн»: [docs/site-specific/README.md](site-specific/README.md). В пакете: подробное ТЗ, архитектура с тремя каналами источников, точная карта двух существующих поисков сайта, план реализации, вопросы для ИТ и критерии приёмки.
+
+Жёсткая граница: UkWood/Saturn-Main-Site остаётся строго read-only. Все дальнейшие изменения — только в UkWood/LLM-RAG-chat-bot. Текущие /search/ и /service/search/ не изменять. Первым практическим шагом после review документов является утверждение примерно 10 пилотных источников и допуск их точных версий; текущие 8 кандидатов остаются UNKNOWN/pending.
+
+Документы подготовлены в отдельной ветке docs/saturn-site-specific-brief-2026-11-08 и вынесены в draft PR #14. PR не слит. См. [PR #14](https://github.com/UkWood/LLM-RAG-chat-bot/pull/14).
+
 ## Planner V2 corrective revision — 2026-11-06
 
 Owner requested continuing after PR10 merge review found two Important blockers: discarded `нет` and protocol qualifiers. Corrections reject negation, unsupported Modbus/TCP/RTU qualification and modification requests outside supported lookup bindings before generation; unqualified protocol queries remain supported, V1 default unchanged. [Corrective report](stages/2026-11-06-planner-v2-corrections.md), [plan addendum](superpowers/plans/2026-11-06-typed-planner-v2.md). Final local verification5project+168backend PASS in both environments (base11optional skips/optional0), calibration14/14 positives20/20statuses without V1-positive regression; independent review fix pass complete. Current-head remote CI/merge outcome must be checked in PR10.
