@@ -50,6 +50,10 @@ class SaturnSiteContentAdapterTests(unittest.TestCase):
         self.assertEqual(entities[("products", "software-x")].entity_type, "Software")
         self.assertEqual(entities[("systems", "heating-system")].entity_type, "System")
         self.assertEqual(entities[("systems", "controllers")].entity_type, "Category")
+        self.assertEqual(entities[("systems", "implicit-system")].entity_type, "System")
+        self.assertEqual(entities[("systems", "unknown-kind")].entity_type, "SiteContent")
+        self.assertTrue(any(item.code == "unknown_entity_discriminator"
+                            and item.path.endswith("/unknown-kind.md") for item in package.issues))
         self.assertEqual(entities[("groups", "controllers")].entity_type, "Group")
         self.assertEqual(entities[("articles", "article-x")].entity_type, "Article")
         self.assertEqual(entities[("news", "news-x")].entity_type, "News")

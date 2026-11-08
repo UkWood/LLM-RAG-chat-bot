@@ -354,7 +354,11 @@ def _entity_type(collection: str, metadata: dict) -> tuple[str, str | None]:
             return "Software", None
         return "Device", None
     if collection == "systems":
-        kind = metadata.get("kind")
+        # The audited source schema declares .default("system"); apply it only
+        # when the field is absent, never when an explicit incompatible value exists.
+        if "kind" not in metadata:
+            return "System", None
+        kind = metadata["kind"]
         if kind == "system":
             return "System", None
         if kind == "category":
