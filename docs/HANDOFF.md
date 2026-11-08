@@ -3,7 +3,7 @@
 Дата: 2026-11-09  
 Текущая реализация: [PR #20](https://github.com/UkWood/LLM-RAG-chat-bot/pull/20), ветка `feature/saturn-site-content-adapter`  
 Основной репозиторий: [UkWood/LLM-RAG-chat-bot](https://github.com/UkWood/LLM-RAG-chat-bot)  
-Текущий main: \`223350c9f6f104b5b67aadd124bfc968f12f5dbf\`
+Текущий main: \`934c65e2bc11adf4c2b0b0e3b30717a02d7bb26e\`
 
 ## 1. Текущий статус
 
@@ -11,7 +11,8 @@
 - Текущий main: `934c65e2bc11adf4c2b0b0e3b30717a02d7bb26e`.
 - PR #20 открыт, не слит: [trusted Saturn Site Content Adapter](https://github.com/UkWood/LLM-RAG-chat-bot/pull/20).
 - PR #20 реализует pure/offline адаптер для уже полученного pinned snapshot. GitHub snapshot provider, PDF, retrieval, LLM/API/UI и deployment ещё не реализованы.
-- Финальный push CI PR #20 на commit `b73617ab176edb0a48aa2d24b176d6a18feefb49`: SUCCESS — 204 теста, 11 существующих optional skips; ONNX contracts SUCCESS.
+- Кодовый commit `b73617ab176edb0a48aa2d24b176d6a18feefb49` прошёл push CI #205: SUCCESS — 204 теста, 11 существующих optional skips; ONNX contracts SUCCESS.
+- После проверенного кодового commit добавлены только status/handoff документы. Перед review проверить CI на актуальном PR head.
 - PR #20 ожидает review владельца. Merge не выполнялся.
 
 ## 2. Решения владельца — обязательны

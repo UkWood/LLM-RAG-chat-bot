@@ -30,7 +30,7 @@ Test file: `backend/tests/unit/test_saturn_site_adapter.py`. Test fixtures: `bac
 
 ## Verification
 
-Final head: `b73617ab176edb0a48aa2d24b176d6a18feefb49`.
+Implementation commit tested by CI: `b73617ab176edb0a48aa2d24b176d6a18feefb49`. Handoff/status documentation commits followed; the latest PR head must also have green checks before merge.
 
 GitHub Actions [run #205](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42531172049): **SUCCESS**.
 
