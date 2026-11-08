@@ -1,5 +1,13 @@
 # Состояние проекта
 
+## Saturn technical consultant — source trust and schema evolution accepted (2026-11-09)
+
+Owner confirmed: all non-draft content, entity relations and linked PDFs in UkWood/Saturn-Main-Site are trusted; no manual source/relation/PDF approval workflow. The site is under development, so the adapter must discover and handle changes to collections, fields, filters/specifications, dictionaries, pages, routes and documents.
+
+ADR-0013 is accepted. Source hashes/commits remain for reproducibility and citations only. New/changed/deleted content syncs automatically. Unknown additive fields/collections are preserved as generic evidence; incompatible schema changes disable stale typed projections and produce drift reports until mapping is updated. PDF links from the trusted catalog are automatically fetched/re-extracted under technical host/path and SSRF protections. Cloud provider egress remains a separate runtime decision.
+
+The next implementation stage is canonical contracts and schema-evolution contracts, followed by the read-only Site Content Adapter. No changes are permitted in Saturn-Main-Site.
+
 ## Planner V2 corrective revision — 2026-11-06
 
 Owner requested continuing after PR10 merge review found two Important blockers: discarded `нет` and protocol qualifiers. Corrections reject negation, unsupported Modbus/TCP/RTU qualification and modification requests outside supported lookup bindings before generation; unqualified protocol queries remain supported, V1 default unchanged. [Corrective report](stages/2026-11-06-planner-v2-corrections.md), [plan addendum](superpowers/plans/2026-11-06-typed-planner-v2.md). Final local verification5project+168backend PASS in both environments (base11optional skips/optional0), calibration14/14 positives20/20statuses without V1-positive regression; independent review fix pass complete. Current-head remote CI/merge outcome must be checked in PR10.

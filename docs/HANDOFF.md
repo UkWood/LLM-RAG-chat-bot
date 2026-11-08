@@ -1,5 +1,31 @@
 # Передача контекста
 
+## Saturn technical consultant — current handoff 2026-11-09
+
+### Owner decisions now accepted
+
+- All non-draft site records, declared relations, dictionaries and PDFs linked from the trusted Support Catalog are trusted. No manual content, relation or per-PDF verification/approval.
+- Saturn-Main-Site remains under development. The adapter must handle additions, updates, deletions and schema evolution without silently dropping unknown data.
+- Source commit/hash are retained for traceability, deterministic snapshots and citations, not as approval gates.
+- Cloud provider egress remains separate from source trust.
+
+### Schema evolution behavior
+
+Every sync pins current main commit, discovers all src/content collections, compares content.config.ts and dictionary fingerprints, processes changed records and detects schema drift. Unknown fields and collections are retained as generic labelled evidence. Changed field types disable stale typed mapping and generate a drift report. PDFs linked from trusted catalog entries are fetched/re-extracted automatically under technical allowlist/SSRF protections. Snapshot publication is atomic.
+
+### Approved architecture
+
+ADR-0012 and ADR-0013 are accepted. Three adapters remain separate: Site Content, Support Catalog, External Document. Canonical Entity/Fact/Relation evidence is kept separate from text projections and PDF passages. Existing search on the site is not modified.
+
+### Next implementation step
+
+Build canonical contracts and schema-evolution contracts in UkWood/LLM-RAG-chat-bot, preserving existing synthetic test paths. Then implement dynamic read-only Site Content Adapter. No real source writes, cloud calls or deployment.
+
+### Collaboration rules
+
+ChatGPT is the primary workspace for architecture, requirements, implementation planning and review. Codex receives only bounded coding tasks with exact files, tests and PASS/FAIL criteria. No autonomous architecture changes, merge or deployment.
+
+
 ## Site-specific consultant package — 2026-11-08
 
 Новая согласовательная документация для конкретного сайта МНПП «Сатурн»: [docs/site-specific/README.md](site-specific/README.md). В пакете: подробное ТЗ, архитектура с тремя каналами источников, точная карта двух существующих поисков сайта, план реализации, вопросы для ИТ и критерии приёмки.

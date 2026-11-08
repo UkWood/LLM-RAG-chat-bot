@@ -1,7 +1,7 @@
 # Целевая архитектура AI Technical Consultant для Сатурна v0.2
 
 Дата: 2026-11-08  
-Статус: **PROPOSED — требуется утверждение владельцем**  
+Статус: **ACCEPTED — owner-approved source trust and schema evolution model**  
 Основание: site-specific v0.1 и ADR-0011. Это уточнение интеграции, не замена фундаментального ТЗ.
 
 ## 1. Архитектурная цель
@@ -89,236 +89,124 @@ flowchart TB
 
 ### 3.1. Site Content Adapter
 
-Вход:
-- точный Git commit Saturn-Main-Site;
-- выбранные Markdown-файлы коллекций;
-- schema definition из src/content.config.ts;
-- необходимые YAML dictionaries из src/data/;
-- manifest с commit, path и SHA-256.
+Вход: read-only Git snapshot UkWood/Saturn-Main-Site@main, все collections под src/content/, src/content.config.ts и YAML dictionaries под src/data/.
 
-Коллекции, описанные в read-only inventory v0.1:
-- products;
-- systems;
-- groups;
-- articles;
-- news;
-- pages.
+Adapter обнаруживает collections и файлы динамически, а не полагается на жёсткий список из шести текущих коллекций. Известные типы mapping:
+- products → Product/Device; software — subtype Product по текущей классификации;
+- systems с kind=system → System;
+- systems с kind=category → Category;
+- groups → CatalogGroup;
+- articles/news → Article/News;
+- pages с kind=solution/section → Solution/SectionPage; остальные — Page.
 
-Adapter должен учитывать фактическую схему конкретного pinned commit, а не предполагать, что схема не менялась.
+Сохраняются все frontmatter fields, body, references, specs, units, qualifiers, documents и certificates. Известные поля получают typed projection; неизвестные поля сохраняются в raw_fields и индексируются как labelled field/value evidence. Неизвестная collection импортируется как generic SiteContent, не теряя содержимое.
 
-Особенности mapping:
-- products — изделия и оборудование;
-- software — семантический тип записи products, обычно определяемый через группу каталога, а не отдельная Astro-коллекция;
-- systems.kind=system — инженерная система;
-- systems.kind=category — каталоговая категория, не инженерная система;
-- pages.kind=solution — типовое решение;
-- draft=true — не допускается в knowledge package;
-- status, notice и иные технические qualifiers сохраняются как исходные значения;
-- состав системы может быть получен из обратных ссылок products.systems, но каждая derived inverse relation должна хранить ссылку на исходное поле продукта.
-
-Для products должны сохраняться, если присутствуют в pinned schema:
-title, name, article, group, systems, status, notice, interfaces, protocols, ip, temperature_c, mass_kg, dimensions_mm, lifetime_years, power, specs, inputs, outputs, features, connectors, documents, certificates, related, variant_of, software, articles, solutions и body.
-
-Это перечень известных полей из inventory v0.1, а не разрешение жёстко зашивать все поля без проверки schema. Неизвестные поля нельзя молча терять: adapter должен либо сохранить их в controlled extension area, либо сообщить validation warning/error по согласованному правилу.
+draft: true исключается из публичного corpus. Отсутствующее поле и schema default не являются отрицательным утверждением. Новые значения dictionaries и новые spec names не должны требовать изменения кода.
 
 ### 3.2. Support Catalog Adapter
 
-Вход:
-- approved Site Content package;
-- documents и certificates из разрешённых products и systems;
-- точные исходные URL и метаданные документа.
+Автоматически собирает documents/certificates из products/systems и обнаруживает прямые PDF-ссылки в Markdown body всех non-draft collections. Для каждой ссылки сохраняет owner page/product/system и точный source locator. Сохраняет:
+- title, kind, version/date;
+- original URL и resolved canonical URL;
+- всех owners и точные source field paths;
+- commit/blob provenance.
 
-Для каждой записи документа сохранять:
-- стабильный document_id;
-- title;
-- document kind/type;
-- version/date, если указаны;
-- support section/category;
-- original URL из source field;
-- canonical URL, полученный по проверенному правилу site asset origin;
-- всех owners (product/system), включая canonical URL карточек;
-- source revision и точный field path каждого owner link.
-
-Один файл может иметь несколько владельцев. Deduplication по URL не должна удалять owner relationships.
-
-Support Catalog — самостоятельный metadata channel. Он позволяет найти файл, его тип и владельцев, но не подтверждает содержание PDF и не должен превращаться в технический claim о характеристиках изделия.
-
-Нельзя вручную собирать URL из предполагаемой структуры каталогов. Нужно сохранять исходную ссылку и использовать проверенную логику разрешения asset origin, применявшуюся сайтом на pinned revision.
+Один документ может иметь несколько owners. Дедупликация не должна терять metadata или owner links. Metadata lookup остаётся отдельным типом результата и не подменяет текст PDF.
 
 ### 3.3. External Document Adapter
 
-Вход:
-- отдельная approved revision Support Catalog entry;
-- exact URL;
-- per-file approval;
-- allowlist host/path и лимиты fetch.
+Все прямые PDF-ссылки из доверенного сайта, доступные по configured HTTPS host/path allowlist, автоматически загружаются и обрабатываются. Сюда входят structured documents/certificates и ссылки в Markdown body. Отдельный manual approval не требуется.
 
-Правила:
-- никаких произвольных URL из пользовательского вопроса;
-- никаких массовых обходов старого файлового сервера;
-- никаких скачиваний всех ссылок, найденных crawler;
-- PDF допускается только после отдельного approval конкретного файла/revision;
-- source page approval не наследуется PDF;
-- исходные bytes сохраняются с SHA-256;
-- при изменении bytes на прежнем URL возникает новая revision и требуется новый approval;
-- redirect по умолчанию запрещён; если нужен, допускается только явно проверенный переход внутри утверждённого origin/path scope;
-- DNS/private/loopback/link-local targets должны блокироваться;
-- лимиты размера, времени, числа страниц и типа содержимого задаются конфигурацией;
-- ошибки fetch и extraction не превращаются в пустой корректный документ.
+Для каждого файла сохраняются URL, bytes SHA-256, page count, parser version, extraction state и физические страницы. Новый hash запускает re-extraction. Несколько владельцев сохраняются.
 
-Извлечение должно сохранять физические номера страниц. Для таблиц, схем и сканов формируется extraction quality report. Если текстовое извлечение не позволяет надёжно подтвердить значения, документ помечается OCR_REQUIRED или MANUAL_REVIEW_REQUIRED и не используется как положительный evidence до проверки.
+Технические ограничения остаются обязательными: HTTPS, allowlisted hosts/paths, запрет user-controlled fetch, SSRF/redirect protection, size/time/page limits, изоляция parser. Ошибка fetch/extraction оставляет metadata в каталоге, но не создаёт фиктивный PDF text evidence.
 
 ## 4. Каноническая модель знаний
 
-Модель должна отделять идентичность сущности от версии источника, а факты и связи — от текстового представления для поиска.
+Модель отделяет идентичность сущности от версии источника, а факты и связи — от текстового представления для поиска.
 
 ### 4.1. SourceIdentity и SourceRevision
 
 SourceIdentity — стабильная логическая идентичность источника.
 
-SourceRevision — конкретная неизменяемая версия, к которой относится approval:
-- source_id;
-- revision_id;
-- source_kind;
-- source commit + path для Git content либо exact URL + fetched bytes SHA-256 для external document;
-- content hash;
-- title/media type;
-- observed_at;
-- approval_state;
-- visibility;
-- allowed_usage;
-- approval_id, approved_by, approved_at;
-- policy_revision;
-- publication_verified;
-- parser/extractor version, если применимо.
+SourceRevision — неизменяемая версия для воспроизводимости:
+- source_id, revision_id, source_kind;
+- repository, branch, exact Git commit + path + blob SHA либо exact URL + fetched bytes SHA-256;
+- content hash, title/media type, observed_at;
+- trust-policy version и parser/extractor version.
 
-Approval действует только на точную revision/hash. Ни одинаковый URL, ни одинаковый title, ни прежний approval не дают права использовать изменившееся содержимое.
+SourceRevision не содержит approval_state, approved_by или approved_at. Новая revision доверенного источника автоматически становится кандидатом следующего sync; hash нужен для traceability, а не для допуска.
 
 ### 4.2. Entity
 
 Entity описывает объект предметной области:
-- entity_id;
-- entity_type;
+- entity_id, entity_type;
 - title/name/designation;
 - canonical_url;
-- source_id и revision_id;
+- source_id/revision_id;
 - source collection/path;
 - source status и qualifiers.
 
-Поддерживаемые типы: Device/Product, System, Category, Software, Group, Article, Solution, News, Page.
-
-Software может быть semantic subtype Product. Это не означает появления новой source collection.
+Типы: Device/Product, System, Category, Software, Group, Article, Solution, News, Page и generic SiteContent. Software может быть semantic subtype Product.
 
 ### 4.3. Fact
 
-Fact — отдельное утверждение, полученное из конкретного поля источника:
-- fact_id;
-- subject_entity_id;
-- predicate/field_path;
-- raw_value — исходное значение без потери форматирования;
-- normalized_value — optional typed projection;
-- unit;
-- qualifiers/conditions;
-- source_id/revision_id;
-- provenance field path;
+Fact — утверждение из конкретного поля источника:
+- fact_id, subject_entity_id, predicate/field_path;
+- raw_value без потери исходного представления;
+- optional normalized_value, unit, qualifiers/conditions;
+- source_id/revision_id, field path;
 - parser/projection version.
 
-Нормализация не должна заменять raw_value. Например, числовое значение, единица, диапазон, условие, отрицание или оговорка должны оставаться различимыми. Строки specs и канонические поля не сливаются без сохранения происхождения.
+Нормализация не заменяет raw_value. Строки specs, единицы, диапазоны, условия и оговорки сохраняются.
 
 ### 4.4. Relation
 
-Relation — только явно заданная связь:
-- relation_id;
-- subject_entity_id;
-- predicate;
-- object_entity_id;
-- source_id/revision_id;
-- source field path;
+Relation хранит source-declared directed relation:
+- relation_id, subject_entity_id, predicate, object_entity_id;
+- source_id/revision_id, source field path;
 - optional qualifiers.
 
-Разрешены только relation mappings, подтверждённые реальной schema сайта: systems, related, variant_of, software, articles, solutions и другие проверенные поля.
+Обратные relations — вычисляемые projections со ссылкой на исходную связь. Смысл связи следует полю сайта; нельзя подменять его более сильным predicate или создавать новую инженерную связь по co-occurrence.
 
-Обратные relations допускаются как вычисляемые проекции, но обязаны указывать исходную directed relation. Совместимость, назначение, состав, принадлежность или поддержка протокола не выводятся из совместного упоминания в тексте.
+### 4.5. SupportDocument, DocumentRevision и EvidenceUnit
 
-### 4.5. SupportDocument и DocumentRevision
+SupportDocument содержит title, kind, version/date, URL и всех owners.
 
-SupportDocument — запись каталога: title, kind, version, URL, support section и owners.
+DocumentRevision содержит exact URL, bytes SHA-256, physical page count, extraction state/quality, extracted text hash и parser version. Approval state отсутствует.
 
-DocumentRevision — отдельные fetched bytes и результат extraction:
-- exact URL;
-- bytes SHA-256;
-- physical page count;
-- extraction state/quality;
-- extracted text hash;
-- parser version;
-- approval на конкретный revision.
+EvidenceUnit — адресуемое доказательство: structured fact, relation, site passage, PDF passage или metadata match. Metadata match не используется как доказательство содержимого PDF.
 
-Metadata record и extracted document revision — разные объекты с разными разрешениями.
+Citation формирует backend: canonical page URL или original PDF URL, source revision/hash, field path/heading и физическая PDF page. LLM не назначает citation metadata.
 
-### 4.6. EvidenceUnit и Citation
+## 5. Source trust, revision traceability и schema evolution
 
-EvidenceUnit — адресуемое доказательство одного из типов:
-- structured fact;
-- explicit relation;
-- entity field/description;
-- PDF/text passage с heading/page;
-- approved support metadata для поиска документа.
+### 5.1. Trust root
 
-Текстовая projection EvidenceUnit может индексироваться BM25/vector, но при retrieval должен возвращаться canonical evidence pointer.
+UkWood/Saturn-Main-Site branch main — доверенный источник. Все non-draft records, declared relations, dictionaries и прямые PDF links из documents/certificates или Markdown body автоматически допускаются к local indexing/local generation. Никаких per-source, per-relation или per-PDF approval workflow нет.
 
-Citation формирует backend, а не LLM. В зависимости от evidence type она содержит:
-- source title;
-- canonical page URL либо original document URL;
-- source revision/content hash;
-- field path/section;
-- физическую PDF page;
-- document/entity owner references.
+### 5.2. Revision traceability
 
-LLM не может самостоятельно назначать source ID, URL, page, version или citation number.
+Каждый SourceRevision содержит repository, branch, exact commit, path, Git blob SHA, content SHA-256, collection/slug, field path и canonical URL. Для PDF сохраняются original URL, bytes SHA-256, parser version и physical page locators.
 
-## 5. Source policy и обновление revisions
+Изменение hash запускает автоматическую обработку новой версии; не переводит её в pending и не требует ручного допуска.
 
-### 5.1. Default deny
+### 5.3. Schema drift
 
-Новая запись по умолчанию:
-- visibility=UNKNOWN;
-- approval_state=pending;
-- allowed_usage=[];
-- cloud_allowed=false.
+На каждой sync сравниваются Git tree, src/content.config.ts, collections, observed field inventory и fingerprints dictionaries.
 
-Для каждого source revision отдельно разрешаются:
-- local_index;
-- local_generate;
-- cloud_generate.
+- Content add/update/delete — автоматически отражается в следующем snapshot.
+- Новые поля, collections и dictionary values сохраняются в generic representation и labelled evidence.
+- Новые collections получают generic SiteContent mapping до появления специализированного mapping.
+- Если тип/структура поля изменились, старый typed mapping для этого поля отключается; raw value сохраняется и появляется drift event.
+- Обновление parser/mapping — обычная задача разработки в AI-репозитории, покрываемая fixtures и contract tests.
+- Новый snapshot публикуется атомарно после проверки целостности. Частичный build не становится active.
 
-Точные имена и обратная совместимость с текущими registry fields проверяются при проектировании contracts. Семантика должна оставаться явной и fail-closed.
+### 5.4. Runtime policy
 
-### 5.2. Изменение источника
+local_index и local_generate разрешены для доверенного non-draft сайта и успешно извлечённых PDF. cloud_generate остаётся отдельным egress permission для выбранного provider и не является source approval.
 
-Если изменился Git commit/path content hash или PDF bytes hash:
-1. создаётся новая SourceRevision;
-2. новая revision получает pending;
-3. прежняя approval не наследуется;
-4. новая revision не входит в active snapshot до approval;
-5. прежняя revision сохраняется в audit storage, но не обслуживает ответы, если источник больше не считается актуальным;
-6. явный revoke немедленно блокирует дальнейшее использование старой revision через live policy check.
-
-Обнаружение изменений можно автоматизировать. Approval — нет.
-
-### 5.3. Snapshot promotion
-
-Knowledge Snapshot immutable и содержит:
-- точный список source revisions;
-- policy revision;
-- adapter/parser/chunker versions;
-- entity/fact/relation manifests;
-- catalog/document manifests;
-- BM25/Qdrant descriptors;
-- hashes всех существенных artifacts.
-
-Build выполняется в отдельной staging area. Snapshot становится active только после полной проверки manifest, approvals и indexes. Ошибка сборки не публикует частичный snapshot.
-
-При этом live revocation действует независимо от snapshot. Старый snapshot не даёт права продолжать выдавать отозванный источник. Health/staleness policy должна блокировать ответ, если нет актуального проверенного состояния.
+Explicit operational block/revoke может временно выключить fetch или использование источника по причинам безопасности/эксплуатации, но не меняет оценку достоверности его содержимого.
 
 ## 6. Retrieval architecture
 
@@ -407,12 +295,12 @@ Build выполняется в отдельной staging area. Snapshot ста
 
 ## 8. Provider boundary
 
-Provider остаётся заменяемым интерфейсом. PR #13 даёт полезную OpenAI-compatible реализацию и строгую обработку ошибок, но архитектура не выбирает модель.
+Provider остаётся заменяемым интерфейсом. PR #13 даёт полезную OpenAI-compatible реализацию, но архитектура не выбирает модель.
 
 До отдельного решения:
 - Fake provider используется для contract tests;
-- реальные внешние вызовы выполняются только при наличии разрешённого runtime, approved public evidence и явного разрешения владельца;
-- cloud generation требует cloud_generate для каждой передаваемой revision;
+- реальные внешние вызовы выполняются только при наличии разрешённого runtime и явного разрешения владельца на передачу данных выбранному provider;
+- cloud_generate — runtime/data-egress permission, а не per-source approval;
 - API key хранится только в runtime secrets/environment;
 - модель, endpoint, region, retention и budget согласуются отдельно;
 - локальная модель рассматривается как отдельный deployment option, не как автоматический fallback.
@@ -423,7 +311,7 @@ Provider остаётся заменяемым интерфейсом. PR #13 д
 
 - Git access к Saturn-Main-Site — read-only на уровне credentials.
 - Adapter не содержит Git write APIs и не запрашивает write scopes.
-- External fetcher получает только exact approved URLs.
+- External fetcher получает только точные URL из доверенного Support Catalog и configured host/path allowlist.
 - User input никогда не становится URL для server-side fetch.
 - Redirects, DNS rebinding, private IP, oversized files, decompression/parser abuse и timeouts закрываются на fetch/parser boundary.
 - PDF parser работает изолированно.
@@ -443,7 +331,7 @@ Provider остаётся заменяемым интерфейсом. PR #13 д
 - финальную схему SQLite/JSON persistence;
 - production hosting, API domain и reverse proxy;
 - latency/concurrency targets до ответа ИТ;
-- окончательный список примерно 10 pilot source objects;
-- значения source approvals и allowed_usage.
+- состав ограниченного pilot corpus;
+- runtime permissions и provider data-egress settings.
 
 Эти решения принимаются по реальным входным данным, benchmark и отдельному решению владельца.
