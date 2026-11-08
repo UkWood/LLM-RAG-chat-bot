@@ -20,7 +20,7 @@ Read:
 - docs/decisions/0013-saturn-relation-provenance.md
 - docs/stages/2026-11-08-saturn-read-only-schema-audit.md
 
-Branch: docs/saturn-readonly-schema-audit. PR is to be opened as Draft for owner review. ADR-0013 is proposed, not accepted.
+Branch: docs/saturn-readonly-schema-audit. Draft [PR #17](https://github.com/UkWood/LLM-RAG-chat-bot/pull/17) is open for owner review. ADR-0013 is proposed, not accepted.
 
 ### Next step
 
