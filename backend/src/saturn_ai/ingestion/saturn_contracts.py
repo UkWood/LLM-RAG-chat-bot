@@ -3,7 +3,7 @@
 These are production-facing contracts. They intentionally contain no per-source
 approval fields: source trust comes from the configured read-only repository root.
 """
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from hashlib import sha256
 import json
 import re
@@ -199,7 +199,7 @@ class PdfRevision:
         for field in ("document_id", "url", "parser_version"):
             _required_text(getattr(self, field), field)
         _check_hash(self.bytes_sha256, _SHA256, "PDF bytes SHA-256")
-        if self.extraction_state not in {"discovered", "fetched", "extracted", "failed"}:
+        if self.extraction_state not in {"fetched", "extracted", "failed"}:
             raise ValueError("Invalid PDF extraction state")
         if self.page_count is not None and (type(self.page_count) is not int or self.page_count < 0):
             raise ValueError("Invalid PDF page count")
@@ -293,16 +293,20 @@ class SchemaInventory:
 
     def __post_init__(self):
         _check_hash(self.schema_source_sha256, _SHA256, "schema source SHA-256")
-        if type(self.collections) is not tuple or tuple(sorted(set(self.collections))) != self.collections:
-            raise ValueError("Collections must be unique and sorted")
-        if type(self.fields) is not tuple or tuple(sorted(
-                self.fields, key=lambda x: (x.collection, x.field_path))) != self.fields:
-            raise ValueError("Schema fields must be sorted")
+        if (type(self.collections) is not tuple or
+                any(not isinstance(name, str) or not name.strip() for name in self.collections) or
+                tuple(sorted(set(self.collections))) != self.collections):
+            raise ValueError("Collections must be unique, non-empty and sorted")
+        if (type(self.fields) is not tuple or
+                any(not isinstance(item, SchemaField) for item in self.fields) or
+                tuple(sorted(self.fields, key=lambda x: (x.collection, x.field_path))) != self.fields):
+            raise ValueError("Schema fields must be sorted SchemaField values")
         field_keys = [(f.collection, f.field_path) for f in self.fields]
         if len(field_keys) != len(set(field_keys)):
             raise ValueError("Duplicate schema field")
-        if type(self.dictionaries) is not tuple or tuple(sorted(
-                self.dictionaries, key=lambda x: x.path)) != self.dictionaries:
+        if (type(self.dictionaries) is not tuple or
+                any(not isinstance(item, DictionaryFingerprint) for item in self.dictionaries) or
+                tuple(sorted(self.dictionaries, key=lambda x: x.path)) != self.dictionaries):
             raise ValueError("Dictionary fingerprints must be sorted")
         dict_paths = [d.path for d in self.dictionaries]
         if len(dict_paths) != len(set(dict_paths)):
@@ -359,12 +363,28 @@ class SiteSyncManifest:
         _required_text(self.adapter_version, "adapter_version")
         _required_text(self.mapping_version, "mapping_version")
         _check_hash(self.snapshot_id, _SHA256, "snapshot ID")
-        if type(self.file_revisions) is not tuple or tuple(sorted(
-                self.file_revisions, key=lambda x: x.path)) != self.file_revisions:
-            raise ValueError("File revisions must be sorted")
+        if not isinstance(self.schema_inventory, SchemaInventory):
+            raise ValueError("Schema inventory is required")
+        if (type(self.file_revisions) is not tuple or
+                any(not isinstance(item, SiteFileRevision) for item in self.file_revisions) or
+                tuple(sorted(self.file_revisions, key=lambda x: x.path)) != self.file_revisions):
+            raise ValueError("File revisions must be sorted SiteFileRevision values")
         paths = [item.path for item in self.file_revisions]
         if len(paths) != len(set(paths)):
             raise ValueError("Duplicate source file path")
+        payload = {
+            "repository": self.repository,
+            "branch": self.branch,
+            "commit_sha": self.commit_sha,
+            "tree_sha": self.tree_sha,
+            "schema_inventory": asdict(self.schema_inventory),
+            "file_revisions": [asdict(item) for item in self.file_revisions],
+            "adapter_version": self.adapter_version,
+            "mapping_version": self.mapping_version,
+        }
+        expected_snapshot_id = stable_id("saturn-site-snapshot-v1", payload)
+        if self.snapshot_id != expected_snapshot_id:
+            raise ValueError("Snapshot ID does not match manifest contents")
 
 
 @dataclass(frozen=True)
@@ -376,5 +396,6 @@ class SiteSyncPlan:
     def __post_init__(self):
         if not isinstance(self.manifest, SiteSyncManifest) or not isinstance(self.file_changes, FileChangeSet):
             raise ValueError("Invalid sync plan")
-        if type(self.schema_drift) is not tuple:
-            raise ValueError("Schema drift events must be immutable")
+        if (type(self.schema_drift) is not tuple or
+                any(not isinstance(item, SchemaDriftEvent) for item in self.schema_drift)):
+            raise ValueError("Schema drift events must be immutable SchemaDriftEvent values")
