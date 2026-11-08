@@ -45,11 +45,11 @@ pages.kind различает solution и section; остальные pages — 
 
 ## 3. Support Catalog и PDF
 
-Документы обнаруживаются в documents и certificates у products/systems. Сохранять title, kind, url, version, date (если есть) и все owner links.
+Документы обнаруживаются в documents и certificates у products/systems; прямые PDF-ссылки также извлекаются из Markdown body всех non-draft collections. Сохранять title, kind, url, version, date (если есть), source locator и все owner links.
 
 Один файл может иметь нескольких owners. Дедупликация не должна терять их metadata.
 
-PDF, перечисленные в доверенных записях, автоматически обрабатываются по configured HTTPS host/path allowlist. Для каждого файла сохраняются URL, bytes hash, parser version, page count и физические номера страниц. Новый hash запускает автоматическое повторное извлечение. Отдельного approval нет.
+Все прямые PDF-ссылки из доверенных non-draft записей автоматически обрабатываются по configured HTTPS host/path allowlist. Для каждого файла сохраняются URL, bytes hash, parser version, page count и физические номера страниц. Новый hash запускает автоматическое повторное извлечение. Отдельного approval нет.
 
 Ошибки сетевого доступа и extraction — технические ошибки: metadata остаётся доступной, но несуществующий/неизвлечённый текст не представляется как evidence. Ограничения fetch/SSRF и sandbox parser — меры безопасности, не проверка достоверности.
 
