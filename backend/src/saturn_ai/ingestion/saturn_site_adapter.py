@@ -17,7 +17,6 @@ from yaml.tokens import AliasToken, AnchorToken, TagToken
 from .saturn_contracts import (
     ADAPTER_VERSION,
     MAPPING_VERSION,
-    DictionaryFingerprint,
     SiteEntity,
     SiteFact,
     SiteFileRevision,
@@ -290,9 +289,15 @@ def _validate_yaml_value(value, *, depth=0, budget=None):
     raise ValueError(f"Unsupported YAML value type: {type(value).__name__}")
 
 
-def _load_yaml(text: str, *, byte_count: int, require_mapping: bool):
-    if byte_count > MAX_FRONTMATTER_BYTES:
-        raise ValueError("YAML frontmatter size limit exceeded")
+def _load_yaml(
+    text: str,
+    *,
+    byte_count: int,
+    require_mapping: bool,
+    max_bytes: int = MAX_FRONTMATTER_BYTES,
+):
+    if byte_count > max_bytes:
+        raise ValueError("YAML input size limit exceeded")
     try:
         for count, token in enumerate(yaml.scan(text, Loader=StrictSafeLoader), start=1):
             if count > MAX_YAML_TOKENS:
@@ -540,6 +545,7 @@ def adapt_snapshot(
                 raw_text,
                 byte_count=len(item.content),
                 require_mapping=False,
+                max_bytes=MAX_DICTIONARY_BYTES,
             )
             raw_json = canonical_json(value)
         except (UnicodeDecodeError, ValueError) as exc:

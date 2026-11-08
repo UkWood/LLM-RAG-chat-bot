@@ -222,5 +222,16 @@ class SaturnSiteContentAdapterTests(unittest.TestCase):
             adapt_snapshot(make_snapshot(files))
 
 
+    def test_dictionary_size_limit_is_independent_from_frontmatter_limit(self):
+        files = fixture_file_map()
+        large_dictionary = b"payload: " + (b"x" * 300_000) + b"\n"
+        replace_file(files, "src/data/large.yaml", large_dictionary)
+        package = adapt_snapshot(make_snapshot(files))
+        dictionary = next(item for item in package.dictionaries if item.path == "src/data/large.yaml")
+        self.assertIsNotNone(dictionary.raw_value_json)
+        self.assertEqual(len(json.loads(dictionary.raw_value_json)["payload"]), 300_000)
+        self.assertTrue(package.ready_for_promotion)
+
+
 if __name__ == "__main__":
     unittest.main()
