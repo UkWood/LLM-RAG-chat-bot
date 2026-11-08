@@ -2,11 +2,13 @@
 
 Отдельный технический консультант: ответы только по разрешённым материалам с источниками и отказом при недостатке доказательств. Статический интерфейс Astro, отдельный FastAPI backend, локальная KB и сменный LLM provider.
 
-**Стадия:** M1/ingestion/snapshot baseline слиты в main. Добавлены local indexes и measured BM25: Top-5 source hit17/20=85%; lexical target100% пока не пройден. Actual E5 experiment: dense18/20=90%, hybrid17/20=85%; Actual local reranker достиг20/20 и evidence recall100% на том же synthetic наборе; bounded grounded pipeline измерен:8/20 положительных ответов, обязательные отказ/уточнение10/10; grounding target не пройден. Реальные источники пока не допущены к индексации/облачной отправке. Полная production-архитектура остаётся proposed.
+**Стадия на 2026-11-08:** фундаментальные site-specific документы для консультанта МНПП «Сатурн» согласованы владельцем и слиты в main (PR #14, merge `3cd6787`). Текущий main содержит M1/offline ingestion/snapshot/retrieval/grounding foundation, но полный прототип не принят по качеству. Измерения на synthetic corpus: lexical17/20, dense18/20, hybrid17/20; local reranker20/20 на том же наборе; bounded grounded pipeline8/20 положительных ответов, отказ/уточнение10/10. Реальные источники Сатурна не допущены к индексации или cloud generation. PR #13 — WIP grounded RAG с human answer review pending; PR #12 — V3 эксперимент, blind quality target failed. Оба PR остаются draft и не входят в main.
 
 ## Память проекта
 
-- [Продолжение в новой сессии](docs/HANDOFF.md)
+- [Старт новой сессии ChatGPT](docs/SESSION_START.md)
+- [Правила совместной работы ChatGPT / Codex](docs/CHATGPT_WORKING_AGREEMENT.md)
+- [Продолжение и история передачи контекста](docs/HANDOFF.md)
 
 - [Текущее состояние и следующий шаг](docs/PROJECT_STATUS.md)
 - [Согласованные критерии прототипа: offline / real sample](docs/acceptance/prototype-v1.md)
