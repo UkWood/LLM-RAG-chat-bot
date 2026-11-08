@@ -18,6 +18,8 @@ Audit of the actual source schema and migration scripts found:
 - groups.system is a group-to-page/catalog mapping, not necessarily a technical relation.
 - industries.yaml labels its mappings preliminary.
 - The current Markdown records do not contain a reliable field-level reviewed_by or relation_origin marker.
+- systems.summary is generated from the first suitable paragraph; applications comes from a hard-coded mapping; documents are extracted from Markdown links and their kind/version are heuristically assigned.
+- pages.kind=solution and images, plus the groups on the resheniya page, are created by a migration script; groups.system is assigned by a mapping or slug match.
 
 The existing check-content.mjs checks reference existence and controlled vocabulary, not engineering truth.
 
@@ -78,6 +80,8 @@ Examples:
 A predicate such as compatible_with, implements, contains, required_for, supports_protocol or approved_for_use requires direct evidence or an explicit reviewed assertion. It must not be synthesized from co-occurrence or title mentions.
 
 ### 4. Preserve origin for derived facts
+
+Also classify systems.applications as taxonomy_mapping unless a separate human-reviewed manifest exists. Classify generated systems.summary as summary_projection; inferred document kind/version as heuristic_extraction; generated page groups as navigation_structure. A current source field alone is not proof that a human has reviewed it.
 
 For canonical facts, store:
 - raw source field/value;
