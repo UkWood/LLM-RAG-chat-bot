@@ -105,7 +105,7 @@ draft: true исключается из публичного corpus. Отсут�
 
 ### 3.2. Support Catalog Adapter
 
-Автоматически собирает documents и certificates из доверенных products/systems и сохраняет:
+Автоматически собирает documents/certificates из products/systems и обнаруживает прямые PDF-ссылки в Markdown body всех non-draft collections. Для каждой ссылки сохраняет owner page/product/system и точный source locator. Сохраняет:
 - title, kind, version/date;
 - original URL и resolved canonical URL;
 - всех owners и точные source field paths;
@@ -115,7 +115,7 @@ draft: true исключается из публичного corpus. Отсут�
 
 ### 3.3. External Document Adapter
 
-Все PDF, перечисленные в доверенном Support Catalog и доступные по configured HTTPS host/path allowlist, автоматически загружаются и обрабатываются. Отдельный manual approval не требуется.
+Все прямые PDF-ссылки из доверенного сайта, доступные по configured HTTPS host/path allowlist, автоматически загружаются и обрабатываются. Сюда входят structured documents/certificates и ссылки в Markdown body. Отдельный manual approval не требуется.
 
 Для каждого файла сохраняются URL, bytes SHA-256, page count, parser version, extraction state и физические страницы. Новый hash запускает re-extraction. Несколько владельцев сохраняются.
 
