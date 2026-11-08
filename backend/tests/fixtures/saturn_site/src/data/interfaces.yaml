@@ -1,0 +1,4 @@
+- code: RS-485
+  label: RS-485
+- code: Ethernet
+  label: Ethernet
