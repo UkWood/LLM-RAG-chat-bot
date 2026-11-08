@@ -1,5 +1,46 @@
 # Состояние проекта
 
+## Актуальный статус — 2026-11-08
+
+### Согласованная основа проекта
+
+- Site-specific ТЗ и архитектура технического консультанта МНПП «Сатурн» v0.1 согласованы владельцем.
+- PR #14 слит в main. Main на момент начала подготовки handoff (до PR #15): `3cd6787db2fe00fd7cea49bce8a355a27f292bf0`; после merge PR #15 SHA изменится, перед работой сверять фактический main.
+- Пакет документов: [docs/site-specific/README.md](site-specific/README.md).
+- Рабочая модель: [ChatGPT / Codex Working Agreement](CHATGPT_WORKING_AGREEMENT.md).
+- Инструкции новой сессии: [SESSION_START.md](SESSION_START.md).
+
+### Роли и управление
+
+ChatGPT — основная рабочая среда для архитектуры, анализа, планирования, решений, постановки задач, code review и оценки результатов. Codex используется только для небольших, ограниченных coding tasks с конкретным ТЗ, границами файлов, командами проверки и критериями приёмки. Существенные изменения и merge утверждает владелец. Подробные правила — в Working Agreement.
+
+### Строгие ограничения
+
+- `UkWood/Saturn-Main-Site` — только read-only. Любые изменения запрещены.
+- Существующие поиски `/search/` и `/service/search/` не изменять.
+- Все источники `UNKNOWN/pending/revoked` запрещены для индексации и генерации.
+- Никакого cloud generation без отдельного разрешения на конкретные source revisions.
+- Synthetic evaluation не является доказательством качества на материалах Сатурна.
+- Не сливать PR и не разворачивать сервис без явного решения владельца.
+
+### Техническая база и качество
+
+Main содержит offline foundation: ingestion/snapshot contracts, BM25, dense/Qdrant adapter, local reranker, evidence gate и evaluation tooling. Текущие измерения на synthetic corpus: lexical 17/20; dense 18/20; hybrid 17/20; local reranker 20/20; bounded grounded pipeline 8/20 положительных ответов, отказ/уточнение 10/10. Полная приёмка прототипа не пройдена. Эти числа относятся к разным измерительным стадиям и не должны складываться в общий score.
+
+### Незавершённые ветки
+
+- PR #13 — draft grounded RAG / publication pipeline. На 15 synthetic cases oracle и end-to-end режимы выполнили 15/15 без инфраструктурных ошибок; human answer assessment pending. Branch head `24a8409b7d5fb65d9f5144019f87f5d1bc75df0c`, основан на прежнем main `bb16530`; после PR #14 требуется reconciliation с новым main и обновлёнными README/HANDOFF/PROJECT_STATUS. PR #13 также содержит ADR-0011 с тем же номером, что и новый site-source ADR-0011 в main; при интеграции сохранить main ADR и перенумеровать PR13 ADR на следующий свободный номер, обновив ссылки. Не merge.
+- PR #12 — draft Semantic Planner V3. Независимый blind quality gate failed: 2/24 positives, 16/16 negative/ambiguity outcomes. Не merge и не включать по умолчанию.
+- PR #14 — merged docs-only site-specific package, merge commit `3cd6787`.
+
+### Ближайшая задача
+
+В ChatGPT сопоставить PR #13 с принятыми site-specific документами и определить переиспользуемые компоненты, расхождения и адаптеры. Перед кодированием подготовить архитектурный план. Параллельно/следом провести независимую human answer assessment пакета PR #13; runtime status и self-verifier не заменяют оценку владельца.
+
+Исторические отчёты и checkpoints ниже сохраняются. Они не отменяют текущий статус и должны трактоваться в контексте своей даты/ветки.
+
+---
+
 ## Planner V2 corrective revision — 2026-11-06
 
 Owner requested continuing after PR10 merge review found two Important blockers: discarded `нет` and protocol qualifiers. Corrections reject negation, unsupported Modbus/TCP/RTU qualification and modification requests outside supported lookup bindings before generation; unqualified protocol queries remain supported, V1 default unchanged. [Corrective report](stages/2026-11-06-planner-v2-corrections.md), [plan addendum](superpowers/plans/2026-11-06-typed-planner-v2.md). Final local verification5project+168backend PASS in both environments (base11optional skips/optional0), calibration14/14 positives20/20statuses without V1-positive regression; independent review fix pass complete. Current-head remote CI/merge outcome must be checked in PR10.

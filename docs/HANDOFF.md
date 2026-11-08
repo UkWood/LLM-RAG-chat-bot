@@ -1,12 +1,32 @@
 # Передача контекста
 
-## Site-specific consultant package — 2026-11-08
+## Актуальная точка — 2026-11-08
 
-Новая согласовательная документация для конкретного сайта МНПП «Сатурн»: [docs/site-specific/README.md](site-specific/README.md). В пакете: подробное ТЗ, архитектура с тремя каналами источников, точная карта двух существующих поисков сайта, план реализации, вопросы для ИТ и критерии приёмки.
+**Main на момент начала подготовки handoff (до PR #15):** `3cd6787db2fe00fd7cea49bce8a355a27f292bf0` — merge согласованного site-specific пакета документов PR #14. После merge PR #15 main продвинется; перед продолжением всегда сверять фактический SHA.
 
-Жёсткая граница: UkWood/Saturn-Main-Site остаётся строго read-only. Все дальнейшие изменения — только в UkWood/LLM-RAG-chat-bot. Текущие /search/ и /service/search/ не изменять. Первым практическим шагом после review документов является утверждение примерно 10 пилотных источников и допуск их точных версий; текущие 8 кандидатов остаются UNKNOWN/pending.
+Начинать новую сессию с [SESSION_START.md](SESSION_START.md) и [CHATGPT_WORKING_AGREEMENT.md](CHATGPT_WORKING_AGREEMENT.md). Они задают актуальную модель работы: ChatGPT — основная среда управления, анализа, архитектуры, постановки задач и проверки; Codex — только исполнитель ограниченных, однозначных задач кодирования по подготовленному ТЗ. Владелец утверждает существенные решения и merge.
 
-Документы подготовлены в отдельной ветке docs/saturn-site-specific-brief-2026-11-08 и вынесены в draft PR #14. PR не слит. См. [PR #14](https://github.com/UkWood/LLM-RAG-chat-bot/pull/14).
+### Согласованная основа для сайта
+
+Документы v0.1 в [docs/site-specific/README.md](site-specific/README.md) приняты владельцем и слиты в main. Включают ТЗ, архитектуру, карту контента и двух поисков, план реализации, вопросы ИТ, acceptance plan и ADR-0011. PR #14 merged, merge commit `3cd6787`.
+
+**Неприкосновенная граница:** `UkWood/Saturn-Main-Site` строго read-only. Не менять его код, контент, URLs, assets, workflows, branches или Git history. Существующие `/search/` и `/service/search/` не переделывать.
+
+### Текущее состояние незавершённой разработки
+
+- **PR #13** — `docs/grounded-rag-redesign`, head `24a8409b7d5fb65d9f5144019f87f5d1bc75df0c`, draft/unmerged. Содержит WIP generic publication + grounded RAG pipeline и диагностику на 15 synthetic HTML fixtures. Oracle и end-to-end режимы прошли по 15/15 случаев без infrastructure errors, но raw runtime statuses не являются оценкой правильности. Независимая human answer assessment остаётся pending. PR основан на старом main `bb16530`; после merge PR #14 ветка отстаёт от main и имеет пересечения с обновлёнными `README.md`, `docs/HANDOFF.md`, `docs/PROJECT_STATUS.md`; GitHub сообщал `mergeable=false`. Дополнительно PR #13 содержит ADR `0011-grounded-rag-redesign.md`, тогда как main теперь использует номер 0011 для `0011-site-source-adapters-and-search-boundaries.md`. При возможной интеграции сохранить main ADR-0011, перенумеровать ADR из PR #13 на следующий свободный номер после проверки и обновить ссылки. Не сливать и не перебазировать автоматически.
+- **PR #12** — `feat/semantic-planner-v3`, head `2ea295197fffebde354a1e843bac464503dd5724`, draft/unmerged. Независимый blind test: 2/24 полностью корректных положительных ответа и 16/16 корректных отказов/уточнений; целевой quality gate не пройден. Не включать V3 по умолчанию и не переносить его реализацию в main.
+- Реальные источники сайта: в реестре 8 кандидатов, все `UNKNOWN/pending`, ни один не допущен автоматически. Реальный ingestion и cloud generation не выполнялись.
+
+### Следующий шаг для ChatGPT
+
+Не начинать с нового coding task. Сначала сопоставить текущий PR #13 с принятыми site-specific документами: PR #13 использует общий контур опубликованных HTML/PDF, тогда как принятая site-specific архитектура отдельно требует структурированный импорт Markdown/frontmatter/YAML, Support catalog metadata и полнотекстовые разрешённые PDF. Определить, какие части PR #13 можно переиспользовать, какие требуют адаптера/изменения, и подготовить короткое архитектурное решение и последовательный план.
+
+Отдельно разобрать пакет 15 synthetic cases и SHA-bound human review forms PR #13. Не считать статусы `answered/partial/needs_support/clarification` человеческими оценками. Если владелец ещё не оценивал ответы, организовать оценку в ChatGPT; не заполнять review формы предположениями.
+
+Исторические записи ниже сохранены для трассировки. При расхождении использовать актуальный checkpoint выше и фактическое состояние GitHub.
+
+---
 
 ## Planner V2 corrective revision — 2026-11-06
 
