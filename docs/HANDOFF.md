@@ -1,45 +1,28 @@
-## Saturn technical consultant — current handoff 2026-11-08
+## Saturn technical consultant — current handoff 2026-11-09
 
-### Approved baseline
+### Owner decisions now accepted
 
-Owner approved and merged PR #16 into main. Merge commit: bf59284b4af9fa9d0a853595ba4fa31d89f53984. ADR-0012 is accepted. The approved architecture is selective reuse, three independent source adapters, canonical Entity/Fact/Relation model, revision-bound approvals, unified Knowledge Snapshot and channel-aware retrieval.
+- All non-draft site records, declared relations, dictionaries and PDFs linked from the trusted Support Catalog are trusted. No manual content, relation or per-PDF verification/approval.
+- Saturn-Main-Site remains under development. The adapter must handle additions, updates, deletions and schema evolution without silently dropping unknown data.
+- Source commit/hash are retained for traceability, deterministic snapshots and citations, not as approval gates.
+- Cloud provider egress remains separate from source trust.
 
-### Read-only site audit
+### Schema evolution behavior
 
-Pinned source: UkWood/Saturn-Main-Site main at 084d759487bfab6e111549c9b5469711ac5fc13. HEAD matched the previous v0.1 inventory. Audit identified 438 records in six collections, 12 Category + 13 System records, 13 Solution pages, 5 Section pages, and actual support/search boundaries.
+Every sync pins current main commit, discovers all src/content collections, compares content.config.ts and dictionary fingerprints, processes changed records and detects schema drift. Unknown fields and collections are retained as generic labelled evidence. Changed field types disable stale typed mapping and generate a drift report. PDFs linked from trusted catalog entries are fetched/re-extracted automatically under technical allowlist/SSRF protections. Snapshot publication is atomic.
 
-No write operation was performed against Saturn-Main-Site. No PDF was fetched, no source was ingested or approved, no external provider was called and no deployment was made.
+### Approved architecture
 
-### New findings requiring owner review
+ADR-0012 and ADR-0013 are accepted. Three adapters remain separate: Site Content, Support Catalog, External Document. Canonical Entity/Fact/Relation evidence is kept separate from text projections and PDF passages. Existing search on the site is not modified.
 
-Several frontmatter relations are migration-generated from title mentions, legacy links or title patterns. A source field does not prove that the relation is a reviewed engineering assertion. Input/output projections have two recorded conflicts. Missing fields and schema defaults must not be interpreted as negative technical facts. industries.yaml is explicitly preliminary.
+### Next implementation step
 
-Read:
-- docs/site-specific/v0.2/04-read-only-schema-audit.md
-- docs/site-specific/v0.2/05-data-quality-register.md
-- docs/decisions/0013-saturn-relation-provenance.md
-- docs/stages/2026-11-08-saturn-read-only-schema-audit.md
-
-Branch: docs/saturn-readonly-schema-audit. Draft [PR #17](https://github.com/UkWood/LLM-RAG-chat-bot/pull/17) is open for owner review. ADR-0013 is proposed, not accepted.
-
-### Next step
-
-Obtain owner decisions on relation provenance/review states, System vs Category, raw fields vs schema defaults, and answer eligibility of unreviewed heuristic relations. Do not begin adapter coding until these decisions are accepted.
-
-After approval:
-1. freeze mapping;
-2. create representative synthetic fixtures;
-3. prepare one bounded Codex task for canonical contracts only;
-4. keep real source ingestion and all provider/cloud paths disabled until separate source approvals.
+Build canonical contracts and schema-evolution contracts in UkWood/LLM-RAG-chat-bot, preserving existing synthetic test paths. Then implement dynamic read-only Site Content Adapter. No real source writes, cloud calls or deployment.
 
 ### Collaboration rules
 
-ChatGPT remains the primary workspace for project architecture, specifications, planning, code review and decisions. Codex is limited to concrete, bounded coding tasks with allowed files, expected behavior, tests, commands and PASS/FAIL criteria. No Codex architecture delegation or autonomous merge/deploy.
+ChatGPT is the primary workspace for architecture, requirements, implementation planning and review. Codex receives only bounded coding tasks with exact files, tests and PASS/FAIL criteria. No autonomous architecture changes, merge or deployment.
 
-Saturn-Main-Site is strictly READ-ONLY at all times. All project changes belong in UkWood/LLM-RAG-chat-bot.
-
-
-# Передача контекста
 
 ## Site-specific consultant package — 2026-11-08
 
