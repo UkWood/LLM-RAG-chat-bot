@@ -105,7 +105,7 @@ PR #13 допускает generic refresh опубликованных мате�
 
 Support Catalog отвечает на вопрос «какой документ нужен и к чему он относится?». PDF text — отдельный answer-evidence channel.
 
-Ссылки из доверенных documents/certificates автоматически попадают в каталог и запускают fetch/extraction по configured trusted origin/path allowlist. Отдельного approval файла или его revision нет. Metadata-only match не доказывает содержание PDF; технически не извлечённый файл не представляется как text evidence.
+PDF-ссылки из documents/certificates и Markdown body доверенных non-draft записей автоматически попадают в каталог и запускают fetch/extraction по configured trusted origin/path allowlist. Отдельного approval файла или его revision нет. Metadata-only match не доказывает содержание PDF; технически не извлечённый файл не представляется как text evidence.
 
 ### 5.5. Planner V3 не принимается автоматически
 
