@@ -105,6 +105,8 @@ category — раздел каталога/перечень изделий, а �
 
 Важное расхождение: текущий src/content/systems/radiokontsentrator-brk.md содержит kind: category, но старый scripts/model/enrich-systems.mjs не включает этот slug в hard-coded CATEGORIES, а migration/model/enrich-systems-report.md называет его system. Для импорта authoritative source — frontmatter конкретной записи на pinned commit; миграционные script/report не должны переопределять текущее значение.
 
+Происхождение других полей тоже требует осторожности: enrich-systems.mjs формирует summary из первого подходящего абзаца, applications из hard-coded mapping, documents из отдельных Markdown-ссылок, kind документа — regex по title/URL, version — из заголовка с годом. В текущем frontmatter нет field-level review marker, поэтому нельзя определить, какие значения после миграции были вручную перепроверены.
+
 ### 3.3. Groups
 
 - title;
