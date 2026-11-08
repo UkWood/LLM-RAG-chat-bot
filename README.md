@@ -1,12 +1,13 @@
 # AI Technical Consultant — МНПП «Сатурн»
 
-Отдельный технический консультант: ответы только по разрешённым материалам с источниками и отказом при недостатке доказательств. Статический интерфейс Astro, отдельный FastAPI backend, локальная KB и сменный LLM provider.
+Отдельный технический консультант: ответы только по доверенным материалам сайта и PDF с источниками и отказом при недостатке доказательств. Статический интерфейс Astro, отдельный FastAPI backend, локальная KB и сменный LLM provider.
 
-**Стадия:** M1/ingestion/snapshot baseline слиты в main. Добавлены local indexes и measured BM25: Top-5 source hit17/20=85%; lexical target100% пока не пройден. Actual E5 experiment: dense18/20=90%, hybrid17/20=85%; Actual local reranker достиг20/20 и evidence recall100% на том же synthetic наборе; bounded grounded pipeline измерен:8/20 положительных ответов, обязательные отказ/уточнение10/10; grounding target не пройден. Реальные источники пока не допущены к индексации/облачной отправке. Полная production-архитектура остаётся proposed.
+**Стадия:** ADR-0012/0013 приняты; PR #17 (source trust/schema evolution) и PR #18 (canonical contracts + schema drift primitives) слиты. CI PR #18: 192 offline tests (11 existing optional skips) и ONNX contracts PASS. Реальный Site Content Adapter, PDF fetch, retrieval integration и deployment ещё не реализованы. Следующий этап — pure/offline Site Content Adapter. Доверие к реальным источникам не означает разрешения на cloud egress.
 
 ## Память проекта
 
-- [Продолжение в новой сессии](docs/HANDOFF.md)
+- [Правила двух ChatGPT-сессий и стартовый prompt](docs/CHATGPT_SESSION_GUIDE.md)
+- [Продолжение реализации](docs/HANDOFF.md)
 
 - [Текущее состояние и следующий шаг](docs/PROJECT_STATUS.md)
 - [Согласованные критерии прототипа: offline / real sample](docs/acceptance/prototype-v1.md)
