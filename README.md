@@ -15,6 +15,7 @@
 - [Решения ADR](docs/decisions/0001-rag-boundaries.md)
 - [Discovery сайта](docs/discovery/2026-11-03-site-audit.md)
 - [Исходное ТЗ](docs/requirements/original-brief.ru.md)
+- [Site-specific ТЗ, архитектура, карта двух поисков и план пилота (v0.1)](docs/site-specific/README.md)
 - [Допуск PUBLIC](docs/public-source-policy.md) и [реестр](config/knowledge/public-sources.json)
 - [Журнал этапов](docs/stages/README.md)
 - [Правила работы](AGENTS.md)
