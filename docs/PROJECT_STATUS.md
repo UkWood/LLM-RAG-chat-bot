@@ -17,7 +17,7 @@ Owner-approved Snapshot Provider Contract v0.1 and ADR-0014 are documented in th
 
 No GitHub/Gitea Provider, PDF ingestion, Git-backed PDF retrieval, adapter/canonical-contract code changes, runtime integration or deployment is included. Saturn-Main-Site remains strictly READ-ONLY.
 
-**Current stage:** architecture/documentation only. PR #21 is OPEN (not merged). Before the current review corrections, PR head `23fcbfc0541e43d3467dfdbbd189affdd1b49485` passed PR-head CI [#42584026479](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42584026479) and matching push CI [#42584019007](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42584019007); both jobs `offline-checks` and `onnx-contracts` succeeded. This correction creates a new PR head and requires fresh CI. Awaiting owner review/merge. Provider implementation remains NOT STARTED and requires a separate instruction.
+**Current stage:** architecture/documentation only. PR #21 is OPEN (not merged). Current PR head `0f2a1226b757ae346d65b05df13be657e3581d35` passed PR-head CI [#42624653260](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42624653260) and push CI [#42624644980](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42624644980); both jobs `offline-checks` and `onnx-contracts` completed successfully on this exact head. Awaiting owner review/merge. Provider implementation remains NOT STARTED and requires a separate instruction.
 
 
 

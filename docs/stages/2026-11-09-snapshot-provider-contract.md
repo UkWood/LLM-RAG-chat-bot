@@ -50,9 +50,10 @@ This is a documentation-only architecture stage. No source code, dependencies, t
 
 PR #21 is open and not merged.
 
-Before the review corrections in this update, the PR head was `23fcbfc0541e43d3467dfdbbd189affdd1b49485`:
-- PR-head run [#42584026479](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42584026479): SUCCESS.
-- Matching push run [#42584019007](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42584019007): SUCCESS.
-- Both runs completed jobs `offline-checks` and `onnx-contracts` successfully.
+Current PR head: `0f2a1226b757ae346d65b05df13be657e3581d35`.
 
-This documentation correction creates a new PR head; CI for the corrected head must run again, and its result is not inferred from the previous successful runs. No provider implementation or PDF ingestion is authorized by this stage.
+- PR-head run [#42624653260](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42624653260): **SUCCESS**.
+- Matching push run [#42624644980](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42624644980): **SUCCESS**.
+- Both runs completed jobs `offline-checks` and `onnx-contracts` successfully on the exact current PR head.
+
+The current documentation revision has therefore passed both required CI workflows. No provider implementation or PDF ingestion is authorized by this stage.

@@ -13,7 +13,7 @@ Base commit до PR #20: `934c65e2bc11adf4c2b0b0e3b30717a02d7bb26e`
 - PR #20 — trusted Saturn Site Content Adapter — слит в main. Реализация и проверки описаны ниже.
 - Snapshot Provider architecture contract v0.1 и ADR-0014 приняты владельцем и опубликованы в документационном PR #21: https://github.com/UkWood/LLM-RAG-chat-bot/pull/21. PR открыт, не слит.
 - PR #21: branch docs-snapshot-provider-contract-2026-11-09; base c1840b071e077ae6019f1b9e7930c3aa15d08ef3.
-- Before the current review corrections, PR head `23fcbfc0541e43d3467dfdbbd189affdd1b49485` passed PR-head CI [#42584026479](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42584026479) and push CI [#42584019007](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42584019007); both `offline-checks` and `onnx-contracts` passed. The correction commit creates a new head and requires fresh CI.
+- Current PR head `0f2a1226b757ae346d65b05df13be657e3581d35` passed PR-head CI [#42624653260](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42624653260) and push CI [#42624644980](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42624644980). Both runs completed `offline-checks` and `onnx-contracts` successfully on this exact head.
 - Git REST API выбран основным транспортом: GitHub — первая реализация, Gitea — последующая реализация того же provider-neutral контракта.
 - Provider один раз разрешает refs/heads/main, фиксирует commit/tree и далее читает только по immutable object IDs. Повторного обращения к moving branch в рамках sync нет.
 - Provider доверен в отношении ref → commit → tree identity mapping и полноты перечисления дерева; независимая криптографическая проверка raw commit/tree objects не заявляется.
