@@ -406,6 +406,10 @@ def _extract_public_site_origin(config_bytes: bytes) -> str:
             "SITE_URL must be a public HTTPS origin without a path, query or fragment"
         )
     host = host.rstrip(".").lower()
+    try:
+        address = ipaddress.ip_address(host)
+    except ValueError:
+        address = None
     if (
         host == "github.com"
         or host.endswith(".github.com")
@@ -417,10 +421,6 @@ def _extract_public_site_origin(config_bytes: bytes) -> str:
         or ("." not in host and address is None)
     ):
         raise SnapshotValidationError("SITE_URL must not identify a Git provider or internal host")
-    try:
-        address = ipaddress.ip_address(host)
-    except ValueError:
-        address = None
     if address is not None and not address.is_global:
         raise SnapshotValidationError("SITE_URL must not use a private or non-public IP address")
     rendered_host = f"[{host}]" if ":" in host else host

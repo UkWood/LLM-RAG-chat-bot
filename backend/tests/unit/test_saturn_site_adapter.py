@@ -158,6 +158,9 @@ class SaturnSiteContentAdapterTests(unittest.TestCase):
         for candidate in (
             b"https://ukwood.github.io",
             b"https://www.mnppsaturn.ru/Saturn-Main-Site/",
+            b"https://gitea.local",
+            b"https://10.0.0.1",
+            b"https://intranet",
         ):
             with self.subTest(candidate=candidate):
                 files = fixture_file_map()
