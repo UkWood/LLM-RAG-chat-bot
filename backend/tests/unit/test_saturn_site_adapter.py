@@ -64,6 +64,10 @@ class SaturnSiteContentAdapterTests(unittest.TestCase):
         self.assertEqual(entities[("pages", "unknown-kind")].entity_type, "SiteContent")
         unknown_page = entities[("pages", "unknown-kind")]
         self.assertEqual(json.loads(unknown_page.raw_frontmatter_json)["kind"], "future")
+        unknown_kind_fact = next(item for item in package.facts
+                                 if item.entity_id == unknown_page.entity_id
+                                 and item.field_path == "kind")
+        self.assertEqual(json.loads(unknown_kind_fact.raw_value_json), "future")
         self.assertTrue(any(item.code == "unknown_entity_discriminator"
                             and item.path.endswith("/unknown-kind.md") for item in package.issues))
         self.assertEqual(entities[("labs", "unknown-x")].entity_type, "SiteContent")
@@ -92,7 +96,13 @@ class SaturnSiteContentAdapterTests(unittest.TestCase):
         self.assertEqual(device.canonical_url, "https://www.mnppsaturn.ru/products/device-x/")
 
     def test_canonical_urls_follow_astro_routes_and_ignore_git_pages_base_path(self):
-        package = adapt_snapshot(make_snapshot())
+        files = fixture_file_map()
+        config = files["astro.config.mjs"][1].replace(
+            b"const base = process.env.BASE_PATH || '/';",
+            b"const base = process.env.BASE_PATH || '/Saturn-Main-Site/';",
+        )
+        replace_file(files, "astro.config.mjs", config)
+        package = adapt_snapshot(make_snapshot(files))
         entities = {(item.collection, item.slug): item for item in package.entities}
         expected = {
             ("products", "device-x"): "https://www.mnppsaturn.ru/products/device-x/",
@@ -120,6 +130,9 @@ class SaturnSiteContentAdapterTests(unittest.TestCase):
         self.assertIn("astro.config.mjs", manifest_paths)
         self.assertIn("src/pages/products/[slug].astro", manifest_paths)
         self.assertIn("src/lib/url.ts", manifest_paths)
+        self.assertIn("src/lib/nav.ts", manifest_paths)
+        self.assertIn("src/data/nav.yaml", manifest_paths)
+        self.assertIn("src/data/industries.yaml", manifest_paths)
 
     def test_public_domain_change_is_config_driven_and_reported(self):
         previous = adapt_snapshot(make_snapshot())
@@ -203,6 +216,12 @@ class SaturnSiteContentAdapterTests(unittest.TestCase):
         self.assertIn(("route_source_deleted", "src/pages/news/[slug].astro"), by_key)
         self.assertEqual(by_key[("route_source_deleted", "src/pages/news/[slug].astro")].severity,
                          "breaking")
+        missing_news = next(item for item in current.entities
+                            if item.collection == "news" and item.slug == "news-x")
+        self.assertIsNone(missing_news.canonical_url)
+        self.assertTrue(any(item.code == "route_template_missing"
+                            and item.path.endswith("/news-x.md")
+                            for item in current.issues))
 
     def test_relations_follow_only_explicit_source_fields(self):
         package = adapt_snapshot(make_snapshot())
@@ -258,6 +277,7 @@ class SaturnSiteContentAdapterTests(unittest.TestCase):
         second = adapt_snapshot(snapshot)
         self.assertEqual(first, second)
         self.assertEqual(first.manifest.snapshot_id, second.manifest.snapshot_id)
+        self.assertEqual(first.manifest.parser_version, first.parser_version)
         self.assertEqual(first.entities, second.entities)
         self.assertEqual(first.facts, second.facts)
         self.assertEqual(first.relations, second.relations)

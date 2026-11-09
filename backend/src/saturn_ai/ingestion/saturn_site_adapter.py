@@ -131,6 +131,8 @@ class SnapshotFile:
 
 @dataclass(frozen=True)
 class PinnedSiteSnapshot:
+    """Immutable snapshot; repository is the stable logical source ID, not a Git remote URL."""
+
     repository: str
     branch: str
     commit_sha: str
@@ -162,7 +164,11 @@ class PinnedSiteSnapshot:
         repository: str = TRUSTED_SITE_REPOSITORY,
         branch: str = TRUSTED_SITE_BRANCH,
     ) -> "PinnedSiteSnapshot":
-        """Build a pinned snapshot from path -> (Git blob SHA, bytes)."""
+        """Build a pinned snapshot from path -> (Git blob SHA, bytes).
+
+        repository is the configured logical source ID. A GitHub/Gitea provider
+        must map its physical remote to this ID before constructing the snapshot.
+        """
         if not isinstance(files, Mapping):
             raise SnapshotValidationError("Snapshot file map is required")
         entries = tuple(

@@ -15,7 +15,7 @@ from pathlib import PurePosixPath
 TRUSTED_SITE_REPOSITORY = "UkWood/Saturn-Main-Site"
 TRUSTED_SITE_BRANCH = "main"
 ADAPTER_VERSION = "saturn-site-adapter/0.1.0"
-MAPPING_VERSION = "saturn-site-mapping/0.1.0"
+MAPPING_VERSION = "saturn-site-mapping/0.2.0"
 
 _SHA1 = re.compile(r"^[0-9a-f]{40}$")
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
