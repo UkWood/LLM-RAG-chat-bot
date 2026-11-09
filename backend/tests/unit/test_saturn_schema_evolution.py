@@ -116,13 +116,13 @@ class SaturnSchemaEvolutionTests(unittest.TestCase):
         files = (file("src/content/products/demo.md"),)
         first = build_sync_manifest(commit_sha=COMMIT_A, tree_sha=TREE_A,
                                     schema_inventory=schema, file_revisions=files,
-                                    adapter_version="adapter/0.1", mapping_version="mapping/0.1")
+                                    adapter_version="adapter/0.1", mapping_version="mapping/0.1", parser_version="parser/0.1")
         second = build_sync_manifest(commit_sha=COMMIT_A, tree_sha=TREE_A,
                                      schema_inventory=schema, file_revisions=files,
-                                     adapter_version="adapter/0.1", mapping_version="mapping/0.1")
+                                     adapter_version="adapter/0.1", mapping_version="mapping/0.1", parser_version="parser/0.1")
         changed = build_sync_manifest(commit_sha=COMMIT_B, tree_sha=TREE_B,
                                       schema_inventory=schema, file_revisions=files,
-                                      adapter_version="adapter/0.1", mapping_version="mapping/0.1")
+                                      adapter_version="adapter/0.1", mapping_version="mapping/0.1", parser_version="parser/0.1")
         self.assertEqual(first, second)
         self.assertNotEqual(first.snapshot_id, changed.snapshot_id)
 
@@ -130,20 +130,51 @@ class SaturnSchemaEvolutionTests(unittest.TestCase):
         manifest = build_sync_manifest(
             commit_sha=COMMIT_A, tree_sha=TREE_A, schema_inventory=inventory(),
             file_revisions=(file("src/content/products/a.md"),),
-            adapter_version="adapter/0.1", mapping_version="mapping/0.1")
+            adapter_version="adapter/0.1", mapping_version="mapping/0.1", parser_version="parser/0.1")
         with self.assertRaises(ValueError):
             replace(manifest, tree_sha=TREE_B)
+
+    def test_parser_version_is_part_of_identity_and_sync_drift(self):
+        schema = inventory()
+        files = (file("src/content/products/demo.md"),)
+        previous = build_sync_manifest(
+            commit_sha=COMMIT_A, tree_sha=TREE_A, schema_inventory=schema,
+            file_revisions=files, adapter_version="adapter/0.1",
+            mapping_version="mapping/0.1", parser_version="parser/0.1",
+        )
+        identical = build_sync_manifest(
+            commit_sha=COMMIT_A, tree_sha=TREE_A, schema_inventory=schema,
+            file_revisions=files, adapter_version="adapter/0.1",
+            mapping_version="mapping/0.1", parser_version="parser/0.1",
+        )
+        reprocessed = build_sync_manifest(
+            commit_sha=COMMIT_A, tree_sha=TREE_A, schema_inventory=schema,
+            file_revisions=files, adapter_version="adapter/0.1",
+            mapping_version="mapping/0.1", parser_version="parser/0.2",
+        )
+        self.assertEqual(previous.snapshot_id, identical.snapshot_id)
+        self.assertNotEqual(previous.snapshot_id, reprocessed.snapshot_id)
+        self.assertEqual(previous.file_revisions, reprocessed.file_revisions)
+        plan = plan_sync(previous, reprocessed)
+        self.assertEqual(plan.file_changes.added, ())
+        self.assertEqual(plan.file_changes.changed, ())
+        self.assertEqual(plan.file_changes.deleted, ())
+        event, = [item for item in plan.schema_drift
+                  if item.kind == "parser_version_changed"]
+        self.assertEqual(event.before, "parser/0.1")
+        self.assertEqual(event.after, "parser/0.2")
+        self.assertEqual(event.severity, "warning")
 
     def test_sync_plan_initial_and_incremental(self):
         schema = inventory()
         first = build_sync_manifest(commit_sha=COMMIT_A, tree_sha=TREE_A,
                                     schema_inventory=schema,
                                     file_revisions=(file("src/content/products/a.md"),),
-                                    adapter_version="adapter/0.1", mapping_version="mapping/0.1")
+                                    adapter_version="adapter/0.1", mapping_version="mapping/0.1", parser_version="parser/0.1")
         second = build_sync_manifest(commit_sha=COMMIT_B, tree_sha=TREE_B,
                                      schema_inventory=schema,
                                      file_revisions=(file("src/content/products/b.md"),),
-                                     adapter_version="adapter/0.1", mapping_version="mapping/0.1")
+                                     adapter_version="adapter/0.1", mapping_version="mapping/0.1", parser_version="parser/0.1")
         initial = plan_sync(None, first)
         self.assertEqual(initial.file_changes.added, ("src/content/products/a.md",))
         delta = plan_sync(first, second)

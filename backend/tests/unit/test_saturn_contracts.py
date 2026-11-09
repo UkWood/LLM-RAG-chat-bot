@@ -142,6 +142,8 @@ class SaturnCanonicalContractTests(unittest.TestCase):
         file = SiteFileRevision("src/content/products/demo.md", BLOB, CONTENT,
                                  "products", "demo")
         self.assertEqual(file.collection, "products")
+        route_config = SiteFileRevision("astro.config.mjs", BLOB, CONTENT)
+        self.assertEqual(route_config.path, "astro.config.mjs")
         with self.assertRaises(ValueError):
             SiteFileRevision("src/content/../secret.md", BLOB, CONTENT)
 

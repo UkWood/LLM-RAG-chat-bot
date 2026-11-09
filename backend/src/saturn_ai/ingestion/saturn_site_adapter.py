@@ -7,9 +7,11 @@ SourceRecord/Registry approval workflow.
 from collections.abc import Mapping
 from dataclasses import dataclass
 from hashlib import sha1, sha256
+import ipaddress
 import math
 from pathlib import PurePosixPath
 import re
+from urllib.parse import quote, urlsplit
 
 import yaml
 from yaml.tokens import AliasToken, AnchorToken, TagToken
@@ -29,10 +31,15 @@ from .saturn_contracts import (
     canonical_json,
     stable_id,
 )
-from .schema_evolution import build_schema_inventory, build_sync_manifest, plan_sync
+from .schema_evolution import (
+    build_schema_inventory,
+    build_sync_manifest,
+    is_route_source_path,
+    plan_sync,
+)
 
 
-PARSER_VERSION = "saturn-site-parser/0.1.0"
+PARSER_VERSION = "saturn-site-parser/0.2.0"
 MAX_MARKDOWN_BYTES = 1_000_000
 MAX_DICTIONARY_BYTES = 2_000_000
 MAX_FRONTMATTER_BYTES = 262_144
@@ -40,6 +47,20 @@ MAX_YAML_TOKENS = 20_000
 MAX_YAML_NODES = 50_000
 MAX_YAML_DEPTH = 32
 SOFTWARE_GROUP_SLUG = "programmnoe-obespechenie"
+
+# Read only the checked-in production fallback from astro.config.mjs. Never
+# evaluate JavaScript or read CI environment overrides (GitHub Pages preview
+# SITE_URL/BASE_PATH values must not become canonical URLs).
+_SITE_URL_FALLBACK_RE = re.compile(
+    r"""(?m)^\s*const\s+site\s*=\s*process\.env\.SITE_URL\s*\|\|\s*(?P<quote>['"])(?P<url>https://[^'"\r\n]+)(?P=quote)\s*;"""
+)
+_ROUTE_TEMPLATES = {
+    "products": "src/pages/products/[slug].astro",
+    "systems": "src/pages/systems/[slug].astro",
+    "groups": "src/pages/catalog/[slug].astro",
+    "articles": "src/pages/articles/[slug].astro",
+    "news": "src/pages/news/[slug].astro",
+}
 
 # Only source-declared references are projected. In particular, pages.groups is
 # deliberately absent: it is a navigation tree, not an engineering relation.
@@ -344,8 +365,107 @@ def _content_location(path: str) -> tuple[str, str] | None:
     return collection, relative
 
 
-def _entity_id(collection: str, slug: str) -> str:
-    return "saturn:" + stable_id("saturn-site-entity-v1", collection, slug)
+def _extract_public_site_origin(config_bytes: bytes) -> str:
+    """Read the checked-in SITE_URL fallback without evaluating Astro/JavaScript."""
+    try:
+        config_text = config_bytes.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        raise SnapshotValidationError("astro.config.mjs must be UTF-8") from None
+    matches = tuple(_SITE_URL_FALLBACK_RE.finditer(config_text))
+    if len(matches) != 1:
+        raise SnapshotValidationError(
+            "astro.config.mjs must declare one static SITE_URL production fallback"
+        )
+    candidate = matches[0].group("url")
+    try:
+        parsed = urlsplit(candidate)
+        host = parsed.hostname
+        port = parsed.port
+    except ValueError:
+        raise SnapshotValidationError("Invalid public SITE_URL configuration") from None
+    if (
+        parsed.scheme.lower() != "https"
+        or not host
+        or parsed.username is not None
+        or parsed.password is not None
+        or parsed.path not in ("", "/")
+        or parsed.query
+        or parsed.fragment
+    ):
+        raise SnapshotValidationError(
+            "SITE_URL must be a public HTTPS origin without a path, query or fragment"
+        )
+    host = host.rstrip(".").lower()
+    if (
+        host == "github.com"
+        or host.endswith(".github.com")
+        or host == "github.io"
+        or host.endswith(".github.io")
+        or host == "localhost"
+        or host.endswith((".local", ".internal", ".lan"))
+    ):
+        raise SnapshotValidationError("SITE_URL must not identify a Git provider or internal host")
+    try:
+        address = ipaddress.ip_address(host)
+    except ValueError:
+        address = None
+    if address is not None and not address.is_global:
+        raise SnapshotValidationError("SITE_URL must not use a private or non-public IP address")
+    rendered_host = f"[{host}]" if ":" in host else host
+    netloc = rendered_host if port in (None, 443) else f"{rendered_host}:{port}"
+    return f"https://{netloc}"
+
+
+def _canonical_url(
+    collection: str,
+    slug: str,
+    public_origin: str,
+    route_paths: set[str],
+    source_path: str,
+    issues: list[SiteParseIssue],
+) -> str | None:
+    """Resolve only routes that exist in the pinned Astro source tree."""
+    if collection == "pages":
+        if slug == "home":
+            route_template = "src/pages/index.astro"
+            route_path = "/"
+        else:
+            route_template = "src/pages/[slug].astro"
+            route_path = None
+    else:
+        route_template = _ROUTE_TEMPLATES.get(collection)
+        route_path = None
+
+    if route_template is None:
+        return None
+    if "/" in slug:
+        issues.append(SiteParseIssue(
+            source_path, "routing", "nested_slug_route_unsupported",
+            f"Astro route {route_template} accepts one slug segment; nested slug {slug!r} has no verified canonical URL",
+            "warning",
+        ))
+        return None
+    if route_template not in route_paths:
+        issues.append(SiteParseIssue(
+            source_path, "routing", "route_template_missing",
+            f"Canonical route template {route_template} is absent from the pinned snapshot",
+            "warning",
+        ))
+        return None
+    if route_path is None:
+        encoded_slug = quote(slug, safe="-._~")
+        if not encoded_slug:
+            return None
+        prefix = {
+            "products": "/products",
+            "systems": "/systems",
+            "groups": "/catalog",
+            "articles": "/articles",
+            "news": "/news",
+            "pages": "",
+        }[collection]
+        route_path = f"{prefix}/{encoded_slug}/"
+    return public_origin + route_path
 
 
 def _entity_type(collection: str, metadata: dict) -> tuple[str, str | None]:
@@ -363,7 +483,7 @@ def _entity_type(collection: str, metadata: dict) -> tuple[str, str | None]:
             return "System", None
         if kind == "category":
             return "Category", None
-        return "SiteContent", "Unknown or absent systems.kind; retained as generic SiteContent"
+        return "SiteContent", f"Unknown systems.kind value {kind!r}; retained as generic SiteContent"
     if collection == "groups":
         return "Group", None
     if collection == "articles":
@@ -371,12 +491,14 @@ def _entity_type(collection: str, metadata: dict) -> tuple[str, str | None]:
     if collection == "news":
         return "News", None
     if collection == "pages":
-        kind = metadata.get("kind")
+        if "kind" not in metadata:
+            return "Page", None
+        kind = metadata["kind"]
         if kind == "solution":
             return "Solution", None
         if kind == "section":
             return "SectionPage", None
-        return "Page", None
+        return "SiteContent", f"Unknown pages.kind value {kind!r}; retained as generic SiteContent"
     return "SiteContent", None
 
 
@@ -482,6 +604,11 @@ def adapt_snapshot(
     schema_file = by_path.get("src/content.config.ts")
     if schema_file is None:
         raise SnapshotValidationError("Pinned snapshot is missing src/content.config.ts")
+    astro_config = by_path.get("astro.config.mjs")
+    if astro_config is None:
+        raise SnapshotValidationError("Pinned snapshot is missing astro.config.mjs")
+    public_origin = _extract_public_site_origin(astro_config.content)
+    route_paths = set(by_path)
 
     content_files = [
         item for item in snapshot.files
@@ -492,10 +619,11 @@ def adapt_snapshot(
         if item.path.startswith("src/data/")
         and PurePosixPath(item.path).suffix.lower() in {".yaml", ".yml"}
     ]
-    relevant_files = tuple(sorted(
-        [schema_file, *content_files, *dictionary_files],
-        key=lambda item: item.path,
-    ))
+    route_files = [item for item in snapshot.files if is_route_source_path(item.path)]
+    relevant_by_path = {
+        item.path: item for item in [schema_file, *content_files, *dictionary_files, *route_files]
+    }
+    relevant_files = tuple(sorted(relevant_by_path.values(), key=lambda item: item.path))
 
     source_revisions = tuple(
         SiteSourceRevision(
@@ -513,6 +641,7 @@ def adapt_snapshot(
     file_revisions = []
     locations = {}
     collection_records: dict[str, list[dict]] = {}
+    content_paths = {item.path for item in content_files}
     for item in content_files:
         location = _content_location(item.path)
         locations[item.path] = location
@@ -523,7 +652,9 @@ def adapt_snapshot(
         file_revisions.append(SiteFileRevision(
             item.path, item.blob_sha, item.content_sha256, collection, slug
         ))
-    for item in (schema_file, *dictionary_files):
+    for item in relevant_files:
+        if item.path in content_paths:
+            continue
         file_revisions.append(SiteFileRevision(
             item.path, item.blob_sha, item.content_sha256
         ))
@@ -618,7 +749,9 @@ def adapt_snapshot(
                 slug=slug,
                 entity_type=entity_type,
                 title=title,
-                canonical_url=None,
+                canonical_url=_canonical_url(
+                    collection, slug, public_origin, route_paths, item.path, issues
+                ),
                 draft=False,
                 source_revision_id=revision.revision_id,
                 raw_frontmatter_json=canonical_json(metadata),
@@ -695,6 +828,7 @@ def adapt_snapshot(
         file_revisions=tuple(file_revisions),
         adapter_version=ADAPTER_VERSION,
         mapping_version=MAPPING_VERSION,
+        parser_version=PARSER_VERSION,
         repository=snapshot.repository,
         branch=snapshot.branch,
     )
@@ -712,4 +846,5 @@ def adapt_snapshot(
         issues=tuple(sorted(issues, key=lambda issue: (
             issue.path, issue.stage, issue.code, issue.message
         ))),
+        parser_version=PARSER_VERSION,
     )

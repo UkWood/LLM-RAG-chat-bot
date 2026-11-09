@@ -19,6 +19,22 @@ from .saturn_contracts import (
     stable_id,
 )
 
+# Files that determine Astro route patterns, route generation inputs, public origin,
+# or base-path handling. Git-provider-specific CI workflows are intentionally excluded.
+_ROUTE_SOURCE_FILES = frozenset({
+    "astro.config.mjs",
+    "src/content.config.ts",
+    "src/lib/url.ts",
+    "src/lib/nav.ts",
+    "src/data/nav.yaml",
+    "src/data/industries.yaml",
+})
+
+
+def is_route_source_path(path: str) -> bool:
+    """Whether a pinned source file can affect route generation or canonical URLs."""
+    return path.startswith("src/pages/") or path in _ROUTE_SOURCE_FILES
+
 
 def _value_type(value) -> str:
     if value is None:
@@ -198,6 +214,7 @@ def build_sync_manifest(
     file_revisions: Sequence[SiteFileRevision],
     adapter_version: str,
     mapping_version: str,
+    parser_version: str,
     repository: str = TRUSTED_SITE_REPOSITORY,
     branch: str = TRUSTED_SITE_BRANCH,
 ) -> SiteSyncManifest:
@@ -212,10 +229,21 @@ def build_sync_manifest(
         "file_revisions": [asdict(item) for item in files],
         "adapter_version": adapter_version,
         "mapping_version": mapping_version,
+        "parser_version": parser_version,
     }
     snapshot_id = stable_id("saturn-site-snapshot-v1", payload)
-    return SiteSyncManifest(repository, branch, commit_sha, tree_sha, adapter_version,
-                            mapping_version, schema_inventory, files, snapshot_id)
+    return SiteSyncManifest(
+        repository=repository,
+        branch=branch,
+        commit_sha=commit_sha,
+        tree_sha=tree_sha,
+        adapter_version=adapter_version,
+        mapping_version=mapping_version,
+        parser_version=parser_version,
+        schema_inventory=schema_inventory,
+        file_revisions=files,
+        snapshot_id=snapshot_id,
+    )
 
 
 def plan_sync(previous: SiteSyncManifest | None, current: SiteSyncManifest) -> SiteSyncPlan:
@@ -229,5 +257,40 @@ def plan_sync(previous: SiteSyncManifest | None, current: SiteSyncManifest) -> S
         if not isinstance(previous, SiteSyncManifest):
             raise ValueError("Previous manifest must be a SiteSyncManifest")
         changes = compare_file_revisions(previous.file_revisions, current.file_revisions)
-        drift = compare_schema(previous.schema_inventory, current.schema_inventory)
+        drift_events = list(compare_schema(previous.schema_inventory, current.schema_inventory))
+
+        old_routes = {
+            item.path: item for item in previous.file_revisions
+            if is_route_source_path(item.path)
+        }
+        new_routes = {
+            item.path: item for item in current.file_revisions
+            if is_route_source_path(item.path)
+        }
+        for path in sorted(old_routes.keys() | new_routes.keys()):
+            old = old_routes.get(path)
+            new = new_routes.get(path)
+            if old is None:
+                drift_events.append(SchemaDriftEvent(
+                    "route_source_added", "info", path, after=new.blob_sha
+                ))
+            elif new is None:
+                drift_events.append(SchemaDriftEvent(
+                    "route_source_deleted", "breaking", path, before=old.blob_sha
+                ))
+            elif old.blob_sha != new.blob_sha or old.content_sha256 != new.content_sha256:
+                drift_events.append(SchemaDriftEvent(
+                    "route_source_changed", "warning", path,
+                    before=old.blob_sha, after=new.blob_sha,
+                ))
+
+        if previous.parser_version != current.parser_version:
+            drift_events.append(SchemaDriftEvent(
+                "parser_version_changed", "warning", "saturn-site-parser",
+                before=previous.parser_version, after=current.parser_version,
+            ))
+        drift = tuple(sorted(
+            drift_events,
+            key=lambda item: (item.kind, item.subject, item.before or "", item.after or ""),
+        ))
     return SiteSyncPlan(current, changes, drift)

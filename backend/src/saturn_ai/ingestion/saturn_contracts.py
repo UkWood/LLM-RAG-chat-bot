@@ -10,6 +10,8 @@ import re
 from pathlib import PurePosixPath
 
 
+# Stable logical source ID; provider-specific remotes are mapped to this ID by Snapshot Providers.
+# Keep this value stable across a GitHub -> Gitea migration.
 TRUSTED_SITE_REPOSITORY = "UkWood/Saturn-Main-Site"
 TRUSTED_SITE_BRANCH = "main"
 ADAPTER_VERSION = "saturn-site-adapter/0.1.0"
@@ -49,7 +51,7 @@ def _safe_source_path(value: str) -> str:
     path = PurePosixPath(value)
     if (path.is_absolute() or "\\" in value or "%" in value or
             any(part in ("", ".", "..") for part in path.parts) or
-            not value.startswith("src/")):
+            not (value.startswith("src/") or value == "astro.config.mjs")):
         raise ValueError("Unsafe source path")
     return path.as_posix()
 
@@ -68,6 +70,8 @@ def _canonical_json_text(value: str, expected_type=None) -> None:
 
 @dataclass(frozen=True)
 class SiteSourceRevision:
+    """Raw source provenance; parser versions belong to processing manifests."""
+
     repository: str
     branch: str
     commit_sha: str
@@ -351,6 +355,7 @@ class SiteSyncManifest:
     tree_sha: str
     adapter_version: str
     mapping_version: str
+    parser_version: str
     schema_inventory: SchemaInventory
     file_revisions: tuple[SiteFileRevision, ...]
     snapshot_id: str
@@ -362,6 +367,7 @@ class SiteSyncManifest:
         _check_hash(self.tree_sha, _SHA1, "Git tree SHA")
         _required_text(self.adapter_version, "adapter_version")
         _required_text(self.mapping_version, "mapping_version")
+        _required_text(self.parser_version, "parser_version")
         _check_hash(self.snapshot_id, _SHA256, "snapshot ID")
         if not isinstance(self.schema_inventory, SchemaInventory):
             raise ValueError("Schema inventory is required")
@@ -381,6 +387,7 @@ class SiteSyncManifest:
             "file_revisions": [asdict(item) for item in self.file_revisions],
             "adapter_version": self.adapter_version,
             "mapping_version": self.mapping_version,
+            "parser_version": self.parser_version,
         }
         expected_snapshot_id = stable_id("saturn-site-snapshot-v1", payload)
         if self.snapshot_id != expected_snapshot_id:

@@ -59,6 +59,13 @@ class SaturnSiteContentAdapterTests(unittest.TestCase):
         self.assertEqual(entities[("news", "news-x")].entity_type, "News")
         self.assertEqual(entities[("pages", "solution-x")].entity_type, "Solution")
         self.assertEqual(entities[("pages", "section-x")].entity_type, "SectionPage")
+        self.assertEqual(entities[("pages", "home")].entity_type, "Page")
+        self.assertEqual(entities[("pages", "page-x")].entity_type, "Page")
+        self.assertEqual(entities[("pages", "unknown-kind")].entity_type, "SiteContent")
+        unknown_page = entities[("pages", "unknown-kind")]
+        self.assertEqual(json.loads(unknown_page.raw_frontmatter_json)["kind"], "future")
+        self.assertTrue(any(item.code == "unknown_entity_discriminator"
+                            and item.path.endswith("/unknown-kind.md") for item in package.issues))
         self.assertEqual(entities[("labs", "unknown-x")].entity_type, "SiteContent")
         self.assertNotIn(("products", "draft-x"), entities)
         self.assertIn(("products", "draft-string"), entities)
@@ -82,7 +89,120 @@ class SaturnSiteContentAdapterTests(unittest.TestCase):
         self.assertEqual(facts["temperature_c"].unit, "°C")
         self.assertEqual(json.loads(facts["specs[0].condition"].raw_value_json), "isolated")
         self.assertEqual(json.loads(facts["new_filter_parameter.qualifiers.condition"].raw_value_json), "nominal")
-        self.assertIsNone(device.canonical_url)
+        self.assertEqual(device.canonical_url, "https://www.mnppsaturn.ru/products/device-x/")
+
+    def test_canonical_urls_follow_astro_routes_and_ignore_git_pages_base_path(self):
+        package = adapt_snapshot(make_snapshot())
+        entities = {(item.collection, item.slug): item for item in package.entities}
+        expected = {
+            ("products", "device-x"): "https://www.mnppsaturn.ru/products/device-x/",
+            ("products", "software-x"): "https://www.mnppsaturn.ru/products/software-x/",
+            ("systems", "heating-system"): "https://www.mnppsaturn.ru/systems/heating-system/",
+            ("groups", "controllers"): "https://www.mnppsaturn.ru/catalog/controllers/",
+            ("articles", "article-x"): "https://www.mnppsaturn.ru/articles/article-x/",
+            ("news", "news-x"): "https://www.mnppsaturn.ru/news/news-x/",
+            ("pages", "solution-x"): "https://www.mnppsaturn.ru/solution-x/",
+            ("pages", "section-x"): "https://www.mnppsaturn.ru/section-x/",
+            ("pages", "home"): "https://www.mnppsaturn.ru/",
+            ("pages", "unknown-kind"): "https://www.mnppsaturn.ru/unknown-kind/",
+        }
+        for key, canonical in expected.items():
+            with self.subTest(entity=key):
+                self.assertEqual(entities[key].canonical_url, canonical)
+        self.assertIsNone(entities[("labs", "unknown-x")].canonical_url)
+        all_urls = [item.canonical_url for item in package.entities if item.canonical_url]
+        self.assertTrue(all(url.startswith("https://www.mnppsaturn.ru/") for url in all_urls))
+        self.assertFalse(any("github" in url.lower() or "Saturn-Main-Site" in url for url in all_urls))
+        self.assertFalse(any("/Saturn-Main-Site/" in url for url in all_urls))
+        source_paths = {item.path for item in package.source_revisions}
+        manifest_paths = {item.path for item in package.manifest.file_revisions}
+        self.assertIn("astro.config.mjs", source_paths)
+        self.assertIn("astro.config.mjs", manifest_paths)
+        self.assertIn("src/pages/products/[slug].astro", manifest_paths)
+        self.assertIn("src/lib/url.ts", manifest_paths)
+
+    def test_public_domain_change_is_config_driven_and_reported(self):
+        previous = adapt_snapshot(make_snapshot())
+        files = fixture_file_map()
+        config = files["astro.config.mjs"][1].replace(
+            b"https://www.mnppsaturn.ru", b"https://docs.example.test"
+        )
+        replace_file(files, "astro.config.mjs", config)
+        current = adapt_snapshot(
+            make_snapshot(files, commit=COMMIT_B, tree=TREE_B),
+            previous_manifest=previous.manifest,
+        )
+        device = next(item for item in current.entities
+                      if item.collection == "products" and item.slug == "device-x")
+        self.assertEqual(device.canonical_url, "https://docs.example.test/products/device-x/")
+        self.assertIn("astro.config.mjs", current.sync_plan.file_changes.changed)
+        self.assertTrue(any(item.kind == "route_source_changed"
+                            and item.subject == "astro.config.mjs"
+                            for item in current.sync_plan.schema_drift))
+
+    def test_github_pages_or_path_prefixed_site_url_is_rejected(self):
+        for candidate in (
+            b"https://ukwood.github.io",
+            b"https://www.mnppsaturn.ru/Saturn-Main-Site/",
+        ):
+            with self.subTest(candidate=candidate):
+                files = fixture_file_map()
+                config = files["astro.config.mjs"][1].replace(
+                    b"https://www.mnppsaturn.ru", candidate
+                )
+                replace_file(files, "astro.config.mjs", config)
+                with self.assertRaises(SnapshotValidationError):
+                    adapt_snapshot(make_snapshot(files))
+
+    def test_canonical_slug_is_url_encoded_and_nested_slug_is_not_guessed(self):
+        files = fixture_file_map()
+        replace_file(
+            files,
+            "src/content/products/device space.md",
+            b"---\ntitle: Spaced device\n---\nBody.\n",
+        )
+        replace_file(
+            files,
+            "src/content/products/nested/device.md",
+            b"---\ntitle: Nested device\n---\nNested body.\n",
+        )
+        package = adapt_snapshot(make_snapshot(files))
+        entities = {(item.collection, item.slug): item for item in package.entities}
+        self.assertEqual(
+            entities[("products", "device space")].canonical_url,
+            "https://www.mnppsaturn.ru/products/device%20space/",
+        )
+        self.assertIsNone(entities[("products", "nested/device")].canonical_url)
+        self.assertTrue(any(item.code == "nested_slug_route_unsupported"
+                            and item.path.endswith("/nested/device.md")
+                            for item in package.issues))
+
+    def test_route_sources_add_change_delete_and_report_drift(self):
+        previous = adapt_snapshot(make_snapshot())
+        files = fixture_file_map()
+        replace_file(
+            files,
+            "src/pages/products/[slug].astro",
+            b"---\n// changed product route\n---\n",
+        )
+        del files["src/pages/news/[slug].astro"]
+        replace_file(files, "src/pages/new-route.astro", b"---\n// new route\n---\n")
+        current = adapt_snapshot(
+            make_snapshot(files, commit=COMMIT_B, tree=TREE_B),
+            previous_manifest=previous.manifest,
+        )
+        changes = current.sync_plan.file_changes
+        self.assertIn("src/pages/products/[slug].astro", changes.changed)
+        self.assertIn("src/pages/new-route.astro", changes.added)
+        self.assertIn("src/pages/news/[slug].astro", changes.deleted)
+        route_events = [item for item in current.sync_plan.schema_drift
+                        if item.kind.startswith("route_source_")]
+        by_key = {(item.kind, item.subject): item for item in route_events}
+        self.assertIn(("route_source_changed", "src/pages/products/[slug].astro"), by_key)
+        self.assertIn(("route_source_added", "src/pages/new-route.astro"), by_key)
+        self.assertIn(("route_source_deleted", "src/pages/news/[slug].astro"), by_key)
+        self.assertEqual(by_key[("route_source_deleted", "src/pages/news/[slug].astro")].severity,
+                         "breaking")
 
     def test_relations_follow_only_explicit_source_fields(self):
         package = adapt_snapshot(make_snapshot())
