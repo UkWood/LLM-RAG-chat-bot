@@ -13,6 +13,10 @@ from saturn_ai.ingestion.saturn_contracts import (
     SiteFileRevision,
     SiteRelation,
     SiteSourceRevision,
+    SiteSyncManifest,
+    TRUSTED_SITE_BRANCH,
+    TRUSTED_SITE_REPOSITORY,
+    LEGACY_PARSER_VERSION,
     SupportDocument,
     canonical_json,
     stable_id,
@@ -50,6 +54,39 @@ class SaturnCanonicalContractTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             SiteSourceRevision("UkWood/Saturn-Main-Site", "main", COMMIT,
                                "src/content/../secret.md", BLOB, CONTENT)
+
+    def test_legacy_manifest_without_parser_version_remains_readable(self):
+        inventory = SchemaInventory(CONTENT, ("products",), (), ())
+        files = (SiteFileRevision("src/content/products/demo.md", BLOB, CONTENT,
+                                  "products", "demo"),)
+        legacy_payload = {
+            "repository": TRUSTED_SITE_REPOSITORY,
+            "branch": TRUSTED_SITE_BRANCH,
+            "commit_sha": COMMIT,
+            "tree_sha": TREE,
+            "schema_inventory": {
+                "schema_source_sha256": CONTENT,
+                "collections": ["products"],
+                "fields": [],
+                "dictionaries": [],
+            },
+            "file_revisions": [{
+                "path": files[0].path,
+                "blob_sha": BLOB,
+                "content_sha256": CONTENT,
+                "collection": "products",
+                "slug": "demo",
+            }],
+            "adapter_version": "adapter/0.1",
+            "mapping_version": "mapping/0.1",
+        }
+        snapshot_id = stable_id("saturn-site-snapshot-v1", legacy_payload)
+        manifest = SiteSyncManifest(
+            TRUSTED_SITE_REPOSITORY, TRUSTED_SITE_BRANCH, COMMIT, TREE,
+            "adapter/0.1", "mapping/0.1", inventory, files, snapshot_id,
+        )
+        self.assertEqual(manifest.parser_version, LEGACY_PARSER_VERSION)
+        self.assertEqual(manifest.snapshot_id, snapshot_id)
 
     def test_entity_preserves_unknown_frontmatter_fields(self):
         raw = {"title": "DEMO-300", "new_filter_parameter": {"min": 1, "max": 9},

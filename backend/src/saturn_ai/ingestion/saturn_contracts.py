@@ -16,6 +16,7 @@ TRUSTED_SITE_REPOSITORY = "UkWood/Saturn-Main-Site"
 TRUSTED_SITE_BRANCH = "main"
 ADAPTER_VERSION = "saturn-site-adapter/0.1.0"
 MAPPING_VERSION = "saturn-site-mapping/0.2.0"
+LEGACY_PARSER_VERSION = "saturn-site-parser/unversioned"
 
 _SHA1 = re.compile(r"^[0-9a-f]{40}$")
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
@@ -355,10 +356,12 @@ class SiteSyncManifest:
     tree_sha: str
     adapter_version: str
     mapping_version: str
-    parser_version: str
     schema_inventory: SchemaInventory
     file_revisions: tuple[SiteFileRevision, ...]
     snapshot_id: str
+    # Missing parser_version in a pre-upgrade serialized manifest maps to this
+    # marker; its legacy snapshot_id is validated using the pre-versioned payload.
+    parser_version: str = LEGACY_PARSER_VERSION
 
     def __post_init__(self):
         if self.repository != TRUSTED_SITE_REPOSITORY or self.branch != TRUSTED_SITE_BRANCH:
@@ -387,8 +390,9 @@ class SiteSyncManifest:
             "file_revisions": [asdict(item) for item in self.file_revisions],
             "adapter_version": self.adapter_version,
             "mapping_version": self.mapping_version,
-            "parser_version": self.parser_version,
         }
+        if self.parser_version != LEGACY_PARSER_VERSION:
+            payload["parser_version"] = self.parser_version
         expected_snapshot_id = stable_id("saturn-site-snapshot-v1", payload)
         if self.snapshot_id != expected_snapshot_id:
             raise ValueError("Snapshot ID does not match manifest contents")

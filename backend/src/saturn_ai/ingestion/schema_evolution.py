@@ -7,6 +7,7 @@ from collections.abc import Mapping, Sequence
 from .saturn_contracts import (
     DictionaryFingerprint,
     FileChangeSet,
+    LEGACY_PARSER_VERSION,
     SchemaDriftEvent,
     SchemaField,
     SchemaInventory,
@@ -229,8 +230,9 @@ def build_sync_manifest(
         "file_revisions": [asdict(item) for item in files],
         "adapter_version": adapter_version,
         "mapping_version": mapping_version,
-        "parser_version": parser_version,
     }
+    if parser_version != LEGACY_PARSER_VERSION:
+        payload["parser_version"] = parser_version
     snapshot_id = stable_id("saturn-site-snapshot-v1", payload)
     return SiteSyncManifest(
         repository=repository,

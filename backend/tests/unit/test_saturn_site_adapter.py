@@ -200,6 +200,8 @@ class SaturnSiteContentAdapterTests(unittest.TestCase):
         )
         del files["src/pages/news/[slug].astro"]
         replace_file(files, "src/pages/new-route.astro", b"---\n// new route\n---\n")
+        industries = files["src/data/industries.yaml"][1] + b"- gas\n"
+        replace_file(files, "src/data/industries.yaml", industries)
         current = adapt_snapshot(
             make_snapshot(files, commit=COMMIT_B, tree=TREE_B),
             previous_manifest=previous.manifest,
@@ -214,6 +216,7 @@ class SaturnSiteContentAdapterTests(unittest.TestCase):
         self.assertIn(("route_source_changed", "src/pages/products/[slug].astro"), by_key)
         self.assertIn(("route_source_added", "src/pages/new-route.astro"), by_key)
         self.assertIn(("route_source_deleted", "src/pages/news/[slug].astro"), by_key)
+        self.assertIn(("route_source_changed", "src/data/industries.yaml"), by_key)
         self.assertEqual(by_key[("route_source_deleted", "src/pages/news/[slug].astro")].severity,
                          "breaking")
         missing_news = next(item for item in current.entities
