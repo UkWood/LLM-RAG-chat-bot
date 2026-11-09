@@ -1,5 +1,6 @@
 import base64
 import hashlib
+from http.client import IncompleteRead
 import json
 import unittest
 
@@ -491,6 +492,41 @@ class GitHubSnapshotProviderTests(unittest.TestCase):
                 with self.assertRaises(expected):
                     provider.fetch_snapshot()
 
+    def test_incomplete_http_read_is_retried(self):
+        transport, _ = build_transport()
+        original = transport.routes[REF_URL]
+        transport.routes[REF_URL] = [IncompleteRead(b"partial", 5), original]
+        provider, sleeps = make_provider(transport)
+
+        snapshot = provider.fetch_snapshot()
+
+        self.assertEqual(snapshot.commit_sha, COMMIT_A)
+        self.assertEqual(sum(call["url"] == REF_URL for call in transport.calls), 2)
+        self.assertEqual(sleeps, [0.25])
+
+    def test_content_length_mismatch_is_rejected(self):
+        transport, _ = build_transport()
+        valid = json_response(transport.routes[REF_URL])
+        transport.routes[REF_URL] = HttpResponse(
+            200,
+            {"Content-Length": "1"},
+            valid.body,
+        )
+        provider, _ = make_provider(transport)
+
+        with self.assertRaises(GitHubAPIError):
+            provider.fetch_snapshot()
+
+    def test_selected_route_path_rejects_percent_encoding(self):
+        files = site_files()
+        files["src/pages/unsafe%20route.astro"] = b"<html>unsafe</html>\n"
+        transport, _ = build_transport(files)
+        provider, _ = make_provider(transport)
+
+        with self.assertRaises(TreeValidationError):
+            provider.fetch_snapshot()
+        self.assertFalse(any("/git/blobs/" in call["url"] for call in transport.calls))
+
     def test_redirect_is_not_followed(self):
         transport, _ = build_transport()
         transport.routes[REF_URL] = HttpResponse(302, {"Location": "https://evil.example/"}, b"")
@@ -563,6 +599,8 @@ class GitHubSnapshotProviderTests(unittest.TestCase):
             )
         with self.assertRaises(ProviderConfigurationError):
             GitHubProviderConfig(token="bad token", object_format="sha1")
+        with self.assertRaises(ProviderConfigurationError):
+            GitHubProviderConfig(token="bad\x00token", object_format="sha1")
 
     def test_environment_configuration_requires_explicit_object_format(self):
         from unittest.mock import patch

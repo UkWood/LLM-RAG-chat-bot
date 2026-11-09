@@ -12,6 +12,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import timezone
 from email.utils import parsedate_to_datetime
+from http.client import HTTPException
 from hashlib import sha1, sha256
 import json
 import math
@@ -31,6 +32,7 @@ from .snapshot_provider import SnapshotProvider
 
 GITHUB_API_ORIGIN = "https://api.github.com"
 GITHUB_PHYSICAL_REPOSITORY = "UkWood/Saturn-Main-Site"
+_REPOSITORY_API_PATH = "/repos/" + GITHUB_PHYSICAL_REPOSITORY
 GITHUB_API_VERSION = "2022-11-28"
 _SHA1_RE = re.compile(r"^[0-9a-f]{40}$")
 _BASE64_WHITESPACE_RE = re.compile(r"[ \t\r\n]+")
@@ -131,8 +133,12 @@ class GitHubProviderConfig:
     max_snapshot_bytes: int = 64_000_000
 
     def __post_init__(self):
-        if not isinstance(self.token, str) or not self.token or any(ch.isspace() for ch in self.token):
-            raise ProviderConfigurationError("SATURN_GITHUB_TOKEN must contain a token")
+        if (
+            not isinstance(self.token, str)
+            or not self.token
+            or any(not 33 <= ord(ch) <= 126 for ch in self.token)
+        ):
+            raise ProviderConfigurationError("SATURN_GITHUB_TOKEN must contain a printable ASCII token")
         if not isinstance(self.object_format, str) or not self.object_format:
             raise ProviderConfigurationError("SATURN_GITHUB_OBJECT_FORMAT must be explicitly configured")
         if self.object_format != "sha1":
@@ -215,7 +221,7 @@ class UrllibHttpTransport:
             # HTTP errors are returned to the API layer for typed status handling.
             body = exc.read(max_bytes + 1)
             return HttpResponse(exc.code, dict(exc.headers.items()), body)
-        except (URLError, TimeoutError, OSError) as exc:
+        except (URLError, TimeoutError, OSError, HTTPException) as exc:
             # Do not include the underlying exception text: it may contain URL details.
             raise GitHubNetworkError(
                 "GitHub HTTPS request failed: " + type(exc).__name__
@@ -270,7 +276,7 @@ class _GitHubAPI:
                     timeout=min(self._config.request_timeout_seconds, remaining),
                     max_bytes=self._config.max_response_bytes,
                 )
-            except (GitHubNetworkError, TimeoutError, OSError) as exc:
+            except (GitHubNetworkError, TimeoutError, OSError, HTTPException) as exc:
                 if attempt >= self._config.max_attempts:
                     raise GitHubNetworkError(
                         "GitHub network request failed after bounded retries"
@@ -283,6 +289,7 @@ class _GitHubAPI:
                 for key, value in response.headers.items()
             }
             content_length = normalized_headers.get("content-length")
+            declared_length = None
             if content_length is not None:
                 try:
                     declared_length = int(content_length)
@@ -294,6 +301,8 @@ class _GitHubAPI:
                 raise GitHubAPIError("GitHub returned a non-byte HTTP response body")
             if len(response.body) > self._config.max_response_bytes:
                 raise ResourceLimitError("GitHub API response size limit exceeded")
+            if declared_length is not None and declared_length != len(response.body):
+                raise GitHubAPIError("GitHub response body length does not match Content-Length")
 
             rate_limited = self._is_rate_limited(response.status_code, normalized_headers, response.body)
             retryable = rate_limited or response.status_code in {408, 425} or 500 <= response.status_code <= 599
@@ -321,7 +330,7 @@ class _GitHubAPI:
 
             try:
                 value = json.loads(response.body.decode("utf-8"))
-            except (UnicodeDecodeError, json.JSONDecodeError):
+            except (UnicodeDecodeError, json.JSONDecodeError, RecursionError):
                 raise GitHubAPIError("GitHub returned invalid UTF-8 JSON") from None
             if not isinstance(value, dict):
                 raise GitHubAPIError("GitHub API response must be a JSON object")
@@ -418,16 +427,14 @@ class GitHubSnapshotProvider(SnapshotProvider):
     def fetch_snapshot(self) -> PinnedSiteSnapshot:
         """Resolve main exactly once and return no object unless every check passes."""
         self._api.begin_operation()
-        ref = self._api.get_json(
-            "/repos/UkWood/Saturn-Main-Site/git/ref/heads/main"
-        )
+        ref = self._api.get_json(_REPOSITORY_API_PATH + "/git/ref/heads/main")
         ref_object = ref.get("object")
         if not isinstance(ref_object, dict) or ref_object.get("type") != "commit":
             raise TreeValidationError("refs/heads/main did not resolve to a commit object")
         commit_sha = self._validate_sha(ref_object.get("sha"), "branch commit")
 
         commit = self._api.get_json(
-            "/repos/UkWood/Saturn-Main-Site/git/commits/" + quote(commit_sha, safe="")
+            _REPOSITORY_API_PATH + "/git/commits/" + quote(commit_sha, safe="")
         )
         if commit.get("sha") != commit_sha:
             raise TreeValidationError("GitHub commit response does not match the pinned commit SHA")
@@ -456,15 +463,16 @@ class GitHubSnapshotProvider(SnapshotProvider):
         for path in sorted(selected):
             entry = selected[path]
             blob = self._api.get_json(
-                "/repos/UkWood/Saturn-Main-Site/git/blobs/" + quote(entry.sha, safe="")
+                _REPOSITORY_API_PATH + "/git/blobs/" + quote(entry.sha, safe="")
             )
             content = self._decode_and_verify_blob(blob, entry)
             total_bytes += len(content)
             if total_bytes > self.config.max_snapshot_bytes:
                 raise ResourceLimitError("Selected snapshot byte limit exceeded")
+            raw_content_sha256 = sha256(content).hexdigest()
             snapshot_file = SnapshotFile(path, entry.sha, content)
             # The existing adapter records this exact raw-content SHA-256 in provenance.
-            if snapshot_file.content_sha256 != sha256(content).hexdigest():
+            if snapshot_file.content_sha256 != raw_content_sha256:
                 raise BlobIntegrityError("Raw content SHA-256 calculation is inconsistent")
             snapshot_files.append(snapshot_file)
 
@@ -478,7 +486,7 @@ class GitHubSnapshotProvider(SnapshotProvider):
 
     def _enumerate_tree(self, root_tree_sha: str) -> dict[str, _TreeEntry]:
         recursive = self._api.get_json(
-            "/repos/UkWood/Saturn-Main-Site/git/trees/"
+            _REPOSITORY_API_PATH + "/git/trees/"
             + quote(root_tree_sha, safe="") + "?recursive=1"
         )
         self._validate_tree_response_identity(recursive, root_tree_sha)
@@ -511,7 +519,7 @@ class GitHubSnapshotProvider(SnapshotProvider):
             if tree_sha in ancestors:
                 raise TreeValidationError("Cycle detected in Git tree object traversal")
             response = self._api.get_json(
-                "/repos/UkWood/Saturn-Main-Site/git/trees/"
+                _REPOSITORY_API_PATH + "/git/trees/"
                 + quote(tree_sha, safe="") + "?recursive=0"
             )
             self._validate_tree_response_identity(response, tree_sha)
@@ -601,6 +609,8 @@ class GitHubSnapshotProvider(SnapshotProvider):
                 continue
 
             if path.startswith("src/pages/"):
+                if "%" in path:
+                    raise TreeValidationError("Selected route-source path contains a disallowed percent character")
                 if entry.mode not in _REGULAR_BLOB_MODES or entry.object_type != "blob":
                     raise TreeValidationError("Symlink or submodule in selected route source: " + path)
                 if path.endswith(".d.ts") or not path.endswith((".astro", ".ts")):
@@ -664,8 +674,6 @@ class GitHubSnapshotProvider(SnapshotProvider):
             raise BlobIntegrityError("GitHub blob byte count does not match its declared size: " + entry.path)
         if self._git_blob_sha1(content) != entry.sha:
             raise BlobIntegrityError("Canonical Git blob SHA-1 does not match the pinned tree: " + entry.path)
-        # SHA-256 is deliberately separate from the Git object ID and is computed on raw bytes.
-        sha256(content).hexdigest()
         return content
 
     @staticmethod
