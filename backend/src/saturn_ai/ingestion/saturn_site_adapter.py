@@ -371,6 +371,10 @@ def _content_location(path: str) -> tuple[str, str] | None:
     return collection, relative
 
 
+def _entity_id(collection: str, slug: str) -> str:
+    return "saturn:" + stable_id("saturn-site-entity-v1", collection, slug)
+
+
 def _extract_public_site_origin(config_bytes: bytes) -> str:
     """Read the checked-in SITE_URL fallback without evaluating Astro/JavaScript."""
     try:
