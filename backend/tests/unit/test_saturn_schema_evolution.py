@@ -165,6 +165,14 @@ class SaturnSchemaEvolutionTests(unittest.TestCase):
         self.assertEqual(event.after, "parser/0.2")
         self.assertEqual(event.severity, "warning")
 
+    def test_legacy_builder_call_defaults_to_unversioned_manifest(self):
+        legacy = build_sync_manifest(
+            commit_sha=COMMIT_A, tree_sha=TREE_A, schema_inventory=inventory(),
+            file_revisions=(file("src/content/products/demo.md"),),
+            adapter_version="adapter/0.1", mapping_version="mapping/0.1",
+        )
+        self.assertEqual(legacy.parser_version, "saturn-site-parser/unversioned")
+
     def test_sync_plan_initial_and_incremental(self):
         schema = inventory()
         first = build_sync_manifest(commit_sha=COMMIT_A, tree_sha=TREE_A,

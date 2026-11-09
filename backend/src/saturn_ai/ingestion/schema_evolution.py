@@ -215,7 +215,7 @@ def build_sync_manifest(
     file_revisions: Sequence[SiteFileRevision],
     adapter_version: str,
     mapping_version: str,
-    parser_version: str,
+    parser_version: str = LEGACY_PARSER_VERSION,
     repository: str = TRUSTED_SITE_REPOSITORY,
     branch: str = TRUSTED_SITE_BRANCH,
 ) -> SiteSyncManifest:
