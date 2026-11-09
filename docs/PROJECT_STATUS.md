@@ -12,12 +12,12 @@ Owner-approved Snapshot Provider Contract v0.1 and ADR-0014 are documented in th
 - The Git provider is trusted for ref → commit → tree identity mapping and complete tree enumeration. Independent cryptographic verification of raw commit/tree objects is not claimed.
 - Selected blob bytes are independently checked against the canonical Git object hash for the repository object format. Raw content SHA-256 is retained separately.
 - Current canonical snapshot/adapter contracts support SHA-1 object IDs; another format fails closed pending a separately approved canonical-contract evolution.
-- Only Markdown collections, YAML dictionaries, content schema, Astro routes and audited route/config dependencies are selected. Unrelated binary assets are not bulk-downloaded.
+- Only Markdown collections, YAML dictionaries, content schema, Astro routes and audited route/config dependencies are selected. Under `src/pages/`, only `.astro` and `.ts` route files (excluding `.d.ts`) are supported; other types trigger route-source drift and fail closed rather than being downloaded or silently skipped. The audited site baseline is 23 files: 19 `.astro`, 4 `.ts`. Unrelated binary assets are not bulk-downloaded.
 - PDF remains a full and mandatory part of the knowledge corpus. Support Catalog Adapter discovers/catalogues it; External Document Adapter fetches and extracts it. A future selective Git-blob PDF path is reserved, not implemented.
 
 No GitHub/Gitea Provider, PDF ingestion, Git-backed PDF retrieval, adapter/canonical-contract code changes, runtime integration or deployment is included. Saturn-Main-Site remains strictly READ-ONLY.
 
-**Current stage:** architecture/documentation only. PR #21 is OPEN (not merged). GitHub Actions PR-head run [#42583556029](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42583556029) and matching push run [#42583549653](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42583549653) both completed SUCCESS on commit cc92871111344ab8b126e0953a9e4aa73540102e; jobs offline-checks and onnx-contracts passed. Awaiting owner review/merge. Provider implementation remains NOT STARTED and requires a separate instruction.
+**Current stage:** architecture/documentation only. PR #21 is OPEN (not merged). Before the current review corrections, PR head `23fcbfc0541e43d3467dfdbbd189affdd1b49485` passed PR-head CI [#42584026479](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42584026479) and matching push CI [#42584019007](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42584019007); both jobs `offline-checks` and `onnx-contracts` succeeded. This correction creates a new PR head and requires fresh CI. Awaiting owner review/merge. Provider implementation remains NOT STARTED and requires a separate instruction.
 
 
 

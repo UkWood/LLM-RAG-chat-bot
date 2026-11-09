@@ -23,7 +23,9 @@ This stage covers architecture and documentation only. It does not implement a G
 - Each selected blob is independently verified against the canonical Git blob object hash using the repository object format. Raw content SHA-256 is stored separately.
 - The current canonical snapshot/adapter implementation supports SHA-1 object IDs. Other formats fail closed until a separately approved canonical-contract and adapter evolution.
 - Only Markdown collections, YAML dictionaries, content schema, Astro routes and audited route/configuration dependencies are selected. Unrelated binary assets are not bulk-downloaded.
-- Any incomplete tree, truncation without complete fallback, missing required file/blob, hash mismatch, unsupported object mode/format or hard-limit violation fails the sync.
+- GitHub recursive truncation and Gitea pagination are handled according to provider-specific semantics. Gitea pages must be fully collected and cross-checked against page, tree SHA and total_count; direct tree-SHA lookup is version-tested, with recursive pinned-commit pagination as the safe fallback.
+- Under src/pages/, only `.astro` and `.ts` route-source files (excluding `.d.ts`) are selected. Unknown file types are reported as route-source drift and fail closed rather than being downloaded or silently skipped. The audited source baseline is 23 files: 19 `.astro`, 4 `.ts`.
+- Any incomplete tree, truncation/pagination inconsistency without a complete fallback, missing required file/blob, hash mismatch, unsupported object mode/format or hard-limit violation fails the sync.
 - HTTPS, trusted endpoint allowlists, read-only credentials, secret protection and finite resource limits are mandatory.
 - Provider-specific GitHub/Gitea behavior stays behind the provider boundary. The Site Content Adapter and canonical contracts do not depend on the Git service.
 
@@ -48,9 +50,9 @@ This is a documentation-only architecture stage. No source code, dependencies, t
 
 PR #21 is open and not merged.
 
-GitHub Actions on head cc92871111344ab8b126e0953a9e4aa73540102e:
-- PR-head run [#42583556029](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42583556029): SUCCESS.
-- Matching push run [#42583549653](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42583549653): SUCCESS.
-- Both runs completed jobs offline-checks and onnx-contracts successfully.
+Before the review corrections in this update, the PR head was `23fcbfc0541e43d3467dfdbbd189affdd1b49485`:
+- PR-head run [#42584026479](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42584026479): SUCCESS.
+- Matching push run [#42584019007](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42584019007): SUCCESS.
+- Both runs completed jobs `offline-checks` and `onnx-contracts` successfully.
 
-These checks cover the existing project suite; this PR changes documentation only. No provider implementation or PDF ingestion is authorized by this stage.
+This documentation correction creates a new PR head; CI for the corrected head must run again, and its result is not inferred from the previous successful runs. No provider implementation or PDF ingestion is authorized by this stage.

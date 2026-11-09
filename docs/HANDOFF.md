@@ -13,7 +13,7 @@ Base commit до PR #20: `934c65e2bc11adf4c2b0b0e3b30717a02d7bb26e`
 - PR #20 — trusted Saturn Site Content Adapter — слит в main. Реализация и проверки описаны ниже.
 - Snapshot Provider architecture contract v0.1 и ADR-0014 приняты владельцем и опубликованы в документационном PR #21: https://github.com/UkWood/LLM-RAG-chat-bot/pull/21. PR открыт, не слит.
 - PR #21: branch docs-snapshot-provider-contract-2026-11-09; base c1840b071e077ae6019f1b9e7930c3aa15d08ef3.
-- GitHub Actions PR-head run [#42583556029](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42583556029) and matching push run [#42583549653](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42583549653) both SUCCESS on head cc92871111344ab8b126e0953a9e4aa73540102e; offline-checks and onnx-contracts passed.
+- Before the current review corrections, PR head `23fcbfc0541e43d3467dfdbbd189affdd1b49485` passed PR-head CI [#42584026479](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42584026479) and push CI [#42584019007](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42584019007); both `offline-checks` and `onnx-contracts` passed. The correction commit creates a new head and requires fresh CI.
 - Git REST API выбран основным транспортом: GitHub — первая реализация, Gitea — последующая реализация того же provider-neutral контракта.
 - Provider один раз разрешает refs/heads/main, фиксирует commit/tree и далее читает только по immutable object IDs. Повторного обращения к moving branch в рамках sync нет.
 - Provider доверен в отношении ref → commit → tree identity mapping и полноты перечисления дерева; независимая криптографическая проверка raw commit/tree objects не заявляется.
@@ -28,10 +28,12 @@ Base commit до PR #20: `934c65e2bc11adf4c2b0b0e3b30717a02d7bb26e`
 
 - Stable trusted logical source ID: `UkWood/Saturn-Main-Site`, branch `main`. Snapshot Providers отображают свои физические GitHub/Gitea remotes и namespace на этот ID; адрес провайдера не входит в контракт адаптера.
 - Snapshot Provider использует Git REST API: GitHub — первая реализация, Gitea — последующая реализация того же provider-neutral контракта.
+- Gitea tree pagination and commit-SHA/tree-SHA behavior must pass version-specific conformance tests; unsupported behavior fails closed. src/pages route-source allowlist is `.astro` and `.ts`, other types create drift diagnostics.
+- Gitea provider обязан обрабатывать `page`/`per_page` и сверять все страницы по `page`, tree `sha`, `total_count` и уникальности entries. Документация Gitea описывает входной `sha` как commit SHA, а текущий upstream код принимает commit или tree ID; прямой tree-SHA lookup проверяется на точной версии целевого сервера. При несовместимости — recursive pagination по закреплённому commit SHA, иначе явная ошибка.
 - `refs/heads/main` разрешается один раз на sync. После pinning все операции выполняются только по immutable commit/tree/blob IDs; повторной проверки подвижной ветки в той же sync нет.
 - Git provider является trust source для ref → commit → tree identity mapping и полноты tree enumeration. Независимая криптографическая проверка raw commit/tree objects не заявляется.
 - Каждый выбранный blob проверяется по canonical Git object hash с учётом object format репозитория; raw content SHA-256 хранится отдельно. Текущие canonical contracts поддерживают SHA-1; другой формат требует отдельной versioned эволюции contracts/adapter.
-- Snapshot ограничен Markdown collections, YAML dictionaries, content schema, Astro routes и утверждёнными route/config dependencies; unrelated binary assets не скачиваются массово.
+- Snapshot ограничен Markdown collections, YAML dictionaries, content schema, Astro routes и утверждёнными route/config dependencies; unrelated binary assets не скачиваются массово. Для `src/pages/` поддерживаются только `.astro` и `.ts` (не `.d.ts`); неизвестное расширение вызывает route-source drift и fail-closed. Read-only baseline Saturn-Main-Site на commit `084d759487bfab6e111549c9b5469711ac5fc13e`: 23 файла, 19 `.astro`, 4 `.ts`.
 - PDF остаются обязательной частью knowledge corpus: discovery/cataloguing — Support Catalog Adapter, fetch/extraction — External Document Adapter. Будущий selective Git-blob retrieval допускается по pinned commit/path/blob SHA, но сейчас не реализуется.
 - Все non-draft записи сайта, объявленные сайтом связи, справочники и прямые PDF-ссылки из documents/certificates или Markdown body доверенные. Ручная проверка/approval не нужна.
 - `draft: true` исключается из публичного corpus.

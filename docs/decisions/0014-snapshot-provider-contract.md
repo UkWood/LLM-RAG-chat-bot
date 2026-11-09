@@ -46,7 +46,13 @@ Branch ref разрешается один раз в начале синхрон
 
 Проверка commit/tree означает согласованность идентификаторов в ответах доверенного провайдера и полное перечисление выбранного дерева. Она не объявляется независимой криптографической проверкой commit/tree: сырые сериализованные Git commit/tree objects самостоятельно не загружаются и не хешируются. Проверка подписи, автора или независимой аутентичности этих объектов в это решение не входит.
 
-Усечённый recursive tree response не является полным деревом. Допускается перейти к полному обходу поддеревьев по immutable tree SHA. Если полноту установить нельзя, синхронизация завершается ошибкой.
+Семантика tree API различается по провайдерам и не должна трактоваться одинаково:
+
+- GitHub: `truncated=true` у recursive tree response означает, что ответ ограничен; полный обход выполняется non-recursive запросами по закреплённым tree SHA.
+- Gitea: endpoint `GET /repos/{owner}/{repo}/git/trees/{sha}` поддерживает `page`, `per_page`, `total_count` и `truncated`; в документированном API `truncated=true` означает наличие следующей страницы. Gitea provider обязан пройти последовательные страницы и проверить номера страниц, постоянство tree SHA и total_count, отсутствие дубликатов и точное совпадение числа собранных entries с total_count. Несогласованность `truncated` и total_count требует bounded terminal-page probe либо fail-closed, но не молчаливого принятия неполного дерева.
+- Gitea API reference описывает path parameter `sha` как commit SHA, тогда как response `sha` является tree object SHA. Текущий upstream код Gitea допускает lookup как по commit ID, так и по tree ID, но это должно быть проверено на точной целевой версии сервера. Если child-tree lookup по tree SHA не поддерживается, разрешён безопасный fallback: recursive tree по закреплённому commit SHA с полной пагинацией. Если он не обеспечивает полноту, provider завершается явной ошибкой.
+
+До включения Gitea provider обязательны version-specific conformance tests: root lookup по commit SHA, child lookup по tree SHA, pagination и полная сверка total_count. Основание: [Gitea Get Tree API](https://docs.gitea.com/enterprise/api/operations/get-tree/), [upstream implementation](https://github.com/go-gitea/gitea/blob/main/services/repository/files/tree.go), [issue #35117](https://github.com/go-gitea/gitea/issues/35117), [fix PR #35177](https://github.com/go-gitea/gitea/pull/35177).
 
 ### 4. Blob integrity и Git object format
 
@@ -64,13 +70,13 @@ Snapshot Provider получает только файлы, необходимы
 - все Markdown-файлы под src/content/ с расширением .md;
 - все YAML-файлы под src/data/ с расширением .yaml или .yml;
 - src/content.config.ts;
-- все tracked files под src/pages/ как route source;
+- tracked regular files под src/pages/ с поддерживаемыми расширениями `.astro` и `.ts` (исключая `.d.ts`); любой другой тип файла диагностируется как route-source drift и приводит к fail-closed, пока политика не будет явно обновлена;
 - astro.config.mjs;
 - src/lib/url.ts, src/lib/nav.ts и src/lib/service.ts, если они присутствуют.
 
 src/content.config.ts и astro.config.mjs обязательны. Каждый выбранный файл, присутствующий в закреплённом tree, должен быть получен полностью и пройти проверку. Отсутствие blob, ошибка получения, неполный ответ, несовпадение hash или неподдерживаемый тип объекта не могут быть проигнорированы.
 
-Новые Markdown collections/records, YAML dictionaries и route files обнаруживаются по дереву автоматически. Выборочная политика путей версионируется отдельно от Git provider. Изображения, PDF, шрифты, видео, generated assets, compiled search indexes и прочие ненужные бинарные материалы массово не скачиваются.
+Новые Markdown collections/records, YAML dictionaries и файлы маршрутов `.astro`/`.ts` обнаруживаются по дереву автоматически. На проверенном read-only commit Saturn-Main-Site `084d759487bfab6e111549c9b5469711ac5fc13e` baseline составляет 23 route files: 19 `.astro` и 4 `.ts`. Другие расширения под src/pages/ не скачиваются и не игнорируются молча: они создают route-source drift и блокируют sync до явного обновления политики и тестов. Выборочная политика путей версионируется отдельно от Git provider. Изображения, PDF, шрифты, видео, generated assets, compiled search indexes и прочие ненужные бинарные материалы массово не скачиваются.
 
 ### 6. PDF — обязательная часть корпуса, но отдельный канал получения
 

@@ -84,14 +84,57 @@ No claim of signature verification, commit authorship verification or independen
 
 ### 4.3. Complete tree enumeration
 
-A successful snapshot requires a complete view of every tree path relevant to the selection policy.
+A successful snapshot requires a complete, internally consistent view of every tree path relevant to the selection policy. The meaning of provider response fields such as `truncated` is provider-specific and must not be normalized by assuming GitHub and Gitea have identical pagination semantics.
 
-- A recursive tree response marked truncated is not a complete result and must never be accepted as one.
-- The provider may fall back to a complete non-recursive traversal, starting from the pinned root tree and following every child tree by its returned tree object ID.
-- Every selected subtree must be enumerated to completion. A truncated, missing, inaccessible or otherwise unverifiable subtree makes the sync fail unless a complete fallback traversal succeeds.
+#### GitHub REST
+
+For GitHub, a recursive tree response with `truncated=true` is incomplete because the endpoint has reached its recursive-response limit. It is not a paginated continuation token. The provider must fall back to non-recursive traversal from the pinned root tree SHA and enumerate child trees by their immutable tree SHAs. Every returned child tree SHA is followed until all selected paths have been enumerated.
+
+#### Gitea REST
+
+Gitea's `GET /repos/{owner}/{repo}/git/trees/{sha}` endpoint exposes `recursive`, `page` and `per_page` parameters. Its response includes `page`, `total_count`, `sha` and `truncated`. In the documented Gitea contract, `truncated=true` means that more entries remain on subsequent pages; it is not equivalent to GitHub's recursive-response size-limit signal.
+
+The Gitea transport must implement explicit pagination:
+
+1. Use an explicit bounded `per_page` and start at `page=1`. Keep the pinned input SHA, `recursive` value and `per_page` unchanged for every page in that listing.
+2. Request consecutive pages without skipping or changing the pinned input SHA. Check that the response `page` equals the requested page.
+3. Check that the response `sha` identifies the same tree on every page. When requesting the root by pinned commit SHA, it must equal the root tree SHA obtained from that pinned commit. When requesting a child tree, it must equal that child tree SHA.
+4. Check that `total_count` is present, non-negative and identical on every page for the same tree listing.
+5. Accumulate entries, reject duplicate paths, reject inconsistent entry identities and reject an accumulated count greater than `total_count`.
+6. Continue while `truncated=true`. A normal terminal page has `truncated=false`; successful completion requires the accumulated number of entries to equal `total_count`.
+7. If `truncated` conflicts with `total_count` (including the historical last-page flag defect), do not silently choose one field. A bounded terminal-page probe may be used: accept only if the next consecutive page is empty, reports the same tree SHA and total count, reports the requested page number and has `truncated=false`, while the accumulated entries already equal `total_count`. Record the inconsistent flag as a provider diagnostic. Any other disagreement fails the listing.
+8. An empty page before the declared count is reached, a changed `total_count` or tree SHA, a missing page, a duplicate path, a page-limit breach or any other inconsistent response fails the sync.
+
+The implementation must also verify that the configured Gitea version implements the expected pagination behavior. A historical Gitea defect returned `truncated=true` on the final page (reported for v1.24.2 and fixed upstream); the provider must not assume every installed Enterprise or self-hosted version contains that fix. The bounded terminal-page probe above is a compatibility guard, not permission to accept a short or unverifiable listing.
+
+#### Gitea commit SHA versus tree SHA
+
+The Gitea Enterprise API reference currently documents the path parameter `sha` as a commit SHA, while the response's `sha` field is the actual tree object SHA. The current upstream Gitea implementation of `GetTreeBySHA` describes and implements lookup by either a commit ID or a tree ID. These statements are not interchangeable guarantees for every deployed Gitea version.
+
+Before enabling a Gitea provider, a conformance test against the exact target server version is mandatory:
+
+- request the root tree using the pinned commit SHA and verify that the response SHA equals the commit's root tree SHA;
+- request a nested tree directly using its tree SHA and verify that the response SHA equals that requested tree SHA and that the entries correspond to that subtree;
+- verify pagination and completeness on a tree with more than one page.
+
+If direct lookup by tree SHA is unsupported or behaves inconsistently, the provider must not substitute a branch, tag or moving ref. It may instead request the recursive tree using the pinned commit SHA and paginate the complete result using the rules above. If that route cannot establish a complete and internally consistent tree, the provider must fail with an explicit unsupported-Gitea-tree-lookup or incomplete-tree error. It must not claim provider conformance.
+
+References reviewed for this contract:
+- [Gitea Enterprise — Get a tree API](https://docs.gitea.com/enterprise/api/operations/get-tree/)
+- [Gitea upstream GetTreeBySHA implementation](https://github.com/go-gitea/gitea/blob/main/services/repository/files/tree.go)
+- [Gitea issue #35117 — last-page truncated flag](https://github.com/go-gitea/gitea/issues/35117)
+- [Gitea PR #35177 — fix merged upstream](https://github.com/go-gitea/gitea/pull/35177)
+- [GitHub REST — Get a tree](https://docs.github.com/en/rest/git/trees)
+
+#### Common completeness rules
+
+For either provider:
+
+- Every selected subtree must be enumerated to completion. A truncated, missing, inaccessible or otherwise unverifiable subtree makes the sync fail unless a complete provider-specific fallback succeeds.
 - The provider must not infer missing entries, silently omit a subtree, or use a partial listing.
 - Tree entries must be checked for path, type, mode, object ID and declared size where the API provides it.
 - Symlinks and submodules inside selected source paths are unsupported and cause an explicit failure; they are not followed or treated as ordinary files.
+- Page count, tree entry count, traversal depth and total operation time remain subject to finite configured resource limits.
 
 The provider does not need to download or recursively enumerate unrelated binary asset directories merely to construct the Site Content Adapter snapshot.
 
@@ -104,7 +147,7 @@ The provider fetches only the source files required by the current Site Content 
 | src/content/** | Every tracked Markdown file with .md suffix, case-insensitive | All Markdown collections and records |
 | src/data/** | Every tracked .yaml and .yml file, case-insensitive | Site dictionaries |
 | src/content.config.ts | Exact file; required | Astro content schema fingerprint |
-| src/pages/** | Every tracked regular file under the directory | Astro route inventory and route source dependencies |
+| src/pages/** | Every tracked regular file with a supported `.astro` or `.ts` route-source extension (excluding `.d.ts`); other file types are drift diagnostics and hard failures, not downloads | Astro page routes and TypeScript endpoint routes |
 | astro.config.mjs | Exact file; required | Production site origin and Astro configuration inputs |
 | src/lib/url.ts | Exact file when present | URL/route helper dependency |
 | src/lib/nav.ts | Exact file when present | Navigation route dependency |
@@ -112,7 +155,7 @@ The provider fetches only the source files required by the current Site Content 
 
 The existing adapter currently requires src/content.config.ts and astro.config.mjs. Their absence is a hard failure. Every selected file present in the pinned tree is mandatory for that sync: a missing blob, inaccessible object, decoding/truncation error or hash mismatch is a hard failure. A selected directory that is genuinely empty in the pinned tree is not an incomplete listing.
 
-All selected files are sorted by repository-relative POSIX path before the immutable snapshot is constructed. New Markdown collections, new Markdown records, new YAML dictionaries and new files under src/pages are discovered from the pinned tree; the provider does not maintain a fixed list of collection names.
+All selected files are sorted by repository-relative POSIX path before the immutable snapshot is constructed. New Markdown collections, new Markdown records and new YAML dictionaries are discovered from the pinned tree; the provider does not maintain a fixed list of collection names. Under src/pages/, the supported route-source types for the current Saturn site are lowercase `.astro` page/route files and `.ts` endpoint files. The read-only audit of Saturn-Main-Site at commit `084d759487bfab6e111549c9b5469711ac5fc13e` found 23 route files: 19 `.astro` and 4 `.ts`. This is an audited baseline, not a fixed filename allowlist: new `.astro` and `.ts` files are discovered automatically. Every regular file under src/pages/ must nevertheless be inspected in the tree inventory. A file with any other extension (including PDF, image, `.js`, `.md`, `.mdx` or `.html`) is not downloaded or silently ignored; it raises a `route_source_type_drift` diagnostic and fails the sync until the route-source policy and its tests are explicitly updated. Type declaration files such as `.d.ts` are not route endpoints and are likewise diagnosed rather than included.
 
 The selection policy is versioned independently from the Git provider. If a future adapter revision requires additional source paths, the policy and its tests must be updated explicitly. Files outside the selected paths are not implicitly included.
 
