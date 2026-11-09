@@ -34,7 +34,7 @@ Pure/offline Saturn Site Content Adapter включён в main. Он прини
 
 Не реализованы: GitHub/Gitea Snapshot Provider, Gitea Actions, PDF fetching/parsing, retrieval integration, LLM/provider, API/UI и deployment. Не использовался legacy SourceRecord/Registry approval path. ADRs не изменялись. Saturn-Main-Site остаётся строго READ-ONLY на проверенном commit `084d759487bfab6e111549c9b5469711ac5fc13`.
 
-**Следующий bounded этап (не начат):** согласовать provider-neutral Snapshot Provider contract с проверкой commit/tree/blob identities и отображением физического Git remote на стабильный Logical Source ID. Реализацию провайдера начинать только после отдельного согласования и команды владельца. Архитектурные изменения обсуждаются в отдельной сессии «Saturn AI — Архитектура и управление».
+**Результат последующего этапа:** архитектурное согласование Snapshot Provider contract завершено и зафиксировано в ADR-0014 и открытом docs-only PR #21. Реализация провайдера остаётся отдельной будущей задачей и требует отдельной команды владельца.
 
 ## Planner V2 corrective revision — 2026-11-06
 

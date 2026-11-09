@@ -26,6 +26,12 @@ Base commit до PR #20: `934c65e2bc11adf4c2b0b0e3b30717a02d7bb26e`
 ## 2. Решения владельца — обязательны
 
 - Stable trusted logical source ID: `UkWood/Saturn-Main-Site`, branch `main`. Snapshot Providers отображают свои физические GitHub/Gitea remotes и namespace на этот ID; адрес провайдера не входит в контракт адаптера.
+- Snapshot Provider использует Git REST API: GitHub — первая реализация, Gitea — последующая реализация того же provider-neutral контракта.
+- `refs/heads/main` разрешается один раз на sync. После pinning все операции выполняются только по immutable commit/tree/blob IDs; повторной проверки подвижной ветки в той же sync нет.
+- Git provider является trust source для ref → commit → tree identity mapping и полноты tree enumeration. Независимая криптографическая проверка raw commit/tree objects не заявляется.
+- Каждый выбранный blob проверяется по canonical Git object hash с учётом object format репозитория; raw content SHA-256 хранится отдельно. Текущие canonical contracts поддерживают SHA-1; другой формат требует отдельной versioned эволюции contracts/adapter.
+- Snapshot ограничен Markdown collections, YAML dictionaries, content schema, Astro routes и утверждёнными route/config dependencies; unrelated binary assets не скачиваются массово.
+- PDF остаются обязательной частью knowledge corpus: discovery/cataloguing — Support Catalog Adapter, fetch/extraction — External Document Adapter. Будущий selective Git-blob retrieval допускается по pinned commit/path/blob SHA, но сейчас не реализуется.
 - Все non-draft записи сайта, объявленные сайтом связи, справочники и прямые PDF-ссылки из documents/certificates или Markdown body доверенные. Ручная проверка/approval не нужна.
 - `draft: true` исключается из публичного corpus.
 - Сайт строго READ-ONLY: не менять его файлы, ветки, URL, assets, CI или поиск.
