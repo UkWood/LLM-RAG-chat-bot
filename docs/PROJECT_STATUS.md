@@ -1,6 +1,27 @@
 # Состояние проекта
 
-## Saturn Site Content Adapter — PR #20 merged (2026-11-09)
+## Snapshot Provider Contract — ADR-0014 accepted; documentation-only PR #21 open (2026-11-09)
+
+**PR #21:** [docs: approve provider-neutral Snapshot Provider contract](https://github.com/UkWood/LLM-RAG-chat-bot/pull/21) — **OPEN, not merged**.  
+**Branch:** docs-snapshot-provider-contract-2026-11-09  
+**Base:** main at c1840b071e077ae6019f1b9e7930c3aa15d08ef3.
+
+Owner-approved Snapshot Provider Contract v0.1 and ADR-0014 are documented in this PR:
+- Git REST API is the primary transport; GitHub is first, Gitea is a later implementation of the same provider-neutral contract.
+- The provider resolves refs/heads/main once. All subsequent operations use immutable commit/tree/blob IDs; there is no final branch recheck within the same sync.
+- The Git provider is trusted for ref → commit → tree identity mapping and complete tree enumeration. Independent cryptographic verification of raw commit/tree objects is not claimed.
+- Selected blob bytes are independently checked against the canonical Git object hash for the repository object format. Raw content SHA-256 is retained separately.
+- Current canonical snapshot/adapter contracts support SHA-1 object IDs; another format fails closed pending a separately approved canonical-contract evolution.
+- Only Markdown collections, YAML dictionaries, content schema, Astro routes and audited route/config dependencies are selected. Under `src/pages/`, only `.astro` and `.ts` route files (excluding `.d.ts`) are supported; other types trigger route-source drift and fail closed rather than being downloaded or silently skipped. The audited site baseline is 23 files: 19 `.astro`, 4 `.ts`. Unrelated binary assets are not bulk-downloaded.
+- PDF remains a full and mandatory part of the knowledge corpus. Support Catalog Adapter discovers/catalogues it; External Document Adapter fetches and extracts it. A future selective Git-blob PDF path is reserved, not implemented.
+
+No GitHub/Gitea Provider, PDF ingestion, Git-backed PDF retrieval, adapter/canonical-contract code changes, runtime integration or deployment is included. Saturn-Main-Site remains strictly READ-ONLY.
+
+**Current stage:** architecture/documentation only. PR #21 is OPEN (not merged). Reviewed architecture/contract head `0f2a1226b757ae346d65b05df13be657e3581d35` passed PR-head CI [#42624653260](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42624653260) and push CI [#42624644980](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42624644980); both jobs `offline-checks` and `onnx-contracts` completed successfully on this exact reviewed head. Awaiting owner review/merge. Provider implementation remains NOT STARTED and requires a separate instruction.
+
+
+
+## Previous completed stage — Saturn Site Content Adapter (PR #20 merged, 2026-11-09)
 
 **PR #20:** [feat: add trusted Saturn site content adapter](https://github.com/UkWood/LLM-RAG-chat-bot/pull/20) — **MERGED**.  
 **Implementation head:** `9b36551adf61070426caa9250650bb32d638a66a`.  
@@ -13,7 +34,7 @@ Pure/offline Saturn Site Content Adapter включён в main. Он прини
 
 Не реализованы: GitHub/Gitea Snapshot Provider, Gitea Actions, PDF fetching/parsing, retrieval integration, LLM/provider, API/UI и deployment. Не использовался legacy SourceRecord/Registry approval path. ADRs не изменялись. Saturn-Main-Site остаётся строго READ-ONLY на проверенном commit `084d759487bfab6e111549c9b5469711ac5fc13`.
 
-**Следующий bounded этап (не начат):** согласовать provider-neutral Snapshot Provider contract с проверкой commit/tree/blob identities и отображением физического Git remote на стабильный Logical Source ID. Реализацию провайдера начинать только после отдельного согласования и команды владельца. Архитектурные изменения обсуждаются в отдельной сессии «Saturn AI — Архитектура и управление».
+**Результат последующего этапа:** архитектурное согласование Snapshot Provider contract завершено и зафиксировано в ADR-0014 и открытом docs-only PR #21. Реализация провайдера остаётся отдельной будущей задачей и требует отдельной команды владельца.
 
 ## Planner V2 corrective revision — 2026-11-06
 
