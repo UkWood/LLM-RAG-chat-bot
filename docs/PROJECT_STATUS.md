@@ -1,19 +1,19 @@
 # Состояние проекта
 
-## Saturn Site Content Adapter — PR #20 review corrections (2026-11-09)
+## Saturn Site Content Adapter — PR #20 merged (2026-11-09)
 
-**Current main:** `934c65e2bc11adf4c2b0b0e3b30717a02d7bb26e`. PR #17/#18 are merged.  
-**Implementation:** `feature/saturn-site-content-adapter`; [PR #20](https://github.com/UkWood/LLM-RAG-chat-bot/pull/20) remains open and unmerged.
+**PR #20:** [feat: add trusted Saturn site content adapter](https://github.com/UkWood/LLM-RAG-chat-bot/pull/20) — **MERGED**.  
+**Implementation head:** `9b36551adf61070426caa9250650bb32d638a66a`.  
+**Merge commit:** `361529963bd48772f0d9d478dfb3b963ec5a8d03` (base до merge: `934c65e2bc11adf4c2b0b0e3b30717a02d7bb26e`).  
+PR #17/#18 также слиты; ADR-0012/0013 и canonical contracts остаются действующей архитектурной основой.
 
-Canonical URLs now derive from the checked-in public `SITE_URL` fallback in `astro.config.mjs`; GitHub Pages preview values and provider addresses are excluded. Astro route/config sources are tracked in the manifest and add/change/delete route drift is reported. The stable logical source ID is independent of the physical GitHub/Gitea remote; future providers must emit the same `PinnedSiteSnapshot`.
+Pure/offline Saturn Site Content Adapter включён в main. Он принимает immutable `PinnedSiteSnapshot`, проверяет Git blob SHA по точным bytes, динамически обнаруживает Markdown collections и сохраняет raw source evidence. Stable logical source ID отделён от физического GitHub/Gitea remote. Canonical URLs строятся по реальным Astro routes; route/config changes и parser-version changes отражаются в manifest/drift. Старые manifests совместимы; неизвестные explicit `pages.kind` не классифицируются как `Page` автоматически.
 
-`SiteSyncManifest.parser_version` participates in snapshot identity and parser-version drift. Legacy manifests/build calls remain compatible through an explicit unversioned marker. Unknown explicit `pages.kind` values map to generic `SiteContent` with warning; absent kind maps to `Page`.
+Кодовый head проверен GitHub Actions: PR-head [run #232](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42569426503) — **SUCCESS**; push [run #231](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42569421610) — **SUCCESS**. Offline suite: 212 tests passed, 11 existing optional skips; ONNX contracts PASS. Synthetic baseline не изменился: 10 documents, 44 chunks, 30 cases; lexical source-hit@5 0.85. Это прежняя synthetic evaluation, не метрика качества нового адаптера.
 
-Code head verified by GitHub Actions [run #230](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42568802924): **SUCCESS** — 212 offline tests, 11 existing optional skips; ONNX contracts SUCCESS. Synthetic baseline unchanged: 10 documents, 44 chunks, 30 cases; lexical source-hit@5 0.85 (non-blocking, not an adapter quality metric).
+Не реализованы: GitHub/Gitea Snapshot Provider, Gitea Actions, PDF fetching/parsing, retrieval integration, LLM/provider, API/UI и deployment. Не использовался legacy SourceRecord/Registry approval path. ADRs не изменялись. Saturn-Main-Site остаётся строго READ-ONLY на проверенном commit `084d759487bfab6e111549c9b5469711ac5fc13`.
 
-No legacy SourceRecord/Registry approval path, source-site writes, GitHub/Gitea provider, PDF fetching/parsing, retrieval, LLM/provider, API/UI or deployment. Saturn-Main-Site remains READ-ONLY at commit `084d759487bfab6e111549c9b5469711ac5fc13`.
-
-**Next bounded stage after owner review/merge:** provider-neutral read-only Snapshot Provider(s): current GitHub and future Gitea implementations share the `PinnedSiteSnapshot` contract. Architecture changes remain in the separate «Saturn AI — Архитектура и управление» session.
+**Следующий bounded этап (не начат):** согласовать provider-neutral Snapshot Provider contract с проверкой commit/tree/blob identities и отображением физического Git remote на стабильный Logical Source ID. Реализацию провайдера начинать только после отдельного согласования и команды владельца. Архитектурные изменения обсуждаются в отдельной сессии «Saturn AI — Архитектура и управление».
 
 ## Planner V2 corrective revision — 2026-11-06
 
