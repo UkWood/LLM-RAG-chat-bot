@@ -50,10 +50,10 @@ This is a documentation-only architecture stage. No source code, dependencies, t
 
 PR #21 is open and not merged.
 
-Current PR head: `0f2a1226b757ae346d65b05df13be657e3581d35`.
+Reviewed architecture/contract head: `0f2a1226b757ae346d65b05df13be657e3581d35`.
 
 - PR-head run [#42624653260](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42624653260): **SUCCESS**.
 - Matching push run [#42624644980](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42624644980): **SUCCESS**.
-- Both runs completed jobs `offline-checks` and `onnx-contracts` successfully on the exact current PR head.
+- Both runs completed jobs `offline-checks` and `onnx-contracts` successfully on this exact reviewed architecture/contract head.
 
 The current documentation revision has therefore passed both required CI workflows. No provider implementation or PDF ingestion is authorized by this stage.
