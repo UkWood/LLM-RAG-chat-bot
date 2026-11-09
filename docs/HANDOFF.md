@@ -10,13 +10,18 @@ Base commit до PR #20: `934c65e2bc11adf4c2b0b0e3b30717a02d7bb26e`
 
 ## 1. Текущий статус
 
-- PR #17 и PR #18 приняты и слиты. ADR-0012/0013, канонические контракты и schema-evolution primitives находятся в main.
-- PR #20 — trusted Saturn Site Content Adapter — слит в main 2026-11-09. Реализация адаптера входит в main через merge commit `361529963bd48772f0d9d478dfb3b963ec5a8d03`.
-- Последний кодовый head PR #20: `9b36551adf61070426caa9250650bb32d638a66a`. PR-head GitHub Actions [run #232](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42569426503) завершился SUCCESS; соответствующий push run [#231](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42569421610) также SUCCESS.
-- Проверка реализации: 212 тестов пройдены, 11 прежних optional skips; ONNX contracts PASS.
-- Synthetic baseline не изменился: 10 документов, 44 chunks, 30 evaluation cases; lexical source-hit@5 — 0,85. Это прежняя synthetic evaluation, а не оценка качества нового адаптера.
-- Адаптер остаётся pure/offline и принимает уже полученный immutable pinned snapshot. GitHub/Gitea Snapshot Provider, PDF download/parser, retrieval, LLM/provider, API/UI и deployment ещё не реализованы.
-- Следующий bounded этап — проектирование provider-neutral Snapshot Provider contract. Он **не начат**; приступать к нему только после отдельной команды владельца.
+- PR #20 — trusted Saturn Site Content Adapter — слит в main. Реализация и проверки описаны ниже.
+- Snapshot Provider architecture contract v0.1 и ADR-0014 приняты владельцем и опубликованы в документационном PR #21: https://github.com/UkWood/LLM-RAG-chat-bot/pull/21. PR открыт, не слит.
+- PR #21: branch docs-snapshot-provider-contract-2026-11-09; base c1840b071e077ae6019f1b9e7930c3aa15d08ef3.
+- Git REST API выбран основным транспортом: GitHub — первая реализация, Gitea — последующая реализация того же provider-neutral контракта.
+- Provider один раз разрешает refs/heads/main, фиксирует commit/tree и далее читает только по immutable object IDs. Повторного обращения к moving branch в рамках sync нет.
+- Provider доверен в отношении ref → commit → tree identity mapping и полноты перечисления дерева; независимая криптографическая проверка raw commit/tree objects не заявляется.
+- Каждый выбранный blob проверяется по canonical Git object hash с учётом object format репозитория; raw content SHA-256 хранится отдельно. Текущие canonical contracts поддерживают SHA-1; другие object formats требуют отдельного изменения contracts/adapter.
+- Обычный snapshot содержит только необходимые Markdown/YAML/schema/Astro route/config файлы; массовая загрузка бинарных assets исключена.
+- PDF остаются обязательной частью корпуса и обрабатываются через Support Catalog Adapter и External Document Adapter. Будущий выборочный Git-blob путь зарезервирован, но не реализован.
+- GitHub/Gitea Provider, PDF ingestion, Git-backed PDF retrieval, retrieval integration, LLM/provider, API/UI и deployment не реализованы.
+- Saturn-Main-Site остаётся строго READ-ONLY.
+
 
 ## 2. Решения владельца — обязательны
 
@@ -61,19 +66,23 @@ Base commit до PR #20: `934c65e2bc11adf4c2b0b0e3b30717a02d7bb26e`
 
 **Не удалять и не ослаблять эти approval gates глобально. Не подключать доверенный Saturn main через старый SourceRecord/Registry.** Новая Saturn-интеграция идёт отдельным путём на основе `saturn_contracts.py` и собственных adapter contracts. Существующие synthetic tests и historical evaluation должны продолжать работать без регрессий.
 
-## 5. Следующий bounded этап — Snapshot Provider (не начат)
+## 5. Snapshot Provider — архитектура принята; реализация не начата
 
-После PR #20 следующий кандидат — provider-neutral read-only Snapshot Provider contract. Сначала требуется согласовать контракт и критерии проверки; реализацию провайдера в рамках этой задачи не начинать.
+Владелец утвердил provider-neutral Snapshot Provider contract v0.1 и ADR-0014. Документы находятся в открытом docs-only PR #21:
 
-Контракт должен обеспечить:
-1. Получение точного snapshot по закреплённому commit/tree.
-2. Проверку commit/tree/blob identities и целостности bytes.
-3. Сопоставление физического Git remote/namespace со стабильным trusted logical source ID.
-4. Передачу неизменяемого `PinnedSiteSnapshot` в существующий pure/offline adapter.
+- [PR #21](https://github.com/UkWood/LLM-RAG-chat-bot/pull/21)
+- [Snapshot Provider Contract](site-specific/v0.2/05-snapshot-provider-contract.md)
+- [ADR-0014](decisions/0014-snapshot-provider-contract.md)
+- [Stage report](stages/2026-11-09-snapshot-provider-contract.md)
 
-После утверждения контракта можно реализовать GitHub Provider первым, а Gitea Provider — позднее как вторую реализацию того же интерфейса. При этом `saturn_site_adapter.py` не должен получать зависимости от GitHub/Gitea API, сети, clone, CI environment или deployment.
+Принятая последовательность: GitHub REST Provider первым; Gitea REST Provider позднее за тем же контрактом. Provider получает точный snapshot и передаёт существующий immutable PinnedSiteSnapshot в pure/offline adapter.
 
-Любое изменение архитектуры или существующих contracts сначала выносится в отдельное обсуждение. Следующий этап не начинать без отдельной команды владельца.
+Ключевые ограничения: branch main разрешается один раз; после pinning все операции выполняются по immutable commit/tree/blob IDs; Git provider является trust source для ref/commit/tree identity mapping, но независимая криптографическая проверка raw commit/tree objects не заявляется; каждый blob проверяется по Git object hash согласно object format, а raw content SHA-256 сохраняется отдельно. Текущие canonical contracts поддерживают SHA-1 и fail closed для иных форматов до отдельного согласования их эволюции.
+
+PDF остаются обязательной частью knowledge corpus. Обычный Git snapshot не загружает их: discovery/cataloguing — Support Catalog Adapter, fetch/extraction — External Document Adapter. На будущее предусмотрено выборочное получение PDF как Git blob по pinned commit/path/blob SHA, но оно не реализуется сейчас.
+
+**Не начинать реализацию GitHub/Gitea Provider или PDF ingestion в рамках PR #21.** Для реализации потребуется отдельная команда владельца и отдельный bounded этап.
+
 
 ## 6. Результаты и проверка PR #20
 
@@ -94,7 +103,7 @@ Base commit до PR #20: `934c65e2bc11adf4c2b0b0e3b30717a02d7bb26e`
 При продолжении:
 1. Проверить актуальный main и не повторять уже завершённую реализацию адаптера.
 2. Считать PR #20 завершённым и слитым; не возвращаться к его review/merge.
-3. Не начинать Snapshot Provider до отдельного согласования контракта и команды владельца.
+3. Считать архитектурный контракт Snapshot Provider утверждённым, но не начинать реализацию GitHub/Gitea Provider или PDF ingestion без отдельной команды владельца.
 4. При конфликте с утверждёнными требованиями остановиться и вынести вопрос в архитектурную сессию.
 
 Для будущих изменений использовать отдельные feature branches и PR. Merge выполнять только после review и отдельной команды владельца.

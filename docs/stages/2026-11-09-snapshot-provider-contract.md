@@ -1,9 +1,11 @@
 # Snapshot Provider Contract — architecture decision
 
 Date: 2026-11-09  
-Status: **Architecture accepted; documentation-only PR**  
+Status: **PR #21 OPEN; documentation-only architecture change**  
 Repository: UkWood/LLM-RAG-chat-bot  
-Base: main at c1840b071e077ae6019f1b9e7930c3aa15d08ef3
+Base: main at c1840b071e077ae6019f1b9e7930c3aa15d08ef3  
+PR: https://github.com/UkWood/LLM-RAG-chat-bot/pull/21  
+Branch: docs-snapshot-provider-contract-2026-11-09
 
 ## Scope
 
@@ -44,4 +46,4 @@ The design reserves a future selective Git-blob retrieval path when a PDF is sto
 
 This is a documentation-only architecture stage. No source code, dependencies, tests, runtime configuration, credentials, source website files or deployment settings are changed.
 
-GitHub Actions and PR review results are recorded after publication of the documentation-only PR. No provider implementation or PDF ingestion is authorized by this stage.
+PR #21 is open and not merged. GitHub Actions and review results are recorded after checks complete. No provider implementation or PDF ingestion is authorized by this stage.

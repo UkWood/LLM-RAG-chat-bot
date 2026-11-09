@@ -1,6 +1,27 @@
 # Состояние проекта
 
-## Saturn Site Content Adapter — PR #20 merged (2026-11-09)
+## Snapshot Provider Contract — ADR-0014 accepted; documentation-only PR #21 open (2026-11-09)
+
+**PR #21:** [docs: approve provider-neutral Snapshot Provider contract](https://github.com/UkWood/LLM-RAG-chat-bot/pull/21) — **OPEN, not merged**.  
+**Branch:** docs-snapshot-provider-contract-2026-11-09  
+**Base:** main at c1840b071e077ae6019f1b9e7930c3aa15d08ef3.
+
+Owner-approved Snapshot Provider Contract v0.1 and ADR-0014 are documented in this PR:
+- Git REST API is the primary transport; GitHub is first, Gitea is a later implementation of the same provider-neutral contract.
+- The provider resolves refs/heads/main once. All subsequent operations use immutable commit/tree/blob IDs; there is no final branch recheck within the same sync.
+- The Git provider is trusted for ref → commit → tree identity mapping and complete tree enumeration. Independent cryptographic verification of raw commit/tree objects is not claimed.
+- Selected blob bytes are independently checked against the canonical Git object hash for the repository object format. Raw content SHA-256 is retained separately.
+- Current canonical snapshot/adapter contracts support SHA-1 object IDs; another format fails closed pending a separately approved canonical-contract evolution.
+- Only Markdown collections, YAML dictionaries, content schema, Astro routes and audited route/config dependencies are selected. Unrelated binary assets are not bulk-downloaded.
+- PDF remains a full and mandatory part of the knowledge corpus. Support Catalog Adapter discovers/catalogues it; External Document Adapter fetches and extracts it. A future selective Git-blob PDF path is reserved, not implemented.
+
+No GitHub/Gitea Provider, PDF ingestion, Git-backed PDF retrieval, adapter/canonical-contract code changes, runtime integration or deployment is included. Saturn-Main-Site remains strictly READ-ONLY.
+
+**Current stage:** architecture and documentation only. PR #21 awaits review/CI and owner merge. Provider implementation remains NOT STARTED and requires a separate instruction.
+
+
+
+## Previous completed stage — Saturn Site Content Adapter (PR #20 merged, 2026-11-09)
 
 **PR #20:** [feat: add trusted Saturn site content adapter](https://github.com/UkWood/LLM-RAG-chat-bot/pull/20) — **MERGED**.  
 **Implementation head:** `9b36551adf61070426caa9250650bb32d638a66a`.  
