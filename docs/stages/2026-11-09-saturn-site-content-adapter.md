@@ -1,11 +1,14 @@
 # Site Content Adapter — first vertical slice
 
 Date: 2026-11-09  
-Status: PR #20 open, not merged  
+Status: **PR #20 MERGED**  
 Repository: `UkWood/LLM-RAG-chat-bot`  
-Base: `main` at `934c65e2bc11adf4c2b0b0e3b30717a02d7bb26e`  
-Branch: `feature/saturn-site-content-adapter`  
-PR: https://github.com/UkWood/LLM-RAG-chat-bot/pull/20
+Base before merge: `main` at `934c65e2bc11adf4c2b0b0e3b30717a02d7bb26e`  
+Implementation branch: `feature/saturn-site-content-adapter`  
+Implementation head: `9b36551adf61070426caa9250650bb32d638a66a`  
+PR: https://github.com/UkWood/LLM-RAG-chat-bot/pull/20  
+Merge commit: `361529963bd48772f0d9d478dfb3b963ec5a8d03`  
+Merged at: 2026-11-09 06:35:47 UTC
 
 ## Scope
 
@@ -17,6 +20,7 @@ The source schema was inspected read-only at Saturn-Main-Site revision `084d7594
 
 - Added `backend/src/saturn_ai/ingestion/saturn_site_adapter.py`.
 - Added immutable snapshot input types and exact Git blob SHA verification.
+- `PinnedSiteSnapshot.repository` is the stable logical source ID (`UkWood/Saturn-Main-Site`), not a physical Git remote URL.
 - Dynamically discovers Markdown collections under `src/content/<collection>/`.
 - Fingerprints `src/content.config.ts` without executing TypeScript/Astro.
 - Safely parses Markdown frontmatter and YAML dictionaries with bounded input, token, depth and node limits; rejects aliases, anchors, explicit tags, duplicate keys and non-string mapping keys.
@@ -28,7 +32,7 @@ The source schema was inspected read-only at Saturn-Main-Site revision `084d7594
 
 Test file: `backend/tests/unit/test_saturn_site_adapter.py`. Test fixtures: `backend/tests/fixtures/saturn_site/`.
 
-## Review corrections
+## Review corrections included in the merged PR
 
 - Canonical origin comes from the checked-in production `SITE_URL` fallback in `astro.config.mjs`; the adapter ignores GitHub Pages preview environment overrides and `BASE_PATH`.
 - Verified routes: products, systems, groups, articles, news, root pages and `pages/home` → `/`. Unknown collections have no canonical URL; nested slugs without a catch-all route are not guessed.
@@ -39,14 +43,20 @@ Test file: `backend/tests/unit/test_saturn_site_adapter.py`. Test fixtures: `bac
 
 ## Verification
 
-Code head verified by CI: `76cef265b7ebc73e7f1a4848e6bbd3d02478ad66`.
+Implementation head: `9b36551adf61070426caa9250650bb32d638a66a`.
 
-GitHub Actions PR-head [run #230](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42568802924): **SUCCESS**.
+GitHub Actions PR-head [run #232](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42569426503): **SUCCESS**.
+
+Matching push [run #231](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42569421610): **SUCCESS**.
 
 - Offline verification: 212 tests passed, 11 existing optional skips.
 - ONNX contracts: SUCCESS.
 - Synthetic baseline preflight: 10 documents, 44 chunks, 30 cases.
-- Existing lexical source-hit@5 remains 0.85 overall; this non-blocking baseline was not changed by the adapter.
+- Existing lexical source-hit@5 remains 0.85 overall; this non-blocking baseline was not changed by the adapter and is not an adapter quality metric.
+
+## Merge record
+
+PR #20 was merged into `main` on 2026-11-09 at 06:35:47 UTC. Merge commit: `361529963bd48772f0d9d478dfb3b963ec5a8d03`. The implementation branch and PR are historical references; there is no open PR #20 work remaining.
 
 ## Explicit exclusions
 
@@ -56,6 +66,8 @@ GitHub Actions PR-head [run #230](https://github.com/UkWood/LLM-RAG-chat-bot/act
 - No changes to existing synthetic ingestion/evaluation or ADRs. `SiteSyncManifest` was extended compatibly with parser version; legacy manifests/build calls remain supported.
 - No modifications to Saturn-Main-Site.
 
-## Next step
+## Next step — not started
 
-Review PR #20. After owner approval and merge, the next bounded stage is a provider-neutral read-only Snapshot Provider contract: current GitHub and future Gitea implementations must emit the same `PinnedSiteSnapshot` and map physical remotes to the stable logical source ID. Any architecture/contract change must first be discussed in the separate architecture session.
+The next bounded stage is to define and approve a provider-neutral read-only Snapshot Provider contract. It must verify exact commit/tree/blob identities, map physical Git remotes to the stable logical source ID and emit the existing `PinnedSiteSnapshot` contract.
+
+Only after that contract is approved should the first provider implementation (GitHub) be started; Gitea can later implement the same contract. This stage has not started and is not included in PR #20. Any architecture/contract change must first be discussed in the separate architecture session.
