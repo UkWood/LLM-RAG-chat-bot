@@ -2,6 +2,9 @@
 
 Каждый этап сохраняется отдельным отчётом: цель, результат/статус, решения, команды проверки и их реальные исходы, Git commits/PR (если доступны), ограничения и следующий шаг. Не включать секреты и сырые пользовательские диалоги.
 
+- [2026-11-09 — GitHub Snapshot Provider v0.1](2026-11-09-github-snapshot-provider.md)
+- [2026-11-09 — Snapshot Provider Contract / ADR-0014](2026-11-09-snapshot-provider-contract.md)
+
 - [2026-11-03 — discovery, архитектура и GitHub-память](2026-11-03-project-memory.md)
 
 - [2026-11-04 — M1 offline RAG](2026-11-04-m1-offline-rag.md)

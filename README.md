@@ -2,7 +2,7 @@
 
 Отдельный технический консультант: ответы только по доверенным материалам сайта и PDF с источниками и отказом при недостатке доказательств. Статический интерфейс Astro, отдельный FastAPI backend, локальная KB и сменный LLM provider.
 
-**Стадия:** ADR-0012/0013 приняты; PR #17 (source trust/schema evolution) и PR #18 (canonical contracts + schema drift primitives) слиты. CI PR #18: 192 offline tests (11 existing optional skips) и ONNX contracts PASS. Реальный Site Content Adapter, PDF fetch, retrieval integration и deployment ещё не реализованы. Следующий этап — pure/offline Site Content Adapter. Доверие к реальным источникам не означает разрешения на cloud egress.
+**Стадия:** ADR-0012/0013/0014 приняты; PR #20 (Saturn Site Content Adapter) и PR #21 (Snapshot Provider Contract) слиты. PR #22 — GitHub Snapshot Provider v0.1 — открыт, не слит. Reviewed implementation code head `ce501d2d`: 245 backend tests PASS (11 existing optional skips), ONNX contracts PASS. Provider формирует существующий `PinnedSiteSnapshot`, но live smoke/runtime scheduling ещё не выполнялись. PDF ingestion, retrieval integration, LLM/provider, API/UI и deployment не реализованы. `UkWood/Saturn-Main-Site` строго READ-ONLY; доверие к реальным источникам не означает разрешения на cloud egress.
 
 ## Память проекта
 
@@ -10,6 +10,7 @@
 - [Продолжение реализации](docs/HANDOFF.md)
 
 - [Текущее состояние и следующий шаг](docs/PROJECT_STATUS.md)
+- [Текущий этап: GitHub Snapshot Provider v0.1](docs/stages/2026-11-09-github-snapshot-provider.md)
 - [Согласованные критерии прототипа: offline / real sample](docs/acceptance/prototype-v1.md)
 - [Дорожная карта](docs/superpowers/plans/2026-11-03-ai-consultant-roadmap.md)
 - [Архитектура](docs/superpowers/specs/2026-11-03-ai-consultant-design.md)

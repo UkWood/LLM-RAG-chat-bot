@@ -9,7 +9,7 @@
 
 ## Сессия A — архитектура и управление
 
-**Текущая сессия.**
+**Отдельная сессия для архитектуры и управления.**
 
 Зона ответственности:
 - требования, архитектура, ADR и границы системы;
@@ -22,7 +22,7 @@
 
 ## Сессия B — реализация кода
 
-**Новая сессия ChatGPT, которую нужно создать.**
+**Текущая coding-сессия проекта.**
 
 Зона ответственности:
 - исследование существующего кода в рамках конкретной задачи;
@@ -50,27 +50,25 @@
 
 ## Стартовый запрос для новой coding-сессии
 
-Скопировать следующий текст в новую сессию ChatGPT:
+Скопировать следующий текст в новую coding/review сессию ChatGPT:
 
 ---
 
-Ты — инженер реализации проекта AI Technical Consultant для МНПП «Сатурн». Эта сессия предназначена для создания и проверки кода, а не для самостоятельного изменения архитектуры.
+Ты — инженер реализации проекта AI Technical Consultant для МНПП «Сатурн». Эта сессия работает по утверждённым архитектурным решениям и не меняет их самостоятельно.
 
-Работай непосредственно с GitHub-репозиторием [UkWood/LLM-RAG-chat-bot](https://github.com/UkWood/LLM-RAG-chat-bot). Сначала прочитай \`AGENTS.md\`, актуальное резюме и нужные команды из \`README.md\`, верхний текущий раздел \`docs/PROJECT_STATUS.md\`, \`docs/HANDOFF.md\`, этот session guide, ADR-0012/0013 и документы \`docs/site-specific/v0.2/02-architecture.md\`, \`03-implementation-plan.md\`, \`04-read-only-schema-audit.md\`. Не загружай целиком исторические status/stage reports.
+Работай непосредственно с GitHub-репозиторием [UkWood/LLM-RAG-chat-bot](https://github.com/UkWood/LLM-RAG-chat-bot). Сначала прочитай `AGENTS.md`, актуальное резюме/команды из `README.md`, верхний раздел `docs/PROJECT_STATUS.md`, `docs/HANDOFF.md`, этот session guide, документы `docs/site-specific/v0.2/02-architecture.md`, `03-implementation-plan.md`, `04-read-only-schema-audit.md`, `05-snapshot-provider-contract.md`, ADR-0012/0013/0014 и действующие ingestion contracts/adapter/tests.
 
-Текущий main на момент handoff: \`223350c9f6f104b5b67aadd124bfc968f12f5dbf\`. PR #17 и PR #18 уже слиты. PR #18 добавил \`saturn_contracts.py\` и \`schema_evolution.py\`; CI прошёл (192 tests, 11 optional skips; ONNX contracts PASS).
+PR #20 (Saturn Site Content Adapter) и PR #21 (Snapshot Provider Contract / ADR-0014) уже MERGED. PR #21 merge commit: `9b2e0882b81fa2737e7efebb109c079a39b392d8`. Текущая реализация GitHub Snapshot Provider находится в открытом PR #22: [PR #22](https://github.com/UkWood/LLM-RAG-chat-bot/pull/22), branch `feat/github-snapshot-provider-v0.1`. Reviewed implementation code head: `ce501d2df5d120a3a437f6e32359a71e7d0543b6`; push и PR CI на этом code head прошли SUCCESS (245 backend tests, 11 existing optional skips; ONNX contracts PASS). Перед работой обязательно проверь текущий PR head и актуальный CI: docs-sync commit может изменить head.
 
-Твоя ближайшая задача — первый bounded этап Site Content Adapter из \`docs/HANDOFF.md\`: реализовать pure/offline adapter, принимающий pinned snapshot (commit, tree SHA, source paths, blob SHA и bytes), динамически обнаруживающий Markdown collections, безопасно разбирающий frontmatter, сохраняющий raw fields/body, формирующий canonical entities/facts/explicit relations и generic fallback для неизвестных collections/fields. Используй contracts PR #18. Подробные обязательные поведения и критерии приёмки находятся в handoff; не расширяй scope.
+Текущий bounded scope — GitHub Snapshot Provider v0.1. Не создавай дублирующую реализацию или новую ветку. Если владелец просит review, сначала изучи полный diff и выдай все замечания единым консолидированным списком с severity, точным местом и критерием исправления. После исправлений проверь весь список целиком.
 
 Критически важно:
-- \`UkWood/Saturn-Main-Site\` строго read-only.
-- Не подключай старый \`SourceRecord/Registry\` approval workflow к доверенному Saturn source path. Старые \`site.py\`, \`registry.py\`, \`pipeline.py\` — отдельный synthetic/fixture path; сохрани их совместимость.
-- Не удаляй approval checks глобально: они могут быть нужны старому synthetic/другим source paths.
-- Не выполняй network fetch из parser; не скачивай PDF; не вызывай LLM/provider; не делай deployment.
-- Не исполняй TypeScript/Astro/JS schema; читай её только как данные для fingerprint/drift.
-- Не придумывай поля, enum, defaults, compatibility relations или отрицательные факты.
-- Не меняй ADR/архитектуру самостоятельно. При неоднозначности остановись и сформулируй конкретный вопрос для архитектурной сессии.
+- `UkWood/Saturn-Main-Site` строго READ-ONLY. Разрешено только чтение; запрещены любые записи, изменения файлов, веток, URL, assets, CI и поиска.
+- Не изменяй `saturn_contracts.py`, `saturn_site_adapter.py`, `schema_evolution.py`, canonical contracts или ADR-0012/0013/0014 без отдельного архитектурного согласования.
+- Provider должен получать commit/tree/blob по immutable IDs после единственного разрешения `refs/heads/main`; не пере-разрешай branch внутри sync.
+- Не допускай partial snapshot; при incomplete tree/blob, hash mismatch, unsupported mode/extension или resource limit sync должен завершаться ошибкой.
+- Не реализуй Gitea, PDF ingestion, retrieval, embeddings/reranking, LLM/provider, API/UI, deployment или scheduling без отдельного задания.
+- Секреты не добавлять в репозиторий; GitHub token должен иметь только read-only Contents access; object format задаётся явно.
+- PR #22 не сливать без отдельной явной команды владельца.
 
-Сначала проверь актуальный HEAD main и прочитай уже существующие contracts/tests. Затем создай feature branch, реализуй bounded scope, добавь тесты, запусти полную offline verification и дождись CI. Подготовь PR с точным summary, изменёнными файлами, командами, PASS/FAIL и ограничениями. PR не сливай — его review и merge будут выполнены отдельно.
-
-Не нужно пересказывать весь проект или создавать новые большие документы. Сфокусируйся на реализации Site Content Adapter и небольшом техническом handoff.
+Начни с проверки актуального GitHub state и только после этого выполняй точно ограниченную задачу владельца. Не пересказывай весь проект и не создавай лишние документы; обновляй handoff/status/stage report по фактическому результату.
