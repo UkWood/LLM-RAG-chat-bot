@@ -412,7 +412,9 @@ def _extract_public_site_origin(config_bytes: bytes) -> str:
         or host == "github.io"
         or host.endswith(".github.io")
         or host == "localhost"
-        or host.endswith((".local", ".internal", ".lan"))
+        or host.endswith((".local", ".internal", ".lan", ".corp", ".intranet", ".home",
+                            ".test", ".example", ".invalid", ".localhost"))
+        or ("." not in host and address is None)
     ):
         raise SnapshotValidationError("SITE_URL must not identify a Git provider or internal host")
     try:

@@ -131,6 +131,7 @@ class SaturnSiteContentAdapterTests(unittest.TestCase):
         self.assertIn("src/pages/products/[slug].astro", manifest_paths)
         self.assertIn("src/lib/url.ts", manifest_paths)
         self.assertIn("src/lib/nav.ts", manifest_paths)
+        self.assertIn("src/lib/service.ts", manifest_paths)
         self.assertIn("src/data/nav.yaml", manifest_paths)
         self.assertIn("src/data/industries.yaml", manifest_paths)
 
@@ -138,7 +139,7 @@ class SaturnSiteContentAdapterTests(unittest.TestCase):
         previous = adapt_snapshot(make_snapshot())
         files = fixture_file_map()
         config = files["astro.config.mjs"][1].replace(
-            b"https://www.mnppsaturn.ru", b"https://docs.example.test"
+            b"https://www.mnppsaturn.ru", b"https://docs.example.com"
         )
         replace_file(files, "astro.config.mjs", config)
         current = adapt_snapshot(
@@ -147,7 +148,7 @@ class SaturnSiteContentAdapterTests(unittest.TestCase):
         )
         device = next(item for item in current.entities
                       if item.collection == "products" and item.slug == "device-x")
-        self.assertEqual(device.canonical_url, "https://docs.example.test/products/device-x/")
+        self.assertEqual(device.canonical_url, "https://docs.example.com/products/device-x/")
         self.assertIn("astro.config.mjs", current.sync_plan.file_changes.changed)
         self.assertTrue(any(item.kind == "route_source_changed"
                             and item.subject == "astro.config.mjs"
@@ -202,6 +203,8 @@ class SaturnSiteContentAdapterTests(unittest.TestCase):
         replace_file(files, "src/pages/new-route.astro", b"---\n// new route\n---\n")
         industries = files["src/data/industries.yaml"][1] + b"- gas\n"
         replace_file(files, "src/data/industries.yaml", industries)
+        replace_file(files, "src/lib/service.ts",
+                     b"export const SECTIONS = [{ id: 'manuals' }, { id: 'new-section' }];\n")
         current = adapt_snapshot(
             make_snapshot(files, commit=COMMIT_B, tree=TREE_B),
             previous_manifest=previous.manifest,
@@ -217,6 +220,7 @@ class SaturnSiteContentAdapterTests(unittest.TestCase):
         self.assertIn(("route_source_added", "src/pages/new-route.astro"), by_key)
         self.assertIn(("route_source_deleted", "src/pages/news/[slug].astro"), by_key)
         self.assertIn(("route_source_changed", "src/data/industries.yaml"), by_key)
+        self.assertIn(("route_source_changed", "src/lib/service.ts"), by_key)
         self.assertEqual(by_key[("route_source_deleted", "src/pages/news/[slug].astro")].severity,
                          "breaking")
         missing_news = next(item for item in current.entities

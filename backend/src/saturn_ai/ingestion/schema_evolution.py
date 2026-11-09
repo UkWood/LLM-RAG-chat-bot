@@ -27,6 +27,7 @@ _ROUTE_SOURCE_FILES = frozenset({
     "src/content.config.ts",
     "src/lib/url.ts",
     "src/lib/nav.ts",
+    "src/lib/service.ts",
     "src/data/nav.yaml",
     "src/data/industries.yaml",
 })
