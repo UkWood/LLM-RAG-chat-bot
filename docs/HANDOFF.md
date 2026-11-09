@@ -11,13 +11,13 @@
 - Текущий main: `934c65e2bc11adf4c2b0b0e3b30717a02d7bb26e`.
 - PR #20 открыт, не слит: [trusted Saturn Site Content Adapter](https://github.com/UkWood/LLM-RAG-chat-bot/pull/20).
 - PR #20 реализует pure/offline адаптер для уже полученного pinned snapshot. GitHub snapshot provider, PDF, retrieval, LLM/API/UI и deployment ещё не реализованы.
-- Кодовый commit `51fb616d0c5d368f0452cab1fe6f1d07f3c78408` прошёл PR-head CI [#214](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42531823934): SUCCESS — 204 теста, 11 существующих optional skips; ONNX contracts SUCCESS.
+- Проверенный кодовый head `76cef265b7ebc73e7f1a4848e6bbd3d02478ad66` прошёл PR-head CI [#230](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42568802924): SUCCESS — 212 тестов, 11 существующих optional skips; ONNX contracts SUCCESS.
 - После кодового commit обновляются только status/handoff документы. Перед merge проверять checks актуального PR head.
 - PR #20 ожидает review владельца. Merge не выполнялся.
 
 ## 2. Решения владельца — обязательны
 
-- Trust root: \`UkWood/Saturn-Main-Site\`, branch \`main\`.
+- Stable trusted logical source ID: `UkWood/Saturn-Main-Site`, branch `main`. Snapshot Providers map their physical GitHub/Gitea remotes to this ID; provider addresses are not part of the adapter contract.
 - Все non-draft записи сайта, объявленные сайтом связи, справочники и прямые PDF-ссылки из documents/certificates или Markdown body доверенные. Ручная проверка/approval не нужна.
 - \`draft: true\` исключается из публичного corpus.
 - Сайт строго READ-ONLY: не менять его файлы, ветки, URL, assets, CI или поиск.
@@ -43,6 +43,15 @@
 
 Тесты: `backend/tests/unit/test_saturn_site_adapter.py`; fixtures — `backend/tests/fixtures/saturn_site/`. Старые ingestion modules и synthetic/evaluation path не изменялись.
 
+### Review corrections in PR #20
+
+- Canonical URLs derive from the checked-in public `SITE_URL` fallback in `astro.config.mjs`; GitHub Pages `SITE_URL`/`BASE_PATH` overrides and provider URLs are not used.
+- Actual Astro routes are verified for products, systems, groups, articles, news and pages; `pages/home` maps to `/`. Nested slugs without a matching catch-all route have no guessed canonical URL.
+- `src/pages/**`, `astro.config.mjs`, `src/content.config.ts`, `src/lib/url.ts`, `src/lib/nav.ts`, `src/lib/service.ts`, `src/data/nav.yaml` and `src/data/industries.yaml` are included in source revisions/manifest. Route add/change/delete is reported as drift.
+- `SiteSyncManifest.parser_version` participates in snapshot identity. Legacy manifests and builder calls remain compatible through an explicit unversioned marker. Current parser/mapping versions are 0.2.0.
+- Unknown explicit `pages.kind` values map to `SiteContent` with warning; missing kind maps to `Page`. Raw frontmatter and facts retain the original value.
+- `SiteSourceRevision` remains raw source provenance; site parser version is a processing-manifest field, consistent with ADR-0013.
+
 ## 4. Важная граница с прежним ingestion
 
 Существующие \`site.py\`, \`registry.py\`, \`pipeline.py\`, \`contracts.py\` обслуживают прежний synthetic/fixture ingestion path. В нём есть фиксированные collections и per-source approval contracts.
@@ -51,24 +60,20 @@
 
 ## 5. Следующий bounded coding task после PR #20
 
-После review и отдельной команды владельца на merge следующий отдельный этап — read-only GitHub snapshot provider, который получает точные commit/tree refs и передаёт адаптеру immutable snapshot.
+После review и отдельной команды владельца на merge — provider-neutral Snapshot Provider stage. Текущий GitHub provider и будущий Gitea provider должны выдавать один и тот же `PinnedSiteSnapshot`; конфигурация каждого provider отображает физический remote/namespace на стабильный trusted logical source ID.
 
-Граница provider/adapter должна сохраниться:
-- provider отвечает за GitHub read-only fetch и точную фиксацию commit/tree/blob identities;
-- `saturn_site_adapter.py` остаётся pure/offline и не получает сетевых зависимостей;
-- source-site writes, PDF fetching/parsing, retrieval, LLM/provider, API/UI и deployment остаются вне следующего этапа, пока отдельно не согласованы.
+`saturn_site_adapter.py` остаётся pure/offline. GitHub/Gitea API, network, clone, provider environment, source-site writes, PDF, retrieval, LLM/provider, API/UI и deployment не входят в этот PR.
 
 Если provider потребует изменения архитектуры или новых контрактов — остановиться и вынести конкретное предложение в архитектурную сессию.
 
 ## 6. Результат и проверка PR #20
 
-- Fixtures покрывают шесть текущих collections, дополнительную неизвестную collection, draft/ordinary records, software/device, system/category, solution/section и declared relations.
-- Проверены raw preservation, YAML rejection, CRLF body, unknown nested fields, arrays/order, add/update/delete, collection/field/type/dictionary drift и deterministic output.
-- Финальный GitHub Actions run: [#205](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42531172049) — оба jobs SUCCESS.
-- Offline verification: 204 tests, 11 optional skips. Synthetic baseline preflight: 10 documents, 44 chunks, 30 cases; lexical source-hit@5 0.85 (существующая non-blocking baseline, без изменений).
-- ONNX contracts: SUCCESS.
-- Saturn-Main-Site не изменялся. PDF, LLM, provider, retrieval и deployment не подключались.
-- PR #20 открыт и ожидает review; merge без отдельной команды владельца запрещён.
+- PR-head CI [#230](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42568802924): SUCCESS — 212 tests, 11 existing optional skips; ONNX contracts PASS.
+- Проверены canonical URL для известных collections, pages/home, публичный домен, GitHub Pages base-path exclusion, slug encoding и nested slugs.
+- Проверены route source add/change/delete, parser version identity/drift, legacy manifest compatibility и pages.kind discriminator.
+- Synthetic baseline preflight: 10 documents, 44 chunks, 30 cases; lexical source-hit@5 0.85 (существующая non-blocking baseline).
+- Saturn-Main-Site проверен read-only на commit `084d759487bfab6e111549c9b5469711ac5fc13`; изменений в нём не было.
+- PR #20 открыт; merge без отдельной команды владельца запрещён.
 
 ## 7. Разделение сессий и порядок работы
 

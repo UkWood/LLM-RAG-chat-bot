@@ -28,25 +28,34 @@ The source schema was inspected read-only at Saturn-Main-Site revision `084d7594
 
 Test file: `backend/tests/unit/test_saturn_site_adapter.py`. Test fixtures: `backend/tests/fixtures/saturn_site/`.
 
+## Review corrections
+
+- Canonical origin comes from the checked-in production `SITE_URL` fallback in `astro.config.mjs`; the adapter ignores GitHub Pages preview environment overrides and `BASE_PATH`.
+- Verified routes: products, systems, groups, articles, news, root pages and `pages/home` → `/`. Unknown collections have no canonical URL; nested slugs without a catch-all route are not guessed.
+- Route/config sources are included in source revisions and manifest: `src/pages/**`, `astro.config.mjs`, `src/content.config.ts`, `src/lib/url.ts`, `src/lib/nav.ts`, `src/lib/service.ts`, `src/data/nav.yaml`, `src/data/industries.yaml`. Add/change/delete produces route drift.
+- Parser version is part of manifest and snapshot identity; parser changes produce drift. Legacy manifests and old builder calls use `saturn-site-parser/unversioned`.
+- Missing `pages.kind` maps to `Page`; known `solution`/`section` map to their types; unknown explicit values remain generic `SiteContent` with warning and preserved raw facts.
+- `SiteSourceRevision` remains raw source provenance. ADR-0013's PDF parser version stays on PDF extraction provenance; the site parser version belongs to `SiteSyncManifest`.
+
 ## Verification
 
-Implementation commit tested by CI: `51fb616d0c5d368f0452cab1fe6f1d07f3c78408`. Handoff/status documentation commits followed; the latest PR head must also have green checks before merge.
+Code head verified by CI: `76cef265b7ebc73e7f1a4848e6bbd3d02478ad66`.
 
-GitHub Actions PR-head [run #214](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42531823934): **SUCCESS**.
+GitHub Actions PR-head [run #230](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42568802924): **SUCCESS**.
 
-- Offline verification: 204 tests passed, 11 existing optional skips.
+- Offline verification: 212 tests passed, 11 existing optional skips.
 - ONNX contracts: SUCCESS.
 - Synthetic baseline preflight: 10 documents, 44 chunks, 30 cases.
 - Existing lexical source-hit@5 remains 0.85 overall; this non-blocking baseline was not changed by the adapter.
 
 ## Explicit exclusions
 
-- No GitHub snapshot provider; caller supplies the pinned snapshot.
+- No GitHub/Gitea Snapshot Provider; caller supplies the pinned snapshot. Future providers map physical remotes to the stable logical source ID and emit the same `PinnedSiteSnapshot`.
 - No PDF download/parser, retrieval integration, LLM/provider, API/UI or deployment.
 - No use of the legacy SourceRecord/Registry approval workflow.
-- No changes to existing synthetic ingestion/evaluation, canonical contracts or ADRs.
+- No changes to existing synthetic ingestion/evaluation or ADRs. `SiteSyncManifest` was extended compatibly with parser version; legacy manifests/build calls remain supported.
 - No modifications to Saturn-Main-Site.
 
 ## Next step
 
-Review PR #20. After owner approval and merge, the next bounded implementation stage can be the read-only pinned GitHub snapshot provider. Any architecture/contract change must first be discussed in the separate architecture session.
+Review PR #20. After owner approval and merge, the next bounded stage is a provider-neutral read-only Snapshot Provider contract: current GitHub and future Gitea implementations must emit the same `PinnedSiteSnapshot` and map physical remotes to the stable logical source ID. Any architecture/contract change must first be discussed in the separate architecture session.

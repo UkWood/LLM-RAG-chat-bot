@@ -1,17 +1,19 @@
 # Состояние проекта
 
-## Saturn Site Content Adapter — PR #20 open (2026-11-09)
+## Saturn Site Content Adapter — PR #20 review corrections (2026-11-09)
 
-**Current main:** `934c65e2bc11adf4c2b0b0e3b30717a02d7bb26e`. PR #17 and PR #18 are merged.  
-**Implementation:** `feature/saturn-site-content-adapter`; [PR #20](https://github.com/UkWood/LLM-RAG-chat-bot/pull/20) is open and not merged.
+**Current main:** `934c65e2bc11adf4c2b0b0e3b30717a02d7bb26e`. PR #17/#18 are merged.  
+**Implementation:** `feature/saturn-site-content-adapter`; [PR #20](https://github.com/UkWood/LLM-RAG-chat-bot/pull/20) remains open and unmerged.
 
-Implemented the first pure/offline adapter slice over an already pinned Saturn-Main-Site snapshot. It dynamically discovers content collections, safely parses Markdown frontmatter and YAML dictionaries, preserves raw source bytes/frontmatter/body and unknown fields, maps only explicit source relations, and builds canonical revisions/schema inventory/deterministic sync plans using PR #18 contracts. It does not fetch GitHub snapshots itself.
+Canonical URLs now derive from the checked-in public `SITE_URL` fallback in `astro.config.mjs`; GitHub Pages preview values and provider addresses are excluded. Astro route/config sources are tracked in the manifest and add/change/delete route drift is reported. The stable logical source ID is independent of the physical GitHub/Gitea remote; future providers must emit the same `PinnedSiteSnapshot`.
 
-Adapter implementation PR CI: [run #214](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42531823934) SUCCESS — 204 offline tests (11 existing optional skips) and ONNX contracts SUCCESS. Synthetic baseline remains unchanged: 10 documents, 44 chunks, 30 cases; lexical source-hit@5 0.85, non-blocking for this adapter stage.
+`SiteSyncManifest.parser_version` participates in snapshot identity and parser-version drift. Legacy manifests/build calls remain compatible through an explicit unversioned marker. Unknown explicit `pages.kind` values map to generic `SiteContent` with warning; absent kind maps to `Page`.
 
-No legacy SourceRecord/Registry approval path, source-site writes, PDF fetching, retrieval, LLM/provider, API/UI or deployment. See [stage report](stages/2026-11-09-saturn-site-content-adapter.md) and [implementation handoff](HANDOFF.md).
+Code head verified by GitHub Actions [run #230](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42568802924): **SUCCESS** — 212 offline tests, 11 existing optional skips; ONNX contracts SUCCESS. Synthetic baseline unchanged: 10 documents, 44 chunks, 30 cases; lexical source-hit@5 0.85 (non-blocking, not an adapter quality metric).
 
-**Next bounded stage after owner review/merge:** read-only pinned GitHub snapshot provider. Architecture changes remain in the separate «Saturn AI — Архитектура и управление» session.
+No legacy SourceRecord/Registry approval path, source-site writes, GitHub/Gitea provider, PDF fetching/parsing, retrieval, LLM/provider, API/UI or deployment. Saturn-Main-Site remains READ-ONLY at commit `084d759487bfab6e111549c9b5469711ac5fc13`.
+
+**Next bounded stage after owner review/merge:** provider-neutral read-only Snapshot Provider(s): current GitHub and future Gitea implementations share the `PinnedSiteSnapshot` contract. Architecture changes remain in the separate «Saturn AI — Архитектура и управление» session.
 
 ## Planner V2 corrective revision — 2026-11-06
 
