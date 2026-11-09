@@ -10,10 +10,13 @@ import re
 from pathlib import PurePosixPath
 
 
+# Stable logical source ID; provider-specific remotes are mapped to this ID by Snapshot Providers.
+# Keep this value stable across a GitHub -> Gitea migration.
 TRUSTED_SITE_REPOSITORY = "UkWood/Saturn-Main-Site"
 TRUSTED_SITE_BRANCH = "main"
 ADAPTER_VERSION = "saturn-site-adapter/0.1.0"
-MAPPING_VERSION = "saturn-site-mapping/0.1.0"
+MAPPING_VERSION = "saturn-site-mapping/0.2.0"
+LEGACY_PARSER_VERSION = "saturn-site-parser/unversioned"
 
 _SHA1 = re.compile(r"^[0-9a-f]{40}$")
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
@@ -49,7 +52,7 @@ def _safe_source_path(value: str) -> str:
     path = PurePosixPath(value)
     if (path.is_absolute() or "\\" in value or "%" in value or
             any(part in ("", ".", "..") for part in path.parts) or
-            not value.startswith("src/")):
+            not (value.startswith("src/") or value == "astro.config.mjs")):
         raise ValueError("Unsafe source path")
     return path.as_posix()
 
@@ -68,6 +71,8 @@ def _canonical_json_text(value: str, expected_type=None) -> None:
 
 @dataclass(frozen=True)
 class SiteSourceRevision:
+    """Raw source provenance; parser versions belong to processing manifests."""
+
     repository: str
     branch: str
     commit_sha: str
@@ -354,6 +359,9 @@ class SiteSyncManifest:
     schema_inventory: SchemaInventory
     file_revisions: tuple[SiteFileRevision, ...]
     snapshot_id: str
+    # Missing parser_version in a pre-upgrade serialized manifest maps to this
+    # marker; its legacy snapshot_id is validated using the pre-versioned payload.
+    parser_version: str = LEGACY_PARSER_VERSION
 
     def __post_init__(self):
         if self.repository != TRUSTED_SITE_REPOSITORY or self.branch != TRUSTED_SITE_BRANCH:
@@ -362,6 +370,7 @@ class SiteSyncManifest:
         _check_hash(self.tree_sha, _SHA1, "Git tree SHA")
         _required_text(self.adapter_version, "adapter_version")
         _required_text(self.mapping_version, "mapping_version")
+        _required_text(self.parser_version, "parser_version")
         _check_hash(self.snapshot_id, _SHA256, "snapshot ID")
         if not isinstance(self.schema_inventory, SchemaInventory):
             raise ValueError("Schema inventory is required")
@@ -382,6 +391,8 @@ class SiteSyncManifest:
             "adapter_version": self.adapter_version,
             "mapping_version": self.mapping_version,
         }
+        if self.parser_version != LEGACY_PARSER_VERSION:
+            payload["parser_version"] = self.parser_version
         expected_snapshot_id = stable_id("saturn-site-snapshot-v1", payload)
         if self.snapshot_id != expected_snapshot_id:
             raise ValueError("Snapshot ID does not match manifest contents")

@@ -1,19 +1,23 @@
 # Передача контекста — реализация кода
 
 Дата: 2026-11-09  
+Текущая реализация: [PR #20](https://github.com/UkWood/LLM-RAG-chat-bot/pull/20), ветка `feature/saturn-site-content-adapter`  
 Основной репозиторий: [UkWood/LLM-RAG-chat-bot](https://github.com/UkWood/LLM-RAG-chat-bot)  
-Текущий main: \`223350c9f6f104b5b67aadd124bfc968f12f5dbf\`
+Текущий main: \`934c65e2bc11adf4c2b0b0e3b30717a02d7bb26e\`
 
 ## 1. Текущий статус
 
-- PR #17: принят и слит. ADR-0012/0013 и архитектура доверенного источника/schema evolution согласованы.
-- PR #18: принят и слит в main. Реализованы канонические контракты и pure schema-evolution primitives.
-- CI PR #18: SUCCESS — 192 теста, 11 существующих optional skips; ONNX contracts SUCCESS.
-- Следующий этап: Site Content Adapter. Реальный sync, PDF fetch, retrieval integration и deployment ещё не реализованы.
+- PR #17 и PR #18 приняты и слиты. ADR-0012/0013, канонические контракты и schema-evolution primitives находятся в main.
+- Текущий main: `934c65e2bc11adf4c2b0b0e3b30717a02d7bb26e`.
+- PR #20 открыт, не слит: [trusted Saturn Site Content Adapter](https://github.com/UkWood/LLM-RAG-chat-bot/pull/20).
+- PR #20 реализует pure/offline адаптер для уже полученного pinned snapshot. GitHub snapshot provider, PDF, retrieval, LLM/API/UI и deployment ещё не реализованы.
+- Проверенный кодовый head `76cef265b7ebc73e7f1a4848e6bbd3d02478ad66` прошёл PR-head CI [#230](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42568802924): SUCCESS — 212 тестов, 11 существующих optional skips; ONNX contracts SUCCESS.
+- После кодового commit обновляются только status/handoff документы. Перед merge проверять checks актуального PR head.
+- PR #20 ожидает review владельца. Merge не выполнялся.
 
 ## 2. Решения владельца — обязательны
 
-- Trust root: \`UkWood/Saturn-Main-Site\`, branch \`main\`.
+- Stable trusted logical source ID: `UkWood/Saturn-Main-Site`, branch `main`. Snapshot Providers map their physical GitHub/Gitea remotes to this ID; provider addresses are not part of the adapter contract.
 - Все non-draft записи сайта, объявленные сайтом связи, справочники и прямые PDF-ссылки из documents/certificates или Markdown body доверенные. Ручная проверка/approval не нужна.
 - \`draft: true\` исключается из публичного corpus.
 - Сайт строго READ-ONLY: не менять его файлы, ветки, URL, assets, CI или поиск.
@@ -23,14 +27,30 @@
 - Cloud data egress к внешней LLM — отдельное решение; source trust его не разрешает.
 - ChatGPT — основная среда проектирования, реализации и review. Codex — только для ограниченных рутинных coding tasks по точному brief.
 
-## 3. Реализовано в main
+## 3. Реализовано в PR #20 (ещё не в main)
 
-Новые модули PR #18:
-- \`backend/src/saturn_ai/ingestion/saturn_contracts.py\` — immutable SiteSourceRevision, SiteEntity, SiteFact, SiteRelation, SupportDocument, PdfRevision, EvidenceUnit, schema and sync manifest contracts.
-- \`backend/src/saturn_ai/ingestion/schema_evolution.py\` — observed schema inventory, collection/field/type/dictionary drift, file add/change/delete diff, deterministic manifest and sync plan.
-- Tests: \`backend/tests/unit/test_saturn_contracts.py\`, \`backend/tests/unit/test_saturn_schema_evolution.py\`.
+Новый модуль: `backend/src/saturn_ai/ingestion/saturn_site_adapter.py`.
 
-Это фундаментальные contracts, не полноценный adapter. Они не читают GitHub и не импортируют реальный сайт.
+- Принимает immutable `PinnedSiteSnapshot`: trust root, branch, commit SHA, tree SHA и отсортированные файлы с Git blob SHA + исходными bytes. Blob SHA проверяется по точным байтам.
+- Динамически обнаруживает Markdown collections под `src/content/<collection>/`; словари `src/data/*.yaml|yml` и `src/content.config.ts` включаются в manifest/fingerprints.
+- `src/content.config.ts` только fingerprint-ится — Astro/TypeScript/JS не исполняются.
+- Safe YAML: YAML 1.2 boolean semantics, запрет anchors/aliases/explicit tags, duplicate keys и non-string keys; ограничены размер, token count, depth и node count.
+- Raw bytes, raw frontmatter text и Markdown body сохраняются. Неизвестные поля и вложенные значения становятся raw facts; неизвестные collections — `SiteContent`.
+- Явные relations берутся только из текущей проверенной схемы. `pages.groups` остаётся navigation data.
+- Для `systems.kind` при отсутствии поля применяется только объявленный в source schema default `system`; явное неизвестное значение остаётся generic `SiteContent` с warning. `pages.kind` default не имеет.
+- Используются PR #18 contracts: source revisions, schema inventory, dictionary fingerprints, deterministic sync manifest и file/schema diff.
+- Ошибка записи диагностируется отдельно. Raw bytes остаются в package; package с error issues не допускается к promotion.
+
+Тесты: `backend/tests/unit/test_saturn_site_adapter.py`; fixtures — `backend/tests/fixtures/saturn_site/`. Старые ingestion modules и synthetic/evaluation path не изменялись.
+
+### Review corrections in PR #20
+
+- Canonical URLs derive from the checked-in public `SITE_URL` fallback in `astro.config.mjs`; GitHub Pages `SITE_URL`/`BASE_PATH` overrides and provider URLs are not used.
+- Actual Astro routes are verified for products, systems, groups, articles, news and pages; `pages/home` maps to `/`. Nested slugs without a matching catch-all route have no guessed canonical URL.
+- `src/pages/**`, `astro.config.mjs`, `src/content.config.ts`, `src/lib/url.ts`, `src/lib/nav.ts`, `src/lib/service.ts`, `src/data/nav.yaml` and `src/data/industries.yaml` are included in source revisions/manifest. Route add/change/delete is reported as drift.
+- `SiteSyncManifest.parser_version` participates in snapshot identity. Legacy manifests and builder calls remain compatible through an explicit unversioned marker. Current parser/mapping versions are 0.2.0.
+- Unknown explicit `pages.kind` values map to `SiteContent` with warning; missing kind maps to `Page`. Raw frontmatter and facts retain the original value.
+- `SiteSourceRevision` remains raw source provenance; site parser version is a processing-manifest field, consistent with ADR-0013.
 
 ## 4. Важная граница с прежним ingestion
 
@@ -38,50 +58,31 @@
 
 **Не удалять и не ослаблять эти approval gates глобально. Не пытаться подключить доверенный Saturn main через старый SourceRecord/Registry.** Новая Saturn-интеграция должна идти отдельным путём на основе \`saturn_contracts.py\` и собственных adapter contracts. Существующие synthetic tests и historical evaluation должны продолжать работать без регрессий.
 
-## 5. Следующая bounded coding task
+## 5. Следующий bounded coding task после PR #20
 
-Реализовать первый вертикальный срез **Site Content Adapter**, который принимает уже полученный immutable/pinned snapshot (commit, tree SHA, path → bytes/blob SHA) и не выполняет сетевых запросов сам.
+После review и отдельной команды владельца на merge — provider-neutral Snapshot Provider stage. Текущий GitHub provider и будущий Gitea provider должны выдавать один и тот же `PinnedSiteSnapshot`; конфигурация каждого provider отображает физический remote/namespace на стабильный trusted logical source ID.
 
-Обязательное поведение:
-1. Динамически обнаруживать все Markdown files в \`src/content/<collection>/\`, не использовать статический allowlist коллекций.
-2. Разбирать frontmatter безопасным YAML loader без исполнения Astro/TypeScript/JS; сохранять raw frontmatter и Markdown body без потерь.
-3. Пропускать только записи с явным \`draft: true\`; отсутствующее поле не считать draft.
-4. Известное текущее mapping брать из \`docs/site-specific/v0.2/04-read-only-schema-audit.md\`; новые collections → generic \`SiteContent\`.
-5. Сохранять каждое поле как raw fact (включая неизвестные поля, массивы, порядок, единицы и qualifiers); не выдумывать defaults и отрицательные утверждения.
-6. Применять только явно объявленные relation mappings. Не выводить совместимость из co-occurrence. \`pages.groups\` — навигационная структура, не состав инженерной системы.
-7. Software — subtype products; \`systems.kind=category\` — Category; \`pages.kind=solution/section\` должны различаться.
-8. Строить source revisions, schema inventory, dictionary fingerprints и deterministic sync manifest через contracts PR #18.
-9. Parser должен быть pure/offline и детерминированным. Ошибка одной записи должна быть диагностирована; решение о fail/skip и атомарной публикации не должно приводить к потере raw data.
-10. Не подключать PDF download/parser, retrieval, LLM/provider, API/UI или deployment в этом PR.
+`saturn_site_adapter.py` остаётся pure/offline. GitHub/Gitea API, network, clone, provider environment, source-site writes, PDF, retrieval, LLM/provider, API/UI и deployment не входят в этот PR.
 
-Первый PR может включать parser + mapping + fixtures/contract tests. Источник GitHub/read-only snapshot provider — отдельный следующий шаг, если он не помещается в небольшой reviewable PR.
+Если provider потребует изменения архитектуры или новых контрактов — остановиться и вынести конкретное предложение в архитектурную сессию.
 
-## 6. Критерии приёмки следующего PR
+## 6. Результат и проверка PR #20
 
-- Unit fixtures покрывают все шесть текущих collections: products, systems, groups, articles, news, pages.
-- Проверены Software, System/Category, Solution/SectionPage, draft/ordinary records.
-- Неизвестная collection и неизвестные nested fields сохраняются.
-- Проверены explicit relations и отсутствие ложной инженерной связи из navigation fields.
-- Проверены add/update/delete и schema drift на входных pinned snapshots.
-- Повторная обработка одинакового snapshot и версий adapter/mapping даёт идентичный canonical output.
-- Нет network access, PDF fetch, provider calls и изменений Saturn-Main-Site.
-- Все существующие tests + новые tests проходят; CI зелёный.
-- PR описывает exact input SHA, файлы, команды, фактические результаты и ограничения.
+- PR-head CI [#230](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42568802924): SUCCESS — 212 tests, 11 existing optional skips; ONNX contracts PASS.
+- Проверены canonical URL для известных collections, pages/home, публичный домен, GitHub Pages base-path exclusion, slug encoding и nested slugs.
+- Проверены route source add/change/delete, parser version identity/drift, legacy manifest compatibility и pages.kind discriminator.
+- Synthetic baseline preflight: 10 documents, 44 chunks, 30 cases; lexical source-hit@5 0.85 (существующая non-blocking baseline).
+- Saturn-Main-Site проверен read-only на commit `084d759487bfab6e111549c9b5469711ac5fc13`; изменений в нём не было.
+- PR #20 открыт; merge без отдельной команды владельца запрещён.
 
-## 7. Как работать в новой сессии
+## 7. Разделение сессий и порядок работы
 
-Новая сессия предназначена для **реализации кода**. Текущая сессия остаётся архитектурной и управляющей: здесь согласуются изменения модели, ADR, scope, критерии и принимаются результаты review.
+Эта сессия предназначена для реализации и проверки кода. Архитектурные решения, ADR и изменение scope согласуются в отдельной сессии «Saturn AI — Архитектура и управление».
 
-Новая сессия должна прочитать:
-1. \`AGENTS.md\`
-2. \`README.md\`
-3. \`docs/PROJECT_STATUS.md\`
-4. этот файл
-5. \`docs/CHATGPT_SESSION_GUIDE.md\`
-6. \`docs/decisions/0012-saturn-knowledge-integration.md\` и \`0013-saturn-relation-provenance.md\`
-7. \`docs/site-specific/v0.2/02-architecture.md\`, \`03-implementation-plan.md\`, \`04-read-only-schema-audit.md\`
-8. два новых canonical modules и tests PR #18.
-
-Не загружать весь исторический архив stage reports без конкретной необходимости. Не менять архитектуру/ADR самостоятельно. При конфликте реализации с утверждёнными решениями — остановиться и вынести короткий вопрос в архитектурную сессию.
+При продолжении:
+1. Проверить актуальный main и состояние PR #20.
+2. Не повторять уже завершённую реализацию адаптера.
+3. После review/merge продолжать только с bounded задачей read-only snapshot provider.
+4. При конфликте с утверждёнными требованиями остановиться и вынести вопрос в архитектурную сессию.
 
 PR создаётся в отдельной feature branch. Merge — только после review и отдельной команды владельца.
