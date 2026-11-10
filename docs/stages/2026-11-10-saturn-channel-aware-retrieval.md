@@ -5,8 +5,47 @@
 Репозиторий: `UkWood/LLM-RAG-chat-bot`  
 Baseline `main`: `2da357db4543c9ca173db7663bbd18396d221cc3` (PR #25 merged)  
 Ветка: `feat/saturn-channel-aware-retrieval-v0.1`  
-PR: #26 или фактический номер после создания  
-Статус: реализация для независимого Acceptance Review; **NO MERGE**.
+PR: [#26](https://github.com/UkWood/LLM-RAG-chat-bot/pull/26)  
+Статус: Consolidated Acceptance Review Corrections — implementation updated, exact-head CI required; **NO MERGE**.
+
+## Consolidated Acceptance Review Corrections — PR #26 (CR-01–CR-03)
+
+**Source review head:** `2ef92e3e69acbd9999ad3bb15b43e610e95e7106`.  
+**Статус:** три замечания исправлены в исходной ветке `feat/saturn-channel-aware-retrieval-v0.1`, без нового PR и без изменения архитектуры или source trust. Финальный точный SHA и оба Actions jobs подтверждать в самом [PR #26](https://github.com/UkWood/LLM-RAG-chat-bot/pull/26); не обновлять этот документ ради очередного документационного SHA.
+
+### CR-01 — BLOCKER: immutable published retrieval bundle
+
+- `SaturnRetrievalBundle` — frozen dataclass: snapshot, records, document metadata, lexical/metadata/dense bindings, manifest и mapping словарных aliases не подменяются обычным присваиванием. Изменяемый alias-dict изолирован через `MappingProxyType`. `SaturnBM25Index` и `SaturnMetadataIndex` содержат исключительно immutable tuples и заблокированные field assignments. `SaturnQdrantIndex` после конструктора запрещает обычное изменение индекса, канонических payloads, vectors, point IDs и backend binding; payload tuples являются неизменяемыми.
+- `SaturnRetrievalService` запрещает переназначение `_active`, публикационного `_lock` и `policy_provider` через обычное присваивание. Изменение authoritative active bundle происходит только внутри `publish()` под единым `RLock`, после прежних строгих проверок 4A и полной сверки индексов/manifest.
+- Жизненный цикл local Qdrant учитывает отдельный active retain и каждый in-flight search retain, получаемый **до** возможного swap. После публикации новой ревизии старый Qdrant получает deferred `close()`, но закрывается только после последнего reader release. Даже внешний вызов `dense.close()` для ещё активного index не обрывает текущий запрос. Ошибки cleanup после успешного pointer swap являются post-publication cleanup diagnostics, а не ошибкой публикации.
+- Корректный старый active сохраняется при failed candidate validation/publish. Ни snapshot, ни index bindings не заменяются частями: один capture — одна согласованная ревизия. Не создаётся второй authoritative pointer.
+- **Граница гарантии:** in-process immutability против обычного Python assignment; не sandbox для произвольного вредоносного кода в том же процессе с `object.__setattr__` или прямым доступом к private QdrantClient. Такие подмены до публикации по-прежнему обнаруживает структурный `validate()`.
+
+### CR-02 — IMPORTANT: prepared BM25 reuse
+
+- `SaturnBM25Index` и отдельный `SaturnMetadataIndex` индексируют `tokens`, `_prepared` term-frequency maps и длины документов **один раз**, до публикации. `search()` использует эти prepared artifacts, а не повторно вызывает `tokenize(record.text)` для каждого запроса.
+- При каждом policy-filtered запросе DF/N/average length пересчитываются **только по eligible records**. Таким образом математическая формула `BM25(k1=1.2,b=0.75)`, динамические блокировки, сортировка `(-score, canonical_id)`, отдельность answer evidence / metadata и bounded `top_k` сохранены.
+- Source-derived canonical evidence IDs, dictionary aliases и RRF `k=60` не изменены. Без новой зависимости; legacy synthetic `retrieval/lexical.py` не менялся. Формула сравнена с независимой reference implementation исходного BM25.
+- Валидация prepared tokens/coverage выполняется до publication; immutable index не нуждается в затратной полной повторной tokenization при каждом search.
+
+### CR-03 — IMPORTANT: sign-preserving engineering tokenization
+
+- `TOKENIZER_VERSION = saturn-technical-tokenizer/0.2.0`, `REPRESENTATION_VERSION = saturn-evidence-representation/0.1.1`. Обе версии входят в index identity; изменение tokenizer влияет на `lexical_config_hash` и `bundle_id`, representation — на dense content identity.
+- Знаки `-20` и `+20` сохраняются и не совпадают с `20`. Математический Unicode minus `−20` (U+2212) **только внутри распознанного числового токена** нормализуется в ASCII `-20`. Не происходит числового преобразования знаков/значений.
+- `0,5` и `0.5` — цельные, но **лексически разные** числовые токены. Диапазоны `-20..+20`, `10-20`, `5–7` сохраняются как цельные literal tokens, без интерпретации границ или units. Инженерные identifiers `RS-485`, `БКД-ПК-РФ.2`, `БКД-ПК-RF.2` остаются цельными, с различением кириллицы и латиницы.
+- Правило одинаково для индексируемых evidence, metadata, словарных aliases и пользовательских запросов.
+
+### Targeted regression and acceptance evidence
+
+`backend/tests/unit/test_saturn_channel_retrieval.py` дополнен adversarial методами на frozen field/index/service rebinding, согласованную внешнюю подмену компонентов, закрытие active Qdrant, старый in-flight reader после swap, конкурентные корректные publications, сохранение previous active при failed publish, отсутствие повторной tokenization/файлового I/O, независимую BM25 parity с policy-filtered DF, равные scores/tie-break, empty/no matches, изменение корпуса, forged prepared tokens, sign/decimal/range tokens, numeric ranking и versioned manifest.
+
+- Baseline до исправлений: **387 backend tests OK (11 optional skips), 5 project checks PASS**.
+- После добавления CR regression suite — **398 backend tests** в полном GitHub offline job (11 existing optional skips). Все final outcomes, а также `offline-checks` и `onnx-contracts` на окончательном head см. [PR #26 / Checks](https://github.com/UkWood/LLM-RAG-chat-bot/pull/26/checks); до их завершения статус PASS не объявляется.
+- Команда CI: `python scripts/verify_offline.py`. Legacy synthetic retrieval/evaluation и source-derived Saturn fixture продолжили запускаться в том же полном suite, без изменения frozen datasets. Semantic relevance реального Saturn corpus и производственная embedding-модель не подтверждены.
+
+### Остаточные границы
+
+Процессная (не межпроцессная и не персистентная) атомарность, trusted in-process encoder, отсутствие production dense model/evaluation, Qdrant server, generation/citations/UI, прежний config provenance limitation 4A и PDF OS sandbox остаются без изменений. `UkWood/Saturn-Main-Site` — строго READ-ONLY. PR остаётся **OPEN / NOT MERGED** до повторного независимого Acceptance Review. Этап 5 не начат.
 
 ## 1. Что реализовано
 
@@ -38,7 +77,7 @@ Saturn-specific retrieval API:
 
 - Qdrant local memory; опционально local path + проверяемое открытие существующей collection (без server/remote endpoint).
 - Явно переданный Encoder с canonical identity; проверяются dimensions, batch cardinality, конечность/ненулевой norm, identity/hash, snapshot/evidence IDs и содержимое всех фактически stored points через scroll (включая payload и vector).
-- Batches ≤16, dimensions ≤8192, ограничено суммарное число vector scalars. Query filter ограничен eligible IDs, exact snapshot ID, encoder ID. Tie-break по rounded cosine score и canonical evidence ID.
+- Batches ≤16, dimensions ≤8192, ограничено суммарное число vector scalars. Query filter ограничен eligible IDs, exact snapshot ID, encoder ID. Qdrant выполняет локальный filtered lookup по подтверждённым IDs; возвращаемый cosine score детерминированно вычисляется из validated normalized vectors; tie-break по score и canonical evidence ID.
 - В CI используются deterministic controlled vectors, не языковая модель. Production embedding model **не выбран**.
 - `dense` и `hybrid` без готового dense index → явная ошибка, никакого hidden lexical fallback.
 
