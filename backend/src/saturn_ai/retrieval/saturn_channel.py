@@ -576,37 +576,34 @@ class SaturnRetrievalService:
         if not isinstance(bundle, SaturnRetrievalBundle):
             raise ValueError("Invalid Saturn retrieval bundle")
         dense = bundle.dense
-        # Retain the candidate index before structural checks: an external
-        # close() cannot destroy it between validation and atomic publication.
         if dense is not None:
+            # Pin the candidate before validation; a concurrent close()
+            # cannot destroy it between validation and pointer publication.
             dense._retain()
         try:
             _valid_snapshot(bundle.snapshot)
             bundle.validate()
-            with self._lock:
-                previous = self._active
-                if previous is bundle:
-                    # The active bundle already owns one separate retain.
-                    if dense is not None:
-                        dense._release()
-                    return bundle.manifest.bundle_id
-                self._active = bundle
-            if previous is not None and previous.dense is not None:
-                # Retire only after swap. In-flight queries have their own
-                # retain and finish before the old Qdrant client is closed.
-                previous.dense.close()
-                previous.dense._release()
-            return bundle.manifest.bundle_id
         except BaseException:
-            # Do not release active ownership after a successful swap.
-            # An invalid candidate never changes the authoritative pointer.
-            if self.capture_or_none() is not bundle and dense is not None:
+            if dense is not None:
                 dense._release()
             raise
-
-    def capture_or_none(self):
+        # Exactly one authoritative pointer is swapped under this lock.
+        # No reader can capture partially replaced snapshot/index bindings.
         with self._lock:
-            return self._active
+            previous = self._active
+            if previous is bundle:
+                if dense is not None:
+                    dense._release()  # already retained as active
+                return bundle.manifest.bundle_id
+            self._active = bundle
+        if previous is not None and previous.dense is not None:
+            # Close is deferred until the old active retain AND all in-flight
+            # query retains have been released. Cleanup is not a rollback.
+            try:
+                previous.dense.close()
+            finally:
+                previous.dense._release()
+        return bundle.manifest.bundle_id
 
     def search_saturn(self, query: str, *, mode="lexical", top_k=5):
         _valid_query(query, top_k, mode)
