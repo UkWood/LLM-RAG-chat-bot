@@ -2,10 +2,12 @@
 
 No remote endpoints, network embeddings, automatic model downloads or global state.
 """
+from dataclasses import FrozenInstanceError
 from hashlib import sha256
 from math import isfinite, sqrt, isclose
 from numbers import Real
 from pathlib import Path
+from threading import RLock
 from uuid import NAMESPACE_URL, uuid5
 
 from qdrant_client import QdrantClient, models
@@ -34,8 +36,60 @@ def _normalize(vector, dimensions):
     return normalized
 
 
+class _QdrantLifetime:
+    """Active publication and in-flight search refs protect local Qdrant.
+
+    close() is deferred if a published bundle or running reader retains it.
+    A retired index closes only after its final reader releases its lease.
+    """
+    def __init__(self, client):
+        self._client = client
+        self._lock = RLock()
+        self._refs = 0
+        self._close_requested = False
+        self._closed = False
+
+    def retain(self):
+        with self._lock:
+            if self._closed:
+                raise ValueError("Qdrant index already closed")
+            self._refs += 1
+
+    def release(self):
+        with self._lock:
+            if self._refs <= 0:
+                raise RuntimeError("Unbalanced Qdrant index lease")
+            self._refs -= 1
+            self._maybe_close()
+
+    def close(self):
+        with self._lock:
+            self._close_requested = True
+            self._maybe_close()
+
+    def _maybe_close(self):
+        if self._refs == 0 and self._close_requested and not self._closed:
+            self._closed = True
+            self._client.close()
+
+    def assert_open(self):
+        with self._lock:
+            if self._closed:
+                raise ValueError("Qdrant index closed")
+
+    @property
+    def closed(self):
+        with self._lock:
+            return self._closed
+
+
 class SaturnQdrantIndex:
-    """Only local memory/path Qdrant, with scroll-based stored-point validation."""
+    """Sealed local Qdrant adapter with deferred close and reader leases."""
+
+    def __setattr__(self, name, value):
+        if self.__dict__.get("_sealed", False):
+            raise FrozenInstanceError("Published Qdrant index fields are immutable: "+name)
+        object.__setattr__(self, name, value)
 
     def __init__(self, snapshot_id, records, encoder, *, path=None):
         self.snapshot_id = snapshot_id
@@ -59,7 +113,7 @@ class SaturnQdrantIndex:
         if len(set(self.ids)) != len(self.ids) or any(r.snapshot_id != snapshot_id for r in records):
             raise ValueError("Dense snapshot/evidence identity mismatch")
         self.point_ids = tuple(str(uuid5(NAMESPACE_URL, "saturn-evidence-v1:"+i)) for i in self.ids)
-        self._payloads = tuple({
+        self._payloads = tuple(tuple(sorted({
             "snapshot_id": snapshot_id, "evidence_id": r.evidence_id,
             "evidence_type": r.evidence_type, "source_revision_id": r.source_revision_id,
             "entity_id": r.entity_id, "locator": r.locator, "canonical_url": r.url,
@@ -67,7 +121,7 @@ class SaturnQdrantIndex:
             "payload_hash": stable_id("saturn-qdrant-payload-v1",
                                        snapshot_id, r.evidence_id, r.text_hash, r.locator,
                                        r.source_revision_id, r.url),
-        } for r in records)
+        }.items())) for r in records)
         vectors = []
         for start in range(0, len(records), MAX_EMBEDDING_BATCH):
             texts = [r.text for r in records[start:start+MAX_EMBEDDING_BATCH]]
@@ -81,6 +135,7 @@ class SaturnQdrantIndex:
                                       self._vectors, REPRESENTATION_VERSION)
         self.collection = "saturn_"+snapshot_id[:16]+"_"+self.encoder_hash[:12]
         self._client = QdrantClient(":memory:") if path is None else QdrantClient(path=str(Path(path)))
+        self._lifetime = _QdrantLifetime(self._client)
         try:
             if not self._client.collection_exists(self.collection):
                 self._client.create_collection(self.collection, vectors_config=models.VectorParams(
@@ -92,15 +147,17 @@ class SaturnQdrantIndex:
                             points=[models.PointStruct(
                                 id=self.point_ids[i],
                                 vector=list(self._vectors[i]),
-                                payload=self._payloads[i],
+                                payload=dict(self._payloads[i]),
                             ) for i in range(start, min(start+256, len(self.ids)))],
                             wait=True)
             self.validate()
         except Exception:
             self._client.close()
             raise
+        object.__setattr__(self, "_sealed", True)
 
     def validate(self, records=None):
+        self._lifetime.assert_open()
         # Independently bind every Qdrant point/payload to the canonical
         # SearchRecord corpus, not merely to an internally cached checksum.
         expected = self._records if records is None else tuple(records)
@@ -112,7 +169,7 @@ class SaturnQdrantIndex:
                 str(uuid5(NAMESPACE_URL, "saturn-evidence-v1:"+r.evidence_id))
                 for r in expected):
             raise ValueError("Qdrant point IDs are not canonical")
-        rebuilt_payloads = tuple({
+        rebuilt_payloads = tuple(tuple(sorted({
             "snapshot_id": self.snapshot_id, "evidence_id": r.evidence_id,
             "evidence_type": r.evidence_type, "source_revision_id": r.source_revision_id,
             "entity_id": r.entity_id, "locator": r.locator, "canonical_url": r.url,
@@ -120,7 +177,7 @@ class SaturnQdrantIndex:
             "payload_hash": stable_id("saturn-qdrant-payload-v1",
                                        self.snapshot_id, r.evidence_id, r.text_hash, r.locator,
                                        r.source_revision_id, r.url),
-        } for r in expected)
+        }.items())) for r in expected)
         if self._payloads != rebuilt_payloads:
             raise ValueError("Qdrant payloads differ from canonical evidence")
         if (canonical_json(self.encoder.identity) != self._identity or
@@ -153,7 +210,7 @@ class SaturnQdrantIndex:
             raise ValueError("Qdrant missing/extra stored points")
         for pid, payload, expected in zip(self.point_ids, self._payloads, self._vectors):
             actual = found[pid]
-            if actual.payload != payload:
+            if actual.payload != dict(payload):
                 raise ValueError("Qdrant payload identity/hash mismatch")
             v = _normalize(actual.vector, self.dimensions)
             if not all(isclose(x, y, abs_tol=1e-6, rel_tol=1e-6)
@@ -203,5 +260,12 @@ class SaturnQdrantIndex:
         scored.sort(key=lambda pair: (-pair[1], pair[0]))
         return tuple(scored[:CANDIDATE_LIMIT])
 
+    def _retain(self):
+        self._lifetime.retain()
+
+    def _release(self):
+        self._lifetime.release()
+
     def close(self):
-        self._client.close()
+        """Request close; never interrupt active bundle or in-flight query."""
+        self._lifetime.close()
