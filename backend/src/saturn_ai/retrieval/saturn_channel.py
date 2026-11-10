@@ -561,6 +561,14 @@ def _rerank_after_policy(candidates, eligible):
 
 class SaturnRetrievalService:
     """Only authoritative active pointer is a complete snapshot+index bundle."""
+    __slots__ = ("_active", "_lock", "policy_provider")
+
+    def __setattr__(self, name, value):
+        # No ordinary assignment can bypass publish() or replace its lock.
+        if name in self.__slots__ and hasattr(self, name):
+            raise AttributeError("Retrieval service bindings require controlled methods: "+name)
+        object.__setattr__(self, name, value)
+
     def __init__(self, policy_provider=None):
         self._active = None
         self._lock = RLock()
@@ -595,7 +603,7 @@ class SaturnRetrievalService:
                 if dense is not None:
                     dense._release()  # already retained as active
                 return bundle.manifest.bundle_id
-            self._active = bundle
+            object.__setattr__(self, "_active", bundle)
         if previous is not None and previous.dense is not None:
             # Close is deferred until the old active retain AND all in-flight
             # query retains have been released. Cleanup is not a rollback.
