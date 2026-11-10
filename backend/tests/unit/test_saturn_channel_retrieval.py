@@ -6,6 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from hashlib import sha256
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from unittest.mock import patch
 from qdrant_client import models
 import unittest
@@ -243,6 +244,20 @@ class SaturnRetrievalTests(unittest.TestCase):
         failed.records = failed.records[:-1]
         with self.assertRaises(ValueError):
             SaturnRetrievalService().publish(failed)
+
+    def test_qdrant_local_path_reopens_with_identical_snapshot_identity(self):
+        with TemporaryDirectory() as directory:
+            first = build_saturn_retrieval_bundle(
+                self.snap, encoder=ControlledEncoder(), qdrant_path=directory)
+            expected = first.manifest
+            first.dense.close()
+            restored = build_saturn_retrieval_bundle(
+                self.snap, encoder=ControlledEncoder(), qdrant_path=directory)
+            self.assertEqual(restored.manifest, expected)
+            service = SaturnRetrievalService()
+            service.publish(restored)
+            self.assertTrue(service.search_saturn("BACnet", mode="dense").answer_evidence)
+            restored.dense.close()
 
     def test_tampered_qdrant_payload_and_points_fail_closed(self):
         bundle = build_saturn_retrieval_bundle(self.snap, encoder=ControlledEncoder())
