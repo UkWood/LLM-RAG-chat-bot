@@ -333,6 +333,23 @@ class SaturnRetrievalTests(unittest.TestCase):
                             for c in result.answer_evidence)
                         or result.answer_evidence == ())
 
+    def test_revoked_site_origin_or_owner_blocks_linked_pdf_evidence(self):
+        match = self.snap.document_matches[0]
+        source_id = match.occurrences[0].source_revision_id
+        owner_id = match.document.owner_entity_ids[0]
+        for policy in (
+            SaturnOperationalPolicy(
+                "source-revoked", blocked_source_revision_ids=frozenset((source_id,))),
+            SaturnOperationalPolicy(
+                "owner-blocked", blocked_entity_ids=frozenset((owner_id,))),
+        ):
+            with self.subTest(policy=policy.revision):
+                service = SaturnRetrievalService(SaturnPolicyProvider(policy))
+                service.publish(build_saturn_retrieval_bundle(self.snap))
+                result = service.search_saturn("Alpha", top_k=40)
+                self.assertFalse(any(c.evidence_type == "pdf_passage"
+                                     for c in result.answer_evidence))
+
     def test_policy_update_during_search_rechecks_post_query(self):
         match = self.snap.document_matches[0]
         pdf = next(e for e in self.snap.answer_evidence if e.evidence_type == "pdf_passage")
