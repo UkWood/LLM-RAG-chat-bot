@@ -1,12 +1,67 @@
 # GitHub Snapshot Provider v0.1 — implementation
 
 Date: 2026-11-09  
-Status: **PR #22 OPEN; implementation code head CI SUCCESS; not merged**  
+Status: **PR #22 OPEN; consolidated review corrections implemented; awaiting independent re-review, not merged**  
 Repository: UkWood/LLM-RAG-chat-bot  
 PR: https://github.com/UkWood/LLM-RAG-chat-bot/pull/22  
 Branch: `feat/github-snapshot-provider-v0.1`  
 Base main: `9b2e0882b81fa2737e7efebb109c079a39b392d8`  
-Reviewed implementation code head: `ce501d2df5d120a3a437f6e32359a71e7d0543b6`
+Original implementation code head: `ce501d2df5d120a3a437f6e32359a71e7d0543b6`  
+Corrective code head: `27b64b439b699bef396122c395cf091fb60735f0`
+
+## Consolidated Acceptance Review corrections — 2026-11-10
+
+**Review outcome:** Four issues corrected in the existing PR #22 branch, preserving ADR-0014 and the SHA-1-only canonical snapshot boundary. The PR remains **OPEN, NOT MERGED**.
+
+| # | Severity | Change | Verification |
+|---|---|---|---|
+| 1 | BLOCKER | A GitHub non-recursive tree request is now exactly `GET /git/trees/{sha}`; the `recursive` query parameter is absent. | Exact URL regression + recursive-truncation fallback to child tree SHA paths |
+| 2 | BLOCKER | Guard `src`, `src/content`, `src/data`, `src/pages`, `src/lib` and every descendant under content/data/pages against symlinks, gitlinks and source-directory replacement. | Source collection gitlink, data symlink, pages gitlink, nested content symlink in normal/fallback modes; unrelated asset symlink remains allowed |
+| 3 | IMPORTANT | Selective fallback traverses only `src`, `src/content/**`, `src/data/**`, `src/pages/**` and the top-level `src/lib` dependency directory. No fixed collection/dictionary/route filename list. | Large unrelated `public/**` and archive trees are never requested, even when configured to return `truncated=true`; new nested Markdown, YAML dictionary and Astro route are discovered |
+| 4 | MINOR | Strict `ref == "refs/heads/main"` check before trusting the commit object. | Wrong and absent `ref` fail closed after one request |
+
+The complete non-recursive traversal still checks tree SHA identity, non-truncated responses, path hierarchy, object modes/types, count and depth limits, and selected blob integrity. No unsupported symlink/gitlink is followed and no partial snapshot is returned.
+
+### Direct GitHub REST semantics verification
+
+Read-only GitHub REST requests against Saturn-Main-Site pinned commit `084d759487bfab6e111549c9b5469711ac5fc13e` and root tree `a5297822bf3a5e071b10cc1dca553481c1b84d47`:
+
+- `/git/trees/{sha}` returned **16** immediate root entries with no nested path.
+- `/git/trees/{sha}?recursive=0` returned **1,119** entries with nested paths.
+- `/git/trees/{sha}?recursive=1` returned **1,119** entries with nested paths.
+- Pinned child-tree requests without `recursive` returned immediate-only entries: `src` **9**, `src/content` **6**, `src/content/products` **292**. Each returned the requested tree SHA and `truncated=false`.
+
+The above direct API check verifies the original defect and the corrected request semantics. It is **not** a claim that the provider was executed end-to-end with live credentials.
+
+### RED → GREEN regression evidence
+
+- Test-only RED commit: `491f14fe1e926958d8d934113a014398a76b2140`.
+- RED push job: [run #42774670369](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42774670369), `offline-checks` **FAILURE**, **254 tests, 12 failing assertions, 11 existing optional skips**. Reproduced all four review findings. ONNX contracts remained SUCCESS.
+- Corrective implementation code commit: `27b64b439b699bef396122c395cf091fb60735f0`.
+- GREEN PR job: [run #42774964424](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42774964424), `offline-checks` and `onnx-contracts` **SUCCESS**, **254 tests passed, 11 optional skips**.
+- Existing synthetic baseline unchanged: 10 documents, 44 chunks, 30 cases; lexical source-hit@5 0.85. This is a historical regression measurement, not site-provider quality.
+- Nine new provider test methods were added, bringing the provider-specific count from 33 to **42**. The test fixture now models non-recursive URLs exactly and models source-directory gitlinks/symlinks without impossible descendants.
+- A final strengthening of the test fixture expands the irrelevant public/archive case to 320 binary/archive files in over 300 directories and checks the nested symlink on both recursive and fallback paths. Final head CI must verify this documentation/test revision.
+
+### Reproducible test commands
+
+From a complete checkout with Python 3.12 and locked dependencies:
+
+```bash
+python -m pip install --require-hashes -r backend/requirements.lock
+PYTHONPATH=backend/src python -m unittest discover -s backend/tests/unit -p test_github_snapshot_provider.py -v
+python scripts/verify_offline.py
+python -m pip install --require-hashes -r backend/requirements-onnx.lock
+PYTHONPATH=backend/src python -m unittest discover -s backend/tests -p test_embeddings.py -v
+PYTHONPATH=backend/src python -m unittest discover -s backend/tests -p test_model_preparation.py -v
+PYTHONPATH=backend/src python -m unittest discover -s backend/tests -p 'test_rerank*.py' -v
+```
+
+The assistant runtime had no checkout/network access to GitHub via the local shell; the full tests were actually run by GitHub Actions using the commands in `.github/workflows/ci.yml`. No local execution is claimed. Final corrected PR-head workflow outcomes must be checked by exact SHA before review.
+
+### Unchanged boundaries
+
+No changes to `PinnedSiteSnapshot`, `saturn_site_adapter.py`, `saturn_contracts.py`, `schema_evolution.py`, ADR-0012/0013/0014, provider-neutral protocol, legacy ingestion or read-only Saturn site. No Git clone/CLI fallback, no new dependency, no Gitea/PDF/retrieval/LLM/runtime deployment.
 
 ## Objective
 
@@ -70,7 +125,7 @@ This was a metadata-only read-only audit, not a live execution of the new provid
 
 ## Tests and CI
 
-Added `backend/tests/unit/test_github_snapshot_provider.py` with 33 offline tests. Coverage includes:
+Originally added `backend/tests/unit/test_github_snapshot_provider.py` with 33 offline tests. Consolidated review adds nine methods (42 total). Coverage includes:
 - successful snapshot and adapter compatibility;
 - one-time branch pinning and branch movement during blob retrieval;
 - complete recursive tree, truncated recursive fallback and truncated non-recursive failure;

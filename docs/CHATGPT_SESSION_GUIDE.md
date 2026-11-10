@@ -35,8 +35,8 @@
 
 ## Общие правила
 
-1. GitHub \`UkWood/LLM-RAG-chat-bot\` — единый источник долговременной памяти. Решения, статус, handoff и код должны быть отражены в репозитории, а не оставаться только в одном чате.
-2. \`UkWood/Saturn-Main-Site\` — строго READ-ONLY. Никаких коммитов, PR, изменения assets, URL, workflows или поиска.
+1. GitHub `UkWood/LLM-RAG-chat-bot` — единый источник долговременной памяти. Решения, статус, handoff и код должны быть отражены в репозитории, а не оставаться только в одном чате.
+2. `UkWood/Saturn-Main-Site` — строго READ-ONLY. Никаких коммитов, PR, изменения assets, URL, workflows или поиска.
 3. Сессии не выполняют параллельные изменения одних и тех же файлов. В каждый момент — одна активная coding feature branch.
 4. Одна bounded задача — один небольшой PR. Никакого большого «сделай всё».
 5. Кодовая сессия не сливает PR без явной команды владельца.
@@ -58,7 +58,7 @@
 
 Работай непосредственно с GitHub-репозиторием [UkWood/LLM-RAG-chat-bot](https://github.com/UkWood/LLM-RAG-chat-bot). Сначала прочитай `AGENTS.md`, актуальное резюме/команды из `README.md`, верхний раздел `docs/PROJECT_STATUS.md`, `docs/HANDOFF.md`, этот session guide, документы `docs/site-specific/v0.2/02-architecture.md`, `03-implementation-plan.md`, `04-read-only-schema-audit.md`, `05-snapshot-provider-contract.md`, ADR-0012/0013/0014 и действующие ingestion contracts/adapter/tests.
 
-PR #20 (Saturn Site Content Adapter) и PR #21 (Snapshot Provider Contract / ADR-0014) уже MERGED. PR #21 merge commit: `9b2e0882b81fa2737e7efebb109c079a39b392d8`. Текущая реализация GitHub Snapshot Provider находится в открытом PR #22: [PR #22](https://github.com/UkWood/LLM-RAG-chat-bot/pull/22), branch `feat/github-snapshot-provider-v0.1`. Reviewed implementation code head: `ce501d2df5d120a3a437f6e32359a71e7d0543b6`; push и PR CI на этом code head прошли SUCCESS (245 backend tests, 11 existing optional skips; ONNX contracts PASS). Перед работой обязательно проверь текущий PR head и актуальный CI: docs-sync commit может изменить head.
+PR #20 (Saturn Site Content Adapter) и PR #21 (Snapshot Provider Contract / ADR-0014) уже MERGED. PR #21 merge commit: `9b2e0882b81fa2737e7efebb109c079a39b392d8`. Текущая реализация GitHub Snapshot Provider находится в открытом PR #22: [PR #22](https://github.com/UkWood/LLM-RAG-chat-bot/pull/22), branch `feat/github-snapshot-provider-v0.1`. Initial implementation code head: `ce501d2df5d120a3a437f6e32359a71e7d0543b6`. Consolidated review corrected code head: `27b64b439b699bef396122c395cf091fb60735f0`; 254 backend tests PASS (11 existing optional skips), ONNX contracts PASS. Добавлены 9 RED→GREEN regression tests по четырём замечаниям. Перед работой обязательно проверь текущий PR head и актуальный CI: docs/test-sync commit может изменить head.
 
 Текущий bounded scope — GitHub Snapshot Provider v0.1. Не создавай дублирующую реализацию или новую ветку. Если владелец просит review, сначала изучи полный diff и выдай все замечания единым консолидированным списком с severity, точным местом и критерием исправления. После исправлений проверь весь список целиком.
 

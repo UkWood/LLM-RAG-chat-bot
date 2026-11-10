@@ -1,14 +1,29 @@
 # Передача контекста — реализация кода
 
-Дата: 2026-11-09  
+Дата: 2026-11-10  
 Основной репозиторий: [UkWood/LLM-RAG-chat-bot](https://github.com/UkWood/LLM-RAG-chat-bot)  
 Текущий этап: GitHub Snapshot Provider v0.1 — [PR #22](https://github.com/UkWood/LLM-RAG-chat-bot/pull/22)
 Статус PR #22: **OPEN, NOT MERGED**
 Рабочая ветка: `feat/github-snapshot-provider-v0.1`
 Base `main` для PR #22: `9b2e0882b81fa2737e7efebb109c079a39b392d8`
-Implementation code head (reviewed and CI-verified): `ce501d2df5d120a3a437f6e32359a71e7d0543b6`
+Original implementation code head: `ce501d2df5d120a3a437f6e32359a71e7d0543b6`  
+Consolidated review corrective code head: `27b64b439b699bef396122c395cf091fb60735f0`  
+**PR head после documentation/test sync проверять по GitHub, а не по сохранённому SHA.**
 
 ## 1. Текущий статус
+
+**2026-11-10 — четыре независимых review замечания PR #22 устранены в существующей feature branch.** Статус — CHANGES IMPLEMENTED; повторное независимое Acceptance Review владельцем ещё не выполнено; merge не разрешён.
+
+- №1 BLOCKER: исправлен non-recursive GitHub REST endpoint: без любого параметра `recursive`. Подтверждена реальная разница GitHub API: root tree без параметра = 16 записей; `recursive=0` и `recursive=1` = 1 119.
+- №2 BLOCKER: скрывающие source directories symlink/gitlink теперь fail closed, включая вложенные `src/content/**` и `src/data/**`, `src/pages/**`; посторонние asset links не блокируют sync.
+- №3 IMPORTANT: non-recursive fallback проходит только relevant source trees, без `public/**`, архивов и assets. Новые Markdown collections, YAML dictionaries и Astro routes динамически обнаруживаются.
+- №4 MINOR: `ref` API response должен точно равняться `refs/heads/main`, иначе `TreeValidationError`.
+- RED test-only commit `491f14fe`: 12 failure outcomes (254 tests, 11 skipped), [CI #42774670369](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42774670369).
+- GREEN corrective code commit `27b64b43`: 254 tests, 11 skipped, push CI [#42774964424](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42774964424) SUCCESS, ONNX contracts SUCCESS. Отдельно усилена проверка large-asset mock и nested fallback symlink; CI финального head нужно подтвердить.
+- Provider regression suite: **42 tests** (33 original + 9 new).
+- Реальный live provider smoke test не проводился; GitHub API semantics проверялись отдельно read-only. Источник `Saturn-Main-Site` не изменён. Код canonical contracts/adapter/ADR не изменён.
+- [Подробный отчёт ревью и команды проверки](stages/2026-11-09-github-snapshot-provider.md).
+
 
 - PR #20 — Saturn Site Content Adapter — **MERGED**.
 - PR #21 — Snapshot Provider Contract / ADR-0014 — **MERGED**. Merge commit в main: `9b2e0882b81fa2737e7efebb109c079a39b392d8`.
@@ -85,7 +100,7 @@ PR #22: [feat: implement GitHub Snapshot Provider v0.1](https://github.com/UkWoo
 Новые файлы:
 - `backend/src/saturn_ai/ingestion/snapshot_provider.py` — provider-neutral `SnapshotProvider` Protocol.
 - `backend/src/saturn_ai/ingestion/github_snapshot_provider.py` — GitHub REST implementation.
-- `backend/tests/unit/test_github_snapshot_provider.py` — 33 offline tests.
+- `backend/tests/unit/test_github_snapshot_provider.py` — 42 offline tests после review corrections.
 
 Реализовано:
 - Фиксированный physical repository `UkWood/Saturn-Main-Site`, API origin `https://api.github.com`, logical source ID остаётся `UkWood/Saturn-Main-Site`.

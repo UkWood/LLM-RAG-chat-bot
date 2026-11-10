@@ -1,6 +1,20 @@
 # Состояние проекта
 
-## GitHub Snapshot Provider v0.1 — implementation PR #22 open (2026-11-09)
+## GitHub Snapshot Provider v0.1 — PR #22 consolidated review corrections (2026-11-10)
+
+**PR #22:** [feat: implement GitHub Snapshot Provider v0.1](https://github.com/UkWood/LLM-RAG-chat-bot/pull/22) — **OPEN; NOT MERGED; awaiting independent re-review**.
+**Branch:** `feat/github-snapshot-provider-v0.1`. Base main `9b2e0882b81fa2737e7efebb109c079a39b392d8`.
+
+- Four review issues corrected in the existing PR: nonrecursive endpoint without `recursive` (BLOCKER), source-directory symlink/gitlink detection (BLOCKER), selective fallback traversal excluding assets/archives (IMPORTANT), exact `refs/heads/main` response identity check (MINOR).
+- RED tests commit `491f14fe1e926958d8d934113a014398a76b2140`: CI [#42774670369](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42774670369) **FAILURE** — 12 expected failing outcomes out of 254 tests.
+- Corrective implementation code head `27b64b439b699bef396122c395cf091fb60735f0`: push CI [#42774964424](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42774964424) **SUCCESS**, 254 backend tests passed with 11 existing optional skips; ONNX contracts PASS.
+- 42 provider regression tests (nine new methods). Additional test hardening includes over 300 unrelated archive/asset directories and nested symlink in fallback.
+- Direct read-only GitHub API verification against `Saturn-Main-Site@084d7594`: `/git/trees/{sha}` returned 16 immediate root entries, while `?recursive=0` and `?recursive=1` returned 1,119 recursive entries; child-tree direct lookups also returned only immediate entries with matching SHA.
+- No local shell test execution: runner has no checkout/network. Offline and ONNX suites were actually run in GitHub Actions. Exact commands and RED→GREEN evidence are in [stage report](stages/2026-11-09-github-snapshot-provider.md).
+- No changes to canonical contracts, pure Saturn Site Content Adapter, ADR-0012/0013/0014 or `Saturn-Main-Site`. No Git clone/CLI, new dependencies, Gitea/PDF/retrieval/runtime work.
+- Final documentation/test commit changes PR head; check its exact SHA and CI before independent acceptance. Merge only on separate owner command.
+
+## Previous implementation checkpoint — PR #22 before consolidated review (2026-11-09)
 
 **PR #22:** [feat: implement GitHub Snapshot Provider v0.1](https://github.com/UkWood/LLM-RAG-chat-bot/pull/22) — **OPEN, not merged**.
 **Branch:** `feat/github-snapshot-provider-v0.1`  

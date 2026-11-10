@@ -2,7 +2,7 @@
 
 Отдельный технический консультант: ответы только по доверенным материалам сайта и PDF с источниками и отказом при недостатке доказательств. Статический интерфейс Astro, отдельный FastAPI backend, локальная KB и сменный LLM provider.
 
-**Стадия:** ADR-0012/0013/0014 приняты; PR #20 (Saturn Site Content Adapter) и PR #21 (Snapshot Provider Contract) слиты. PR #22 — GitHub Snapshot Provider v0.1 — открыт, не слит. Reviewed implementation code head `ce501d2d`: 245 backend tests PASS (11 existing optional skips), ONNX contracts PASS. Provider формирует существующий `PinnedSiteSnapshot`, но live smoke/runtime scheduling ещё не выполнялись. PDF ingestion, retrieval integration, LLM/provider, API/UI и deployment не реализованы. `UkWood/Saturn-Main-Site` строго READ-ONLY; доверие к реальным источникам не означает разрешения на cloud egress.
+**Стадия:** ADR-0012/0013/0014 приняты; PR #20 (Saturn Site Content Adapter) и PR #21 (Snapshot Provider Contract) слиты. PR #22 — GitHub Snapshot Provider v0.1 — открыт, не слит. Consolidated review code head `27b64b43`: 254 backend tests PASS (11 existing optional skips), ONNX contracts PASS. Четыре замечания PR #22 исправлены, ожидается независимое повторное Acceptance Review; merge не выполнялся. Provider формирует существующий `PinnedSiteSnapshot`, но live smoke/runtime scheduling ещё не выполнялись. PDF ingestion, retrieval integration, LLM/provider, API/UI и deployment не реализованы. `UkWood/Saturn-Main-Site` строго READ-ONLY; доверие к реальным источникам не означает разрешения на cloud egress.
 
 ## Память проекта
 

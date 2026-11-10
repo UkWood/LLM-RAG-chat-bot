@@ -330,25 +330,23 @@ class GitHubSnapshotProviderTests(unittest.TestCase):
 
     def test_nonrecursive_fallback_skips_large_unrelated_asset_trees(self):
         files = site_files()
-        for path in (
-            "public/assets/large/00/photo.png",
-            "public/assets/large/01/photo.png",
-            "archive/legacy/backups/00/notes.txt",
-            "archive/legacy/backups/01/notes.txt",
-        ):
-            files[path] = b"x" * 1024
+        # Simulate large binary/media and legacy archives, with many nested
+        # directories that must not consume fallback requests or tree limits.
+        for i in range(160):
+            files[f"public/assets/large/{i:03d}/photo.png"] = b"x" * 1024
+            files[f"archive/legacy/backups/{i:03d}/notes.txt"] = b"x" * 1024
         transport, _ = build_transport(files, recursive_truncated=True)
-        unrelated_dirs = [
-            "public", "public/assets", "public/assets/large",
-            "public/assets/large/00", "public/assets/large/01",
-            "archive", "archive/legacy", "archive/legacy/backups",
-            "archive/legacy/backups/00", "archive/legacy/backups/01",
-        ]
         tree_shas = {
             entry["path"]: entry["sha"]
             for entry in transport.routes[ROOT_RECURSIVE_URL]["tree"]
             if entry["type"] == "tree"
         }
+        unrelated_dirs = sorted(
+            path for path in tree_shas
+            if path in {"public", "archive"}
+            or path.startswith(("public/", "archive/"))
+        )
+        self.assertGreater(len(unrelated_dirs), 300)
         for directory in unrelated_dirs:
             url = BASE + "/git/trees/" + tree_shas[directory]
             transport.routes[url]["truncated"] = True
@@ -417,13 +415,15 @@ class GitHubSnapshotProviderTests(unittest.TestCase):
     def test_nested_content_directory_replaced_with_symlink_fails_closed(self):
         files = site_files()
         files["src/content/products/nested/card.md"] = b"---\ntitle: Nested\n---\n"
-        transport, _ = build_transport(files)
-        replace_source_directory_with_unsupported_object(
-            transport, "src/content/products/nested", "120000"
-        )
-        provider, _ = make_provider(transport)
-        with self.assertRaises(TreeValidationError):
-            provider.fetch_snapshot()
+        for fallback in (False, True):
+            with self.subTest(recursive_fallback=fallback):
+                transport, _ = build_transport(files, recursive_truncated=fallback)
+                replace_source_directory_with_unsupported_object(
+                    transport, "src/content/products/nested", "120000"
+                )
+                provider, _ = make_provider(transport)
+                with self.assertRaises(TreeValidationError):
+                    provider.fetch_snapshot()
 
     def test_unrelated_directory_gitlink_remains_ignored(self):
         files = site_files()
