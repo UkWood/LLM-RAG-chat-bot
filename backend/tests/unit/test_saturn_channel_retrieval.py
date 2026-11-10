@@ -149,12 +149,12 @@ class SaturnRetrievalTests(unittest.TestCase):
 
     def test_bounded_dictionary_alias_requires_explicit_source_declaration(self):
         additions = {
-            PRODUCT: source("Instrument", fields="protocol: RS-485\\n"),
+            PRODUCT: source("Instrument", fields="protocol: RS-485\n"),
             "src/data/interfaces.yaml": (
-                "- code: RS-485\\n"
-                "  aliases: [RS485]\\n"
-                "- code: БКД-ПК-РФ.2\\n"
-                "  label: Example\\n"
+                "- code: RS-485\n"
+                "  aliases: [RS485]\n"
+                "- code: БКД-ПК-РФ.2\n"
+                "  label: Example\n"
             ),
         }
         snapshot = build_saturn_knowledge_snapshot(*make_inputs(additions))
