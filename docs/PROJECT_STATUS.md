@@ -1,5 +1,19 @@
 # Состояние проекта
 
+## PR #23 — Consolidated Review Corrections, code checks PASS (2026-11-10)
+
+В существующем PR #23 устранены CR-01–CR-04 без изменения архитектурных контрактов/ADR: Markdown/HTML PDF link scanner, безопасная URL identity, 8 неизменённых read-only site fixtures, универсальный coding prompt. Проверенный **code head** `b2ee0164c49f53cba7121df92c6538e557b4b7e3` (`60ca2856265e2d3a8f5276897892122a7c20a9e3` — implementation commit). GitHub Actions [push #42816240259](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42816240259), [PR #42816246557](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42816246557) **SUCCESS**: 288 backend tests (11 skips), ONNX PASS; 7 новых regression cases. [Подробности и ограничения](stages/2026-11-10-support-catalog-adapter.md). После обновления документации сверить CI финального PR head; **PR OPEN, NOT MERGED**. Не начинать 3B.
+
+
+## Текущий этап 3A — Support Catalog Adapter v0.1 (2026-11-10)
+
+**Основа:** PR #22 MERGED в `main`, merge commit `ff9baa8819714d5cb4ba9c61827dbf4666acd0b6`; main CI [#42777814511](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42777814511) SUCCESS.
+
+**Реализовано, PR OPEN:** [#23 — Support Catalog Adapter v0.1](https://github.com/UkWood/LLM-RAG-chat-bot/pull/23), ветка `feat/support-catalog-adapter-v0.1` от указанного main. Реализуется чистый offline каталогизатор `SiteContentPackage → SupportDocument[]`, отдельные PDF-кандидаты и источник-специфичные occurrences/diagnostics. Canonical contracts, Site Content Adapter, ADR и сайт не меняются. Exact PR head/CI фиксировать после завершения проверок; без независимого Acceptance Review merge запрещён.
+
+[Детали и ограничения этапа](stages/2026-11-10-support-catalog-adapter.md). Предыдущая запись о PR #22 ниже — исторический pre-merge checkpoint; статус OPEN утратил актуальность после merge.
+
+
 ## GitHub Snapshot Provider v0.1 — PR #22 consolidated review corrections (2026-11-10)
 
 **PR #22:** [feat: implement GitHub Snapshot Provider v0.1](https://github.com/UkWood/LLM-RAG-chat-bot/pull/22) — **OPEN; NOT MERGED; awaiting independent re-review**.

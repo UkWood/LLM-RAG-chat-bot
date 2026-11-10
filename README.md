@@ -2,7 +2,7 @@
 
 Отдельный технический консультант: ответы только по доверенным материалам сайта и PDF с источниками и отказом при недостатке доказательств. Статический интерфейс Astro, отдельный FastAPI backend, локальная KB и сменный LLM provider.
 
-**Стадия:** ADR-0012/0013/0014 приняты; PR #20 (Saturn Site Content Adapter) и PR #21 (Snapshot Provider Contract) слиты. PR #22 — GitHub Snapshot Provider v0.1 — открыт, не слит. Consolidated review code head `27b64b43`: 254 backend tests PASS (11 existing optional skips), ONNX contracts PASS. Четыре замечания PR #22 исправлены, ожидается независимое повторное Acceptance Review; merge не выполнялся. Provider формирует существующий `PinnedSiteSnapshot`, но live smoke/runtime scheduling ещё не выполнялись. PDF ingestion, retrieval integration, LLM/provider, API/UI и deployment не реализованы. `UkWood/Saturn-Main-Site` строго READ-ONLY; доверие к реальным источникам не означает разрешения на cloud egress.
+**Стадия:** PR #22 — GitHub Snapshot Provider v0.1 — MERGED into main (`ff9baa8819714d5cb4ba9c61827dbf4666acd0b6`), main CI #42777814511 SUCCESS. Этап 3A — Support Catalog Adapter v0.1 — реализован в открытом [PR #23](https://github.com/UkWood/LLM-RAG-chat-bot/pull/23), проверяется на exact head; до независимого Acceptance Review merge запрещён. Каталогизация построена на существующем `SiteContentPackage`, без сетевого доступа и PDF parsing; CI/полная приёмка этапа проверяются отдельно. PDF ingestion, Unified Snapshot, retrieval integration, LLM/provider, API/UI, deployment ещё не реализованы. `UkWood/Saturn-Main-Site` строго READ-ONLY; source trust не разрешает cloud egress.
 
 ## Память проекта
 
@@ -10,7 +10,7 @@
 - [Продолжение реализации](docs/HANDOFF.md)
 
 - [Текущее состояние и следующий шаг](docs/PROJECT_STATUS.md)
-- [Текущий этап: GitHub Snapshot Provider v0.1](docs/stages/2026-11-09-github-snapshot-provider.md)
+- [Текущий этап: Support Catalog Adapter v0.1](docs/stages/2026-11-10-support-catalog-adapter.md)
 - [Согласованные критерии прототипа: offline / real sample](docs/acceptance/prototype-v1.md)
 - [Дорожная карта](docs/superpowers/plans/2026-11-03-ai-consultant-roadmap.md)
 - [Архитектура](docs/superpowers/specs/2026-11-03-ai-consultant-design.md)

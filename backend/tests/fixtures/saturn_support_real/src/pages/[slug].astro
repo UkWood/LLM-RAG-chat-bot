@@ -1,0 +1,58 @@
+---
+import { getCollection, getEntries } from 'astro:content';
+import SolutionView from '../components/SolutionView.astro';
+import SolutionsIndex from '../components/SolutionsIndex.astro';
+import SectionView from '../components/SectionView.astro';
+import PageView from '../components/PageView.astro';
+import ServicesIndex from '../components/ServicesIndex.astro';
+import ContactsView from '../components/ContactsView.astro';
+import PartnersView from '../components/PartnersView.astro';
+import { orderedArticles } from '../lib/sections';
+import fs from 'node:fs';
+import { parse } from 'yaml';
+
+export async function getStaticPaths() {
+  const pages = await getCollection('pages', (p) => !p.data.draft && p.id !== 'home');
+  const articles = await getCollection('articles', (a) => !a.data.draft);
+  // услуги: состав и значки — пункт «Услуги» в src/data/nav.yaml
+  const nav = parse(fs.readFileSync('src/data/nav.yaml', 'utf8')) as any[];
+  const services: { entry: (typeof pages)[number]; icon: string }[] = (nav.find((t) => t.id === 'services')?.items ?? [])
+    .filter((x: any) => !x.planned && x.ref?.startsWith('pages/'))
+    .map((x: any): { entry: (typeof pages)[number]; icon: string } => ({ entry: pages.find((p) => p.id === x.ref.slice(6))!, icon: x.icon ?? 'briefcase' }));
+  const index = pages.find((p) => p.id === 'resheniya');
+  const sections = index ? await Promise.all(index.data.groups.map(async (g) => ({ title: g.title, icon: g.icon, items: await getEntries(g.items) }))) : [];
+  return Promise.all(pages.map(async (entry) => {
+    const section = sections.find((g) => g.items.some((i) => i.id === entry.id));
+    return {
+      params: { slug: entry.id },
+      props: {
+        entry,
+        sections,
+        services,
+        section,
+        products: await getEntries(entry.data.products),
+        systems: await getEntries(entry.data.systems),
+        sectionArticles: entry.data.kind === 'section' ? orderedArticles(entry, articles) : [],
+      },
+    };
+  }));
+}
+const { entry, services, sections, section, products, systems, sectionArticles } = Astro.props;
+---
+{entry.id === 'uslugi' ? (
+  <ServicesIndex entry={entry} services={services} />
+) : services.some((s) => s.entry.id === entry.id) ? (
+  <PageView entry={entry} parent={{ href: '/uslugi/', label: 'Услуги' }} siblings={services.map((s) => s.entry)} />
+) : entry.id === 'kontakty' ? (
+  <ContactsView entry={entry} />
+) : entry.id === 'nashi-partnery' ? (
+  <PartnersView entry={entry} />
+) : entry.id === 'resheniya' ? (
+  <SolutionsIndex entry={entry} sections={sections} />
+) : entry.data.kind === 'section' ? (
+  <SectionView entry={entry} articles={sectionArticles} />
+) : entry.data.kind === 'solution' ? (
+  <SolutionView entry={entry} products={products} systems={systems} section={section} />
+) : (
+  <PageView entry={entry} />
+)}
