@@ -6,6 +6,7 @@ Legacy Registry/approval-based retrieval is intentionally not imported.
 from collections import Counter
 from dataclasses import dataclass, replace
 from hashlib import sha256
+import json
 from math import isfinite, log
 from threading import RLock
 import re
@@ -17,6 +18,7 @@ from ..saturn_knowledge_contracts import (
 
 REPRESENTATION_VERSION = "saturn-evidence-representation/0.1.0"
 TOKENIZER_VERSION = "saturn-technical-tokenizer/0.1.0"
+ALIAS_VERSION = "saturn-explicit-dictionary-alias/0.1.0"
 BM25_K1 = 1.2
 BM25_B = 0.75
 RRF_K = 60
@@ -258,9 +260,53 @@ def _limit_records(records, documents):
         raise ValueError("Offline index resource limit exceeded")
 
 
-def _bm25(query: str, texts, limit: int):
+def _dictionary_aliases(snapshot):
+    """Only explicit dictionary 'code' + 'aliases' declarations may expand query.
+
+    Arbitrary dictionary labels, values, properties or engineering claims are
+    NOT automatically treated as synonyms. No external model/normalization.
+    """
+    pairs = set()
+    for dictionary in snapshot.dictionaries:
+        value = json.loads(dictionary.raw_value_json) if dictionary.raw_value_json else None
+        rows = value if isinstance(value, list) else (
+            value.get("entries", ()) if isinstance(value, dict) else ())
+        if not isinstance(rows, (list, tuple)):
+            continue
+        for row in rows[:256]:
+            if not isinstance(row, dict):
+                continue
+            code, aliases = row.get("code"), row.get("aliases")
+            if not isinstance(code, str) or not isinstance(aliases, list):
+                continue
+            base = tokenize(code)
+            if len(base) != 1 or len(code) > 128:
+                continue
+            for alias in aliases[:8]:
+                if not isinstance(alias, str) or len(alias) > 128:
+                    continue
+                expanded = tokenize(alias)
+                if len(expanded) == 1 and expanded != base:
+                    pairs.add((base[0], expanded[0]))
+                    if len(pairs) > 256:
+                        raise ValueError("Dictionary alias expansion limit exceeded")
+    result = {}
+    for a, b in sorted(pairs):
+        result.setdefault(a, set()).add(b)
+        result.setdefault(b, set()).add(a)
+    return {key: tuple(sorted(values)) for key, values in sorted(result.items())}
+
+
+def _bm25(query: str, texts, limit: int, aliases=None):
     """Same BM25 mathematical baseline as retrieval.lexical; deterministic ties."""
     terms = set(tokenize(query))
+    if aliases:
+        additions = []
+        for term in sorted(terms):
+            additions.extend(aliases.get(term, ())[:8])
+            if len(additions) >= 32:
+                break
+        terms.update(additions[:32])
     if not terms or not texts:
         return ()
     corpus = [(key, tokenize(text)) for key, text in texts]
@@ -296,10 +342,10 @@ class SaturnBM25Index:
         if expected != self.tokens or self.coverage_hash != _hash(self.tokens):
             raise ValueError("Tampered Saturn BM25 index")
 
-    def search(self, query, records, allowed):
+    def search(self, query, records, allowed, aliases=None):
         self.validate(records)
         return _bm25(query, [(r.evidence_id, r.text) for r in records if r.evidence_id in allowed],
-                     CANDIDATE_LIMIT)
+                     CANDIDATE_LIMIT, aliases)
 
 
 class SaturnMetadataIndex:
@@ -312,10 +358,10 @@ class SaturnMetadataIndex:
         if self.tokens != expected or self.coverage_hash != _hash(self.tokens):
             raise ValueError("Tampered Saturn document index")
 
-    def search(self, query, records, allowed):
+    def search(self, query, records, allowed, aliases=None):
         self.validate(records)
         return _bm25(query, [(r.match.document.document_id, r.text) for r in records
-                             if r.match.document.document_id in allowed], CANDIDATE_LIMIT)
+                             if r.match.document.document_id in allowed], CANDIDATE_LIMIT, aliases)
 
 
 class SaturnRetrievalBundle:
@@ -323,6 +369,7 @@ class SaturnRetrievalBundle:
     def __init__(self, snapshot, records, documents, lexical, metadata, dense, manifest):
         self.snapshot, self.records, self.documents = snapshot, records, documents
         self.lexical, self.metadata, self.dense = lexical, metadata, dense
+        self.aliases = _dictionary_aliases(snapshot)
         self.manifest = manifest
 
     def validate(self):
@@ -332,6 +379,8 @@ class SaturnRetrievalBundle:
             raise ValueError("Retrieval source/provenance mismatch")
         self.lexical.validate(self.records)
         self.metadata.validate(self.documents)
+        if self.aliases != _dictionary_aliases(self.snapshot):
+            raise ValueError("Dictionary rules were tampered with")
         if self.dense is not None:
             if self.dense.snapshot_id != self.snapshot.snapshot_id:
                 raise ValueError("Dense snapshot mismatch")
@@ -348,7 +397,7 @@ def _make_manifest(snapshot, records, documents, lexical, metadata, dense):
         corpus_hash=snapshot.manifest.corpus_hash,
         representation_version=REPRESENTATION_VERSION,
         tokenizer_version=TOKENIZER_VERSION,
-        lexical_config_hash=_hash((BM25_K1, BM25_B, CANDIDATE_LIMIT, TOKENIZER_VERSION)),
+        lexical_config_hash=_hash((BM25_K1, BM25_B, CANDIDATE_LIMIT, TOKENIZER_VERSION, ALIAS_VERSION)),
         dictionary_fingerprints=tuple(sorted((d.path, sha256(d.content).hexdigest())
                                              for d in snapshot.dictionaries)),
         dense_encoder_hash=dense.encoder_hash if dense else None,
@@ -468,9 +517,9 @@ class SaturnRetrievalService:
         entities = {e.entity_id: e for e in bundle.snapshot.entities}
         allowed_e = {k for k, v in records.items() if _allowed_record(v, before)}
         allowed_d = {k for k, v in documents.items() if _allowed_doc(v, before, entities)}
-        lexical_pairs = bundle.lexical.search(query, bundle.records, allowed_e) if mode != "dense" else ()
+        lexical_pairs = bundle.lexical.search(query, bundle.records, allowed_e, bundle.aliases) if mode != "dense" else ()
         dense_pairs = bundle.dense.search(query, allowed_e) if mode != "lexical" else ()
-        doc_pairs = bundle.metadata.search(query, bundle.documents, allowed_d)
+        doc_pairs = bundle.metadata.search(query, bundle.documents, allowed_d, bundle.aliases)
         lexical = tuple(_candidate(records[eid], score, rank, "lexical")
                         for rank, (eid, score) in enumerate(lexical_pairs, 1))
         dense = tuple(_candidate(records[eid], score, rank, "dense")
