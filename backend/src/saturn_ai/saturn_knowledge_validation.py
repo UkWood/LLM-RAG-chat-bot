@@ -280,7 +280,7 @@ def validate_saturn_snapshot_inputs(site, catalog, external) -> ValidationResult
             expected_url = _canonical_url(
                 entity.collection, entity.slug, "https://unverified.invalid",
                 set(rev_by_path), rec.path, route_issues)
-            if expected_url is not None and entity.canonical_url is not None:
+            if expected_url is not None:
                 expected_url = None
                 issue("canonical_origin_unverifiable", entity.entity_id)
         if entity.canonical_url != expected_url:

@@ -102,7 +102,7 @@ class CR01SourceProjection(unittest.TestCase):
         self.assertIsNone(result.candidate)
 
     def test_source_raw_frontmatter_body_and_draft_are_exact(self):
-        site, cat, pdf = make_inputs()
+        site, cat, pdf = make_inputs({PRODUCT: source()})
         record = next(r for r in site.raw_records if r.path == PRODUCT)
         for forged in (replace(record, body="forged"),
                        replace(record, raw_frontmatter_text="title: Forged\n"),
