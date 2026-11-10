@@ -1,3 +1,11 @@
+## Текущий handoff — этап 4B, Saturn Channel-Aware Retrieval v0.1 (2026-11-10)
+
+- GitHub подтверждает **PR #25 MERGED**, текущий baseline `main=2da357db4543c9ca173db7663bbd18396d221cc3`. Прежние записи о PR #25 OPEN ниже — исторические.
+- Ветка реализации: `feat/saturn-channel-aware-retrieval-v0.1`; PR #26 либо фактический номер. `retrieval/saturn_channel.py`, `retrieval/saturn_qdrant.py`, offline tests и [отчёт этапа](stages/2026-11-10-saturn-channel-aware-retrieval.md).
+- Архитектура: strict 4A snapshot structural replay before indexing/publish; canonical Answer Evidence отдельно от SupportDocument metadata; BM25 + local optional Qdrant + RRF; bounded source-declared dictionary aliases; deterministic manifest/coverage; только **одна authoritative active bundle-ссылка**; operational policy pre/post search fail-closed. Старый approval-based Registry не используется.
+- Нельзя выдавать synthetic/controlled Qdrant tests за реальную semantic quality Saturn. Production encoder, durable/multi-worker recovery, backend citations и stage 5 вне scope. Известное ограничение 4A: конфигурационные bytes `astro.config.mjs` не представлены во входе и absolute production SITE_URL origin независимо не доказуем.
+- Перед Acceptance Review подтвердить финальный exact PR head и оба GitHub Actions jobs (`offline-checks`, `onnx-contracts`), полный diff и численные результаты. **Не выполнять merge и не начинать этап 5.** `UkWood/Saturn-Main-Site` строго READ-ONLY.
+
 # Передача контекста — реализация кода
 
 ## PR #25 — Consolidated Acceptance Review Corrections (2026-11-10)
