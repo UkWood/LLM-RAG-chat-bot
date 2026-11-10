@@ -2,6 +2,8 @@
 
 Controlled vectors test Qdrant integration, not real semantic quality.
 """
+from collections import Counter
+from math import log
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import FrozenInstanceError, replace
 from hashlib import sha256
@@ -75,6 +77,29 @@ class ChangingPolicyProvider:
     def capture(self):
         self.calls += 1
         return self.first if self.calls == 1 else self.later
+
+
+def baseline_reference_bm25(query, texts):
+    """Independent pre-CR BM25 formula over eligible raw records."""
+    words = [(key, tokenize(text)) for key, text in texts]
+    if not words:
+        return ()
+    n = len(words)
+    avg = sum(len(items) for _, items in words) / n
+    if not avg:
+        return ()
+    df = Counter(term for _, toks in words for term in set(toks))
+    result = []
+    for key, toks in words:
+        tf = Counter(toks)
+        score = sum(
+            log(1 + (n - df[t] + .5) / (df[t] + .5)) *
+            tf[t] * 2.2 / (tf[t] + 1.2 * (.25 + .75 * len(toks) / avg))
+            for t in sorted(set(tokenize(query))) if tf[t]
+        )
+        if score > 0:
+            result.append((key, score))
+    return tuple(sorted(result, key=lambda item: (-item[1], item[0]))[:40])
 
 
 class SaturnRetrievalTests(unittest.TestCase):
@@ -556,6 +581,8 @@ class SaturnRetrievalTests(unittest.TestCase):
             self.assertEqual(spy.call_count, 6)  # 3 queries x 2 separate channels
             self.assertTrue(all(call.args == ("RS-485",) for call in spy.call_args_list))
         self.assertEqual(bundle.lexical.coverage_hash, bundle.lexical.coverage_hash)
+        with patch("builtins.open", side_effect=AssertionError("No file/label reads")):
+            self.assertTrue(service.search_saturn("RS-485").answer_evidence)
 
     def test_cr02_prepared_policy_filtered_scoring_matches_reference(self):
         sample = [
@@ -574,7 +601,20 @@ class SaturnRetrievalTests(unittest.TestCase):
                     reference = _bm25(query, [(r.evidence_id, r.text) for r in sample
                                               if r.evidence_id in allowed], 40)
                     self.assertEqual(index.search(query, sample, allowed), reference)
+                    independent = baseline_reference_bm25(
+                        query, [(r.evidence_id, r.text) for r in sample
+                                if r.evidence_id in allowed])
+                    self.assertEqual(len(reference), len(independent))
+                    for (rid, score), (other_id, old_score) in zip(reference, independent):
+                        self.assertEqual(rid, other_id)
+                        self.assertAlmostEqual(score, old_score, places=12)
         self.assertEqual(index.search("none", sample, {"a", "b"}), ())
+        self.assertEqual(index.search("", sample, {"a", "b"}), ())
+        tied = [SearchRecord(key, "site_passage", "snap", "rev", None,
+                "line", None, "equal equal", "h"*64) for key in ("z", "a")]
+        tied_index = SaturnBM25Index(tied)
+        self.assertEqual([cid for cid, _ in tied_index.search(
+            "equal", tied, {"z", "a"})], ["a", "z"])
 
     def test_cr02_add_remove_evidence_rebuilds_prepared_index(self):
         small = build_saturn_knowledge_snapshot(*make_inputs({
