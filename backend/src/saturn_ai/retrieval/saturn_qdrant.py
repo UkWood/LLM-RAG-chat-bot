@@ -53,6 +53,7 @@ class SaturnQdrantIndex:
             raise ValueError("Invalid encoder identity")
         self._identity = identity
         self.encoder_hash = sha256(identity.encode("utf-8")).hexdigest()
+        self._records = tuple(records)
         self.ids = tuple(r.evidence_id for r in records)
         if len(set(self.ids)) != len(self.ids) or any(r.snapshot_id != snapshot_id for r in records):
             raise ValueError("Dense snapshot/evidence identity mismatch")
@@ -98,7 +99,29 @@ class SaturnQdrantIndex:
             self._client.close()
             raise
 
-    def validate(self):
+    def validate(self, records=None):
+        # Independently bind every Qdrant point/payload to the canonical
+        # SearchRecord corpus, not merely to an internally cached checksum.
+        expected = self._records if records is None else tuple(records)
+        if (expected != self._records or
+                tuple(r.evidence_id for r in expected) != self.ids or
+                any(r.snapshot_id != self.snapshot_id for r in expected)):
+            raise ValueError("Qdrant/evidence canonical coverage mismatch")
+        if self.point_ids != tuple(
+                str(uuid5(NAMESPACE_URL, "saturn-evidence-v1:"+r.evidence_id))
+                for r in expected):
+            raise ValueError("Qdrant point IDs are not canonical")
+        rebuilt_payloads = tuple({
+            "snapshot_id": self.snapshot_id, "evidence_id": r.evidence_id,
+            "evidence_type": r.evidence_type, "source_revision_id": r.source_revision_id,
+            "entity_id": r.entity_id, "locator": r.locator, "canonical_url": r.url,
+            "text_hash": r.text_hash, "encoder_hash": self.encoder_hash,
+            "payload_hash": stable_id("saturn-qdrant-payload-v1",
+                                       self.snapshot_id, r.evidence_id, r.text_hash, r.locator,
+                                       r.source_revision_id, r.url),
+        } for r in expected)
+        if self._payloads != rebuilt_payloads:
+            raise ValueError("Qdrant payloads differ from canonical evidence")
         if (canonical_json(self.encoder.identity) != self._identity or
                 self.encoder.dimensions != self.dimensions or
                 sha256(self._identity.encode("utf-8")).hexdigest() != self.encoder_hash):
