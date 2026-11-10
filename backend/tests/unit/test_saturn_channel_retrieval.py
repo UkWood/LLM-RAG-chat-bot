@@ -270,6 +270,19 @@ class SaturnRetrievalTests(unittest.TestCase):
             SaturnRetrievalService().publish(bundle)
         dense.close()
 
+    def test_dense_cached_payload_and_point_identity_cannot_be_resealed(self):
+        bundle = build_saturn_retrieval_bundle(self.snap, encoder=ControlledEncoder())
+        dense = bundle.dense
+        original = dense._payloads
+        dense._payloads = (dict(original[0], source_revision_id="forged"), *original[1:])
+        with self.assertRaisesRegex(ValueError, "canonical evidence"):
+            bundle.validate()
+        dense._payloads = original
+        dense.point_ids = ("00000000-0000-4000-8000-000000000000", *dense.point_ids[1:])
+        with self.assertRaisesRegex(ValueError, "point IDs"):
+            bundle.validate()
+        dense.close()
+
     def test_missing_qdrant_point_fails_closed(self):
         bundle = build_saturn_retrieval_bundle(self.snap, encoder=ControlledEncoder())
         dense = bundle.dense
