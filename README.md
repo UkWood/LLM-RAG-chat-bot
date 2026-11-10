@@ -2,7 +2,7 @@
 
 Отдельный технический консультант: ответы только по доверенным материалам сайта и PDF с источниками и отказом при недостатке доказательств. Статический интерфейс Astro, отдельный FastAPI backend, локальная KB и сменный LLM provider.
 
-**Стадия:** PR #23 — Support Catalog Adapter v0.1 — MERGED в main (dee6011fa67de0bcc62b8304b7549b4ebde396b1; main CI #42838702444 SUCCESS). Этап 3B — External Document Adapter v0.1 — реализуется в отдельной feature branch feat/external-document-adapter-v0.1; PR и exact-head CI подлежат независимому Acceptance Review, merge не выполнялся. Включены HTTPS default-deny policy, PDF fetch/worker, revisions и physical page evidence; worker без подтверждённой OS sandbox не разрешён в production. Unified Snapshot, retrieval, UI/API, deployment ещё не реализованы. UkWood/Saturn-Main-Site строго READ-ONLY.
+**Стадия:** PR #23 — Support Catalog Adapter v0.1 — MERGED в main (dee6011fa67de0bcc62b8304b7549b4ebde396b1; main CI #42838702444 SUCCESS). Этап 3B — External Document Adapter v0.1 — реализован в открытом PR #24, ветка feat/external-document-adapter-v0.1. Проверенный code head 887108ea65feec91ddcd01631d742aaceb8c2b62: 320 backend tests (11 skips), CI push #42847781478 и PR #42847795850 SUCCESS; документационный head проверяется отдельно. Необходим независимый Acceptance Review, merge не выполнялся. Включены HTTPS default-deny policy, PDF fetch/worker, revisions и physical page evidence; worker без подтверждённой OS sandbox не разрешён в production. Unified Snapshot, retrieval, UI/API, deployment ещё не реализованы. UkWood/Saturn-Main-Site строго READ-ONLY.
 
 ## Память проекта
 
@@ -10,7 +10,7 @@
 - [Продолжение реализации](docs/HANDOFF.md)
 
 - [Текущее состояние и следующий шаг](docs/PROJECT_STATUS.md)
-- [Текущий этап: Support Catalog Adapter v0.1](docs/stages/2026-11-10-support-catalog-adapter.md)
+- [Текущий этап: External Document Adapter v0.1](docs/stages/2026-11-10-external-document-adapter.md)
 - [Согласованные критерии прототипа: offline / real sample](docs/acceptance/prototype-v1.md)
 - [Дорожная карта](docs/superpowers/plans/2026-11-03-ai-consultant-roadmap.md)
 - [Архитектура](docs/superpowers/specs/2026-11-03-ai-consultant-design.md)

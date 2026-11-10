@@ -3,7 +3,7 @@
 ## Текущий этап 3B — External Document Adapter v0.1 (2026-11-10)
 
 - PR #23 MERGED в main: dee6011fa67de0bcc62b8304b7549b4ebde396b1, main CI #42838702444 SUCCESS. Это текущий baseline.
-- Рабочая ветка: feat/external-document-adapter-v0.1. Код и offline-тесты 3B: secure HTTPS host/path + DNS pinning, bounded transport, отдельный PDF worker (только явный тестовый режим, production sandbox не подтверждена), SHA-256 revision/evidence, immutable associations/cache.
+- Рабочая ветка: feat/external-document-adapter-v0.1. [PR #24](https://github.com/UkWood/LLM-RAG-chat-bot/pull/24) OPEN, NOT MERGED. Проверенный code head 887108ea65feec91ddcd01631d742aaceb8c2b62; push CI #42847781478 / PR CI #42847795850 SUCCESS; 320 backend tests (11 skips), 5 project tests PASS, ONNX PASS. Код и offline-тесты 3B: secure HTTPS host/path + DNS pinning, bounded transport, отдельный PDF worker (только явный тестовый режим, production sandbox не подтверждена), SHA-256 revision/evidence, immutable associations/cache.
 - Требуется полный exact-head CI и независимый Acceptance Review сессией A. **Не сливать PR и не начинать этап 4.** Статусы PR #23 OPEN ниже являются историческими.
 - [Отчёт этапа 3B](stages/2026-11-10-external-document-adapter.md). Сайт Saturn-Main-Site READ-ONLY.
 

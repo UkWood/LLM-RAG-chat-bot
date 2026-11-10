@@ -4,7 +4,7 @@
 Репозиторий: UkWood/LLM-RAG-chat-bot  
 Feature branch: feat/external-document-adapter-v0.1  
 Baseline main: dee6011fa67de0bcc62b8304b7549b4ebde396b1 (PR #23 merged)  
-PR: создаётся после первой реализации, затем передаётся сессии A на Acceptance Review.
+PR: [#24 — External Document Adapter v0.1](https://github.com/UkWood/LLM-RAG-chat-bot/pull/24) (OPEN, NOT MERGED); передать сессии A на Acceptance Review.
 
 ## Назначение и реализованные интерфейсы
 
@@ -50,3 +50,14 @@ EvidenceUnit(evidence_type=pdf_passage) создаётся только для �
 Созданы offline unit/contract tests URL policy, pinned DNS/TLS transport, redirects, resource limits, processor failures, physical page numbering, revisions, owner associations, deterministic IDs, real-site source-derived fixture catalog с mock transport и synthetic PDF bytes. Никаких HTTP-загрузок реальных PDF сайта в CI.
 
 Обязательно выполнить python scripts/verify_offline.py, offline-checks, onnx-contracts на финальном exact PR head и зафиксировать результаты в PR. До подтверждения CI не заявлять PASS или production-ready. Live smoke и scheduler не проводятся. UkWood/Saturn-Main-Site строго READ-ONLY и не изменяется. Этап 4 (Unified Snapshot) не начат.
+
+## Фактическая проверка (reviewed code head, не documentation head)
+
+- Проверенный implementation+security code head: 887108ea65feec91ddcd01631d742aaceb8c2b62 (commit DNS deadline hardening после первого code commit 6328da903dbd9ed98e67d0d803499581e2f27c32).
+- Точная команда GitHub workflow: python scripts/verify_offline.py, итог: 5 project tests PASS, 320 backend tests OK (11 existing optional skips), synthetic lexical baseline source-hit@5 = 0.85 (исторический synthetic, не оценка PDF quality).
+- [Push Actions #42847781478](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42847781478) — SUCCESS, offline-checks и onnx-contracts SUCCESS.
+- [PR Actions #42847795850](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42847795850) — SUCCESS, offline-checks и onnx-contracts SUCCESS.
+- Оба CI относятся к exact code head 887108ea65feec91ddcd01631d742aaceb8c2b62. Финальный docs head будет отличаться; его CI проверить отдельно, не обновляя SHA в документации циклически.
+- Новые целевые тесты — 32 (31 в первом commit + 1 DNS deadline test), все PASS; real Saturn fixture проверен только offline с зафиксированными исходными source blobs и synthetic PDF bytes. Live HTTPS/PDF smoke: NOT_RUN; OS-level sandbox: NOT_IMPLEMENTED. Внешние реальные PDF не скачивались.
+
+Документ сохраняет исторически проверенный code head; при проверке следующего documentation head ссылаться на CI в PR, не изменяя эту запись ради SHA.
