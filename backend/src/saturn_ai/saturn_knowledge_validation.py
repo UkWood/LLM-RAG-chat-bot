@@ -16,10 +16,14 @@ from .ingestion.saturn_contracts import (
 )
 from .ingestion.saturn_site_adapter import (
     RawSiteRecord, SiteContentPackage, SiteDictionary, SiteParseIssue,
-    _RELATION_FIELDS, _safe_reference_slug,
+    _RELATION_FIELDS, _safe_reference_slug, _content_location, _split_markdown,
+    _load_yaml, _entity_type, _canonical_url, _facts_for_entity,
+    _entity_id, _relation_candidates, MAX_MARKDOWN_BYTES,
+    MAX_DICTIONARY_BYTES, MAX_FRONTMATTER_BYTES,
 )
 from .ingestion.support_catalog_adapter import (
     CatalogOccurrence, PdfCandidate, SupportCatalogResult, _is_pdf,
+    _origin, adapt_support_catalog,
 )
 from .ingestion.external_document_transport import CODES
 from .ingestion.external_document_adapter import (
@@ -27,6 +31,11 @@ from .ingestion.external_document_adapter import (
     DocumentStatus, ExternalDocumentResult,
 )
 from .saturn_knowledge_contracts import SnapshotIssue
+
+# The adapter package carries raw content and dictionary bytes but not the
+# astro.config.mjs bytes. The source origin can therefore be checked for route
+# shape and inter-entity consistency, but NOT proven from config bytes in 4A.
+# See the limitations in the stage report / architecture handoff.
 
 
 _FIELD_KEY = re.compile(r"^[A-Za-z_][A-Za-z0-9_-]*$")
@@ -168,89 +177,168 @@ def validate_saturn_snapshot_inputs(site, catalog, external) -> ValidationResult
                 sha256(record.content).hexdigest() != revision.content_sha256 or
                 _git_blob_sha(record.content) != revision.blob_sha):
             issue("source_bytes_mismatch", record.path)
+
+    # Re-parse the checked original bytes with the approved offline parser.
+    # Never accept a caller-provided frontmatter/body/draft as its own witness.
+    raw_metadata = {}
+    draft_keys = set()
+    for path, record in records.items():
+        location = _content_location(path)
+        if location != (record.collection, record.slug):
+            issue("source_record_location_mismatch", path)
+        try:
+            if type(record.content) is not bytes or len(record.content) > MAX_MARKDOWN_BYTES:
+                raise ValueError("Markdown source bytes/size invalid")
+            frontmatter_text, body = _split_markdown(record.content.decode("utf-8-sig"))
+            if len(frontmatter_text.encode("utf-8")) > MAX_FRONTMATTER_BYTES:
+                raise ValueError("Frontmatter source size exceeded")
+            metadata = _load_yaml(
+                frontmatter_text, byte_count=len(frontmatter_text.encode("utf-8")),
+                require_mapping=True)
+            draft = metadata.get("draft") is True
+        except (UnicodeDecodeError, ValueError, RecursionError):
+            issue("source_record_unverifiable", path)
+            continue
+        if (record.raw_frontmatter_text != frontmatter_text or
+                record.body != body or record.draft is not draft):
+            issue("source_record_projection_mismatch", path)
+        raw_metadata[path] = metadata
+        if draft and location is not None:
+            draft_keys.add(location)
+
     fingerprints = {x.path: x.content_sha256
                     for x in manifest.schema_inventory.dictionaries}
     if set(fingerprints) != set(dictionaries):
         issue("dictionary_inventory_mismatch", "schema inventory")
     for path, dictionary in dictionaries.items():
-        if (fingerprints.get(path) != sha256(dictionary.content).hexdigest() or
-                dictionary.raw_yaml_text is None or dictionary.raw_value_json is None):
+        if (type(dictionary.content) is not bytes or
+                fingerprints.get(path) != sha256(dictionary.content).hexdigest()):
             issue("dictionary_content_mismatch", path)
-        else:
-            try:
-                if canonical_json(json.loads(dictionary.raw_value_json)) != dictionary.raw_value_json:
-                    issue("dictionary_value_mismatch", path)
-            except (TypeError, ValueError):
-                issue("dictionary_value_mismatch", path)
+            continue
+        try:
+            if len(dictionary.content) > MAX_DICTIONARY_BYTES:
+                raise ValueError("Dictionary size exceeded")
+            yaml_text = dictionary.content.decode("utf-8-sig")
+            expected_json = canonical_json(_load_yaml(
+                yaml_text, byte_count=len(dictionary.content),
+                require_mapping=False, max_bytes=MAX_DICTIONARY_BYTES))
+        except (UnicodeDecodeError, ValueError, RecursionError):
+            issue("dictionary_source_unverifiable", path)
+            continue
+        if (dictionary.raw_yaml_text != yaml_text or
+                dictionary.raw_value_json != expected_json):
+            issue("dictionary_projection_mismatch", path)
 
     entities = index(site.entities, lambda x: x.entity_id, "duplicate_entity")
+    # With only SiteContentPackage available, config bytes are absent.
+    # Derive only the consistent origin of source-provided canonical URLs.
+    # Cross-entity mismatch is rejected; an origin shared by ALL malicious
+    # URLs is not independently verifiable (documented contract limitation).
+    origin = _origin(site.entities)
+    url_origins = {
+        urlunsplit((x.scheme, x.netloc, "", "", ""))
+        for entity in site.entities if entity.canonical_url
+        for x in (urlsplit(entity.canonical_url),)
+    }
+    if len(url_origins) > 1:
+        issue("canonical_origin_mismatch", "site entities")
+
     frontmatter = {}
+    expected_facts = {}
     for entity in site.entities:
         rev = revisions.get(entity.source_revision_id)
         rec = records.get(rev.path) if rev is not None else None
+        metadata = raw_metadata.get(rev.path) if rev is not None else None
         if (entity.draft or rev is None or rec is None or rec.draft is not False or
                 rec.body != entity.body or rec.collection != entity.collection or
                 rec.slug != entity.slug or
                 rev.path != "src/content/" + entity.collection + "/" + entity.slug + ".md" or
-                entity.entity_id != "saturn:" + stable_id(
-                    "saturn-site-entity-v1", entity.collection, entity.slug)):
+                entity.entity_id != _entity_id(entity.collection, entity.slug)):
             issue("invalid_entity_provenance", entity.entity_id)
-        try:
-            frontmatter[entity.entity_id] = dict(_fields(json.loads(
-                entity.raw_frontmatter_json)))
-        except (ValueError, TypeError):
-            issue("invalid_entity_frontmatter", entity.entity_id)
-            frontmatter[entity.entity_id] = {}
-    if site.ready_for_promotion:
-        for record in site.raw_records:
-            if record.draft is False and record.collection and record.slug:
-                entity_id = "saturn:" + stable_id(
-                    "saturn-site-entity-v1", record.collection, record.slug)
-                if entity_id not in entities:
-                    issue("missing_nondraft_entity", record.path)
+        if metadata is None:
+            issue("entity_source_unverifiable", entity.entity_id)
+            continue
+        expected_frontmatter = canonical_json(metadata)
+        if entity.raw_frontmatter_json != expected_frontmatter:
+            issue("entity_frontmatter_mismatch", entity.entity_id)
+        title_raw = metadata.get("title")
+        expected_title = (title_raw if isinstance(title_raw, str) and
+                          title_raw.strip() else entity.slug)
+        expected_type, _ = _entity_type(entity.collection, metadata)
+        if entity.title != expected_title:
+            issue("entity_title_mismatch", entity.entity_id)
+        if entity.entity_type != expected_type:
+            issue("entity_type_mismatch", entity.entity_id)
+        route_issues = []
+        if origin is not None:
+            expected_url = _canonical_url(
+                entity.collection, entity.slug, origin, set(rev_by_path),
+                rec.path, route_issues)
+        else:
+            # A placeholder makes route/path validation independent of URL
+            # origin; no configured origin can be proven without config bytes.
+            expected_url = _canonical_url(
+                entity.collection, entity.slug, "https://unverified.invalid",
+                set(rev_by_path), rec.path, route_issues)
+            if expected_url is not None and entity.canonical_url is not None:
+                expected_url = None
+                issue("canonical_origin_unverifiable", entity.entity_id)
+        if entity.canonical_url != expected_url:
+            issue("entity_canonical_url_mismatch", entity.entity_id)
+        frontmatter[entity.entity_id] = dict(_fields(metadata))
+        for fact in _facts_for_entity(entity.entity_id, metadata,
+                                      entity.source_revision_id):
+            expected_facts[fact.fact_id] = fact
 
-    index(site.facts, lambda x: x.fact_id, "duplicate_fact")
-    fact_paths = set()
-    for fact in site.facts:
-        owner = entities.get(fact.entity_id)
-        if (owner is None or owner.source_revision_id != fact.source_revision_id or
-                frontmatter.get(fact.entity_id, {}).get(fact.field_path) != fact.raw_value_json or
-                fact.fact_id != stable_id("saturn-site-fact-v1", fact.entity_id,
-                                          fact.field_path, fact.raw_value_json,
-                                          fact.source_revision_id)):
-            issue("invalid_fact_provenance", fact.fact_id)
-        fact_paths.add((fact.entity_id, fact.field_path))
-    expected_paths = {(eid, path) for eid, fields in frontmatter.items()
-                      for path in fields}
-    if fact_paths != expected_paths:
-        issue("incomplete_fact_projection", "frontmatter fields")
+    expected_entity_ids = {
+        _entity_id(record.collection, record.slug)
+        for record in site.raw_records
+        if record.path in raw_metadata and record.draft is False and
+        record.collection is not None and record.slug is not None
+    }
+    if set(entities) != expected_entity_ids:
+        issue("entity_projection_coverage_mismatch", "non-draft records")
 
-    index(site.relations, lambda x: x.relation_id, "duplicate_relation")
+    provided_facts = index(site.facts, lambda x: x.fact_id, "duplicate_fact")
+    if set(provided_facts) != set(expected_facts):
+        issue("fact_projection_coverage_mismatch", "source frontmatter")
+    for key in set(provided_facts) & set(expected_facts):
+        if provided_facts[key] != expected_facts[key]:
+            issue("fact_projection_mismatch", key)
+
+    # Reconstruct all declared relations from verified source metadata; do
+    # not derive completeness from the already supplied SiteRelation objects.
+    expected_relations = {}
+    draft_references = set(draft_keys)
+    for entity in site.entities:
+        rev = revisions.get(entity.source_revision_id)
+        if rev is None or rev.path not in raw_metadata:
+            continue
+        source_issues = []
+        for predicate, field_path, target_collection, target_slug in _relation_candidates(
+            entity.collection, raw_metadata[rev.path], rev.path, source_issues
+        ):
+            if (target_collection, target_slug) in draft_references:
+                continue
+            target_id = _entity_id(target_collection, target_slug)
+            relation_id = stable_id(
+                "saturn-site-relation-v1", entity.entity_id, predicate,
+                target_id, entity.source_revision_id, field_path)
+            expected_relations[relation_id] = SiteRelation(
+                relation_id, entity.entity_id, predicate, target_id,
+                entity.source_revision_id, field_path)
+    actual_relations = index(site.relations, lambda x: x.relation_id,
+                             "duplicate_relation")
+    if set(expected_relations) != set(actual_relations):
+        issue("relation_projection_coverage_mismatch", "source-declared references")
+    for key in set(expected_relations) & set(actual_relations):
+        if actual_relations[key] != expected_relations[key]:
+            issue("relation_projection_mismatch", key)
+
     valid_relations, unresolved = [], []
     for relation in site.relations:
-        owner = entities.get(relation.subject_entity_id)
-        if (owner is None or owner.source_revision_id != relation.source_revision_id or
-                relation.source_field_path not in frontmatter.get(
-                    relation.subject_entity_id, {}) or
-                relation.relation_id != stable_id("saturn-site-relation-v1",
-                    relation.subject_entity_id, relation.predicate,
-                    relation.object_entity_id, relation.source_revision_id,
-                    relation.source_field_path)):
+        if relation.subject_entity_id not in entities:
             issue("invalid_relation_provenance", relation.relation_id)
-        if owner is not None:
-            field_name = relation.source_field_path.split("[", 1)[0]
-            descriptor = _RELATION_FIELDS.get(owner.collection, {}).get(field_name)
-            try:
-                raw_target = json.loads(frontmatter[owner.entity_id][
-                    relation.source_field_path])
-                source_slug = _safe_reference_slug(raw_target)
-            except (KeyError, ValueError, TypeError):
-                issue("relation_source_mismatch", relation.relation_id)
-            else:
-                if (descriptor is None or field_name != relation.predicate or
-                        relation.object_entity_id != "saturn:" + stable_id(
-                            "saturn-site-entity-v1", descriptor[0], source_slug)):
-                    issue("relation_source_mismatch", relation.relation_id)
         if relation.object_entity_id in entities:
             valid_relations.append(relation)
         else:
@@ -329,6 +417,30 @@ def validate_saturn_snapshot_inputs(site, catalog, external) -> ValidationResult
                 candidate.source_revision_ids != tuple(sorted({x.source_revision_id for x in occs})) or
                 candidate.raw_urls != tuple(sorted({x.raw_url for x in occs}))):
             issue("pdf_candidate_provenance_mismatch", candidate.document_id)
+
+    # The catalog adapter itself is the sole Markdown/HTML link interpreter:
+    # exact inline/reference/autolink/HTML offsets, escapes, headings and
+    # code/comment exclusions must match a fresh offline derivation from the
+    # already checked site package. No second, weaker link parser is allowed.
+    try:
+        derived_catalog = adapt_support_catalog(site)
+    except (TypeError, ValueError, KeyError, AttributeError, RecursionError):
+        issue("catalog_reconstruction_failed", "source package")
+    else:
+        if (catalog.occurrences != derived_catalog.occurrences and
+                sorted(catalog.occurrences, key=lambda x: x.source_locator) !=
+                sorted(derived_catalog.occurrences, key=lambda x: x.source_locator)):
+            issue("source_occurrence_mismatch", "exact source PDF links")
+        if (catalog.documents != derived_catalog.documents and
+                set(catalog.documents) != set(derived_catalog.documents)):
+            issue("source_document_mismatch", "support metadata")
+        if (catalog.pdf_candidates != derived_catalog.pdf_candidates and
+                set(catalog.pdf_candidates) != set(derived_catalog.pdf_candidates)):
+            issue("source_pdf_candidate_mismatch", "PDF ownership and URLs")
+        if (catalog.issues != derived_catalog.issues or
+                catalog.upstream_ready != derived_catalog.upstream_ready or
+                catalog.catalog_version != derived_catalog.catalog_version):
+            issue("source_catalog_diagnostics_mismatch", "catalog adapter")
 
     statuses = index(external.statuses, lambda x: x.document_id,
                      "duplicate_pdf_status")

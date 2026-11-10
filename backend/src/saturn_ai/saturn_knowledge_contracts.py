@@ -12,10 +12,13 @@ from .ingestion.saturn_contracts import (
     SiteSourceRevision, SiteSyncManifest, SupportDocument, stable_id,
     canonical_json,
 )
-from .ingestion.saturn_site_adapter import RawSiteRecord, SiteDictionary
-from .ingestion.support_catalog_adapter import CatalogOccurrence
+from .ingestion.saturn_site_adapter import (
+    RawSiteRecord, SiteDictionary, SiteContentPackage,
+)
+from .ingestion.support_catalog_adapter import CatalogOccurrence, SupportCatalogResult
 from .ingestion.external_document_adapter import (
     DocumentAssociation, DocumentDiagnostic, DocumentStatus,
+    ExternalDocumentResult,
 )
 
 BUILDER_VERSION = "saturn-unified-snapshot/0.1.0"
@@ -67,6 +70,19 @@ class SaturnSnapshotManifest:
 
 
 @dataclass(frozen=True)
+class SnapshotValidationSources:
+    """Immutable builder inputs retained for structural activation replay.
+
+    The content hash alone cannot authenticate fields or a forged re-seal;
+    activation independently reconstructs the entire candidate from the same
+    frozen inputs and compares all projections, pointers and manifest fields.
+    """
+    site: SiteContentPackage
+    catalog: SupportCatalogResult
+    external: ExternalDocumentResult
+
+
+@dataclass(frozen=True)
 class SaturnKnowledgeSnapshot:
     source_revisions: tuple[SiteSourceRevision, ...]
     source_records: tuple[RawSiteRecord, ...]
@@ -87,6 +103,7 @@ class SaturnKnowledgeSnapshot:
     diagnostics: tuple[SnapshotIssue, ...]
     readiness_gates: tuple[bool, bool, bool]
     manifest: SaturnSnapshotManifest
+    validation_sources: SnapshotValidationSources
 
     @property
     def snapshot_id(self) -> str:
@@ -179,8 +196,27 @@ class SaturnSnapshotManager:
 
     def activate(self, candidate: SaturnKnowledgeSnapshot) -> str:
         if (not isinstance(candidate, SaturnKnowledgeSnapshot) or
-                not candidate.ready_for_promotion or not verify_snapshot_seal(candidate)):
+                not candidate.ready_for_promotion or not verify_snapshot_seal(candidate) or
+                not isinstance(candidate.validation_sources, SnapshotValidationSources)):
             raise SnapshotBuildError((SnapshotIssue("activation_rejected", "candidate"),))
+        # A malicious caller can recompute corpus_hash and snapshot_id after
+        # modifying a snapshot. The only valid activation proof is complete
+        # offline structural reconstruction from the preserved builder inputs.
+        # Rebuilding covers source bytes, catalog, PDF pages, all evidence,
+        # pointers, manifest counts, statuses and readiness gates.
+        from .saturn_knowledge_snapshot import stage_saturn_knowledge_snapshot
+        inputs = candidate.validation_sources
+        try:
+            fresh = stage_saturn_knowledge_snapshot(
+                inputs.site, inputs.catalog, inputs.external)
+            if (not fresh.ready_for_promotion or fresh.candidate != candidate):
+                raise SnapshotBuildError((
+                    SnapshotIssue("activation_structure_mismatch", "candidate"),))
+        except (TypeError, ValueError, AttributeError, KeyError, IndexError) as exc:
+            if isinstance(exc, SnapshotBuildError):
+                raise
+            raise SnapshotBuildError((
+                SnapshotIssue("activation_structure_mismatch", type(exc).__name__),)) from None
         with self._lock:
             self._active = candidate
             return candidate.snapshot_id

@@ -15,7 +15,8 @@ from .ingestion.external_document_adapter import ExternalDocumentResult
 from .saturn_knowledge_contracts import (
     BUILDER_VERSION, DocumentMatch, EvidencePointer, SaturnKnowledgeSnapshot,
     SaturnSnapshotBuildResult, SaturnSnapshotManifest, SnapshotBuildError,
-    SnapshotIssue, SaturnSnapshotManager, snapshot_content, sorted_canonical,
+    SnapshotIssue, SaturnSnapshotManager, SnapshotValidationSources,
+    snapshot_content, sorted_canonical,
     verify_snapshot_seal,
 )
 from .saturn_knowledge_validation import validate_saturn_snapshot_inputs
@@ -264,6 +265,7 @@ def stage_saturn_knowledge_snapshot(
         dictionaries, documents, occurrences, associations,
         pdf_revisions, statuses, pdf_diagnostics,
         evidence, pointers, matches, issues, gates, manifest,
+        SnapshotValidationSources(site, catalog, external),
     )
     manifest = replace(manifest, corpus_hash=stable_id(
         "saturn-unified-corpus-v1", snapshot_content(snapshot)))
