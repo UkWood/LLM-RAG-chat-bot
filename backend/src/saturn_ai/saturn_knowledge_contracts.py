@@ -3,7 +3,7 @@
 The trusted source and three adapters have independent contracts. This module
 does not change them or legacy synthetic snapshots.
 """
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from hashlib import sha256
 from threading import RLock
 
@@ -103,7 +103,7 @@ class SaturnKnowledgeSnapshot:
     diagnostics: tuple[SnapshotIssue, ...]
     readiness_gates: tuple[bool, bool, bool]
     manifest: SaturnSnapshotManifest
-    validation_sources: SnapshotValidationSources
+    validation_sources: SnapshotValidationSources = field(compare=False, repr=False)
 
     @property
     def snapshot_id(self) -> str:
