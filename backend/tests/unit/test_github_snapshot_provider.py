@@ -34,7 +34,7 @@ BASE = API + "/repos/UkWood/Saturn-Main-Site"
 REF_URL = BASE + "/git/ref/heads/main"
 COMMIT_URL = BASE + "/git/commits/" + COMMIT_A
 ROOT_RECURSIVE_URL = BASE + "/git/trees/" + ROOT_TREE_SHA + "?recursive=1"
-ROOT_NONRECURSIVE_URL = BASE + "/git/trees/" + ROOT_TREE_SHA + "?recursive=0"
+ROOT_NONRECURSIVE_URL = BASE + "/git/trees/" + ROOT_TREE_SHA
 
 
 def git_blob_sha1(content):
@@ -175,7 +175,7 @@ def build_transport(
     }
 
     for directory, tree_sha in tree_shas.items():
-        routes[BASE + "/git/trees/" + tree_sha + "?recursive=0"] = {
+        routes[BASE + "/git/trees/" + tree_sha] = {
             "sha": tree_sha,
             "truncated": fallback_truncated,
             "tree": direct_entries[directory],
@@ -195,6 +195,30 @@ def build_transport(
         routes[BASE + "/git/blobs/" + digest] = blob_overrides.get(path, payload)
 
     return FakeTransport(routes), blob_shas
+
+
+def replace_source_directory_with_unsupported_object(transport, path, mode):
+    """A real recursive tree cannot show descendants of a symlink/gitlink."""
+    objects = {"120000": "blob", "160000": "commit"}
+    recursive = transport.routes[ROOT_RECURSIVE_URL]["tree"]
+    directory = next(entry for entry in recursive if entry["path"] == path)
+    directory["mode"] = mode
+    directory["type"] = objects[mode]
+    recursive[:] = [
+        entry for entry in recursive if not entry["path"].startswith(path + "/")
+    ]
+    parent, _, name = path.rpartition("/")
+    parent_url = ROOT_NONRECURSIVE_URL if not parent else (
+        BASE + "/git/trees/" + next(
+            entry["sha"] for entry in recursive if entry["path"] == parent
+        )
+    )
+    direct = transport.routes[parent_url]["tree"]
+    direct_entry = next(entry for entry in direct if entry["path"] == name)
+    direct_entry["mode"] = mode
+    direct_entry["type"] = objects[mode]
+
+
 
 
 def make_provider(transport, **overrides):
@@ -285,6 +309,145 @@ class GitHubSnapshotProviderTests(unittest.TestCase):
         self.assertTrue(any(call["url"] == ROOT_NONRECURSIVE_URL for call in transport.calls))
         self.assertEqual(sum(call["url"] == REF_URL for call in transport.calls), 1)
         self.assertEqual(len(snapshot.files), 7)
+
+    def test_nonrecursive_tree_endpoint_has_no_recursive_query_parameter(self):
+        transport, _ = build_transport(recursive_truncated=True)
+        provider, _ = make_provider(transport)
+
+        snapshot = provider.fetch_snapshot()
+
+        self.assertEqual(snapshot.commit_sha, COMMIT_A)
+        tree_calls = [
+            call["url"] for call in transport.calls if "/git/trees/" in call["url"]
+        ]
+        self.assertEqual(tree_calls[0], ROOT_RECURSIVE_URL)
+        self.assertIn(ROOT_NONRECURSIVE_URL, tree_calls)
+        self.assertTrue(all("?" not in url for url in tree_calls[1:]))
+        self.assertTrue(any(
+            url.startswith(BASE + "/git/trees/") and url != ROOT_NONRECURSIVE_URL
+            for url in tree_calls[1:]
+        ))
+
+    def test_nonrecursive_fallback_skips_large_unrelated_asset_trees(self):
+        files = site_files()
+        for path in (
+            "public/assets/large/00/photo.png",
+            "public/assets/large/01/photo.png",
+            "archive/legacy/backups/00/notes.txt",
+            "archive/legacy/backups/01/notes.txt",
+        ):
+            files[path] = b"x" * 1024
+        transport, _ = build_transport(files, recursive_truncated=True)
+        unrelated_dirs = [
+            "public", "public/assets", "public/assets/large",
+            "public/assets/large/00", "public/assets/large/01",
+            "archive", "archive/legacy", "archive/legacy/backups",
+            "archive/legacy/backups/00", "archive/legacy/backups/01",
+        ]
+        tree_shas = {
+            entry["path"]: entry["sha"]
+            for entry in transport.routes[ROOT_RECURSIVE_URL]["tree"]
+            if entry["type"] == "tree"
+        }
+        for directory in unrelated_dirs:
+            url = BASE + "/git/trees/" + tree_shas[directory]
+            transport.routes[url]["truncated"] = True
+        provider, _ = make_provider(transport)
+
+        snapshot = provider.fetch_snapshot()
+
+        self.assertEqual(len(snapshot.files), 7)
+        queried = {call["url"] for call in transport.calls}
+        for directory in unrelated_dirs:
+            self.assertNotIn(BASE + "/git/trees/" + tree_shas[directory], queried)
+        self.assertNotIn("public/assets/large/00/photo.png", {
+            file.path for file in snapshot.files
+        })
+
+    def test_nonrecursive_fallback_discovers_new_nested_content_dictionary_and_route(self):
+        files = site_files()
+        files["src/content/emerging/nested/card.md"] = b"---\ntitle: New\n---\nNew body.\n"
+        files["src/data/new/domain.yml"] = b"domain: emerging\n"
+        files["src/pages/research/nested.astro"] = b"<html>research</html>\n"
+        transport, blobs = build_transport(files, recursive_truncated=True)
+        provider, _ = make_provider(transport)
+
+        snapshot = provider.fetch_snapshot()
+
+        paths = {file.path: file for file in snapshot.files}
+        for path in (
+            "src/content/emerging/nested/card.md",
+            "src/data/new/domain.yml",
+            "src/pages/research/nested.astro",
+        ):
+            self.assertIn(path, paths)
+            self.assertEqual(paths[path].blob_sha, blobs[path])
+            self.assertEqual(paths[path].content, files[path])
+        self.assertEqual(sum(
+            call["url"] == REF_URL for call in transport.calls
+        ), 1)
+
+    def test_source_collection_replaced_with_gitlink_fails_closed(self):
+        transport, _ = build_transport()
+        replace_source_directory_with_unsupported_object(
+            transport, "src/content/products", "160000"
+        )
+        provider, _ = make_provider(transport)
+        with self.assertRaises(TreeValidationError):
+            provider.fetch_snapshot()
+
+    def test_source_data_directory_replaced_with_symlink_fails_closed(self):
+        transport, _ = build_transport()
+        replace_source_directory_with_unsupported_object(
+            transport, "src/data", "120000"
+        )
+        provider, _ = make_provider(transport)
+        with self.assertRaises(TreeValidationError):
+            provider.fetch_snapshot()
+
+    def test_source_pages_directory_replaced_with_gitlink_fails_closed(self):
+        transport, _ = build_transport()
+        replace_source_directory_with_unsupported_object(
+            transport, "src/pages", "160000"
+        )
+        provider, _ = make_provider(transport)
+        with self.assertRaises(TreeValidationError):
+            provider.fetch_snapshot()
+
+    def test_nested_content_directory_replaced_with_symlink_fails_closed(self):
+        files = site_files()
+        files["src/content/products/nested/card.md"] = b"---\ntitle: Nested\n---\n"
+        transport, _ = build_transport(files)
+        replace_source_directory_with_unsupported_object(
+            transport, "src/content/products/nested", "120000"
+        )
+        provider, _ = make_provider(transport)
+        with self.assertRaises(TreeValidationError):
+            provider.fetch_snapshot()
+
+    def test_unrelated_directory_gitlink_remains_ignored(self):
+        files = site_files()
+        files["public/extra/asset.png"] = b"binary"
+        transport, _ = build_transport(files, recursive_truncated=True)
+        replace_source_directory_with_unsupported_object(
+            transport, "public/extra", "160000"
+        )
+        provider, _ = make_provider(transport)
+        snapshot = provider.fetch_snapshot()
+        self.assertEqual(len(snapshot.files), 7)
+
+    def test_ref_response_identity_mismatch_or_absence_fails_closed(self):
+        for invalid_ref in ("refs/heads/other", None):
+            with self.subTest(invalid_ref=invalid_ref):
+                transport, _ = build_transport()
+                if invalid_ref is None:
+                    del transport.routes[REF_URL]["ref"]
+                else:
+                    transport.routes[REF_URL]["ref"] = invalid_ref
+                provider, _ = make_provider(transport)
+                with self.assertRaises(TreeValidationError):
+                    provider.fetch_snapshot()
+                self.assertEqual(len(transport.calls), 1)
 
     def test_truncated_nonrecursive_tree_fails_closed(self):
         transport, _ = build_transport(
