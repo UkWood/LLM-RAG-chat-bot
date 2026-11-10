@@ -147,7 +147,7 @@ class SupportCatalogTests(unittest.TestCase):
         self.assertEqual(len(result.pdf_candidates), 2)
         urls = {x.url for x in result.documents}
         self.assertIn(ORIGIN + "/ftp/guide.pdf", urls)
-        self.assertIn(ORIGIN + "/products/guide2.pdf", urls)
+        self.assertIn(ORIGIN + "/products/catalog-a/guide2.pdf", urls)
 
     def test_percent_query_fragment_identity(self):
         result = catalog({PRODUCT: source(body=
