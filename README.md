@@ -2,7 +2,7 @@
 
 Отдельный технический консультант: ответы только по доверенным материалам сайта и PDF с источниками и отказом при недостатке доказательств. Статический интерфейс Astro, отдельный FastAPI backend, локальная KB и сменный LLM provider.
 
-**Стадия:** PR #22 — GitHub Snapshot Provider v0.1 — MERGED into main (`ff9baa8819714d5cb4ba9c61827dbf4666acd0b6`), main CI #42777814511 SUCCESS. Этап 3A — Support Catalog Adapter v0.1 — в реализации в `feat/support-catalog-adapter-v0.1`; до независимого Acceptance Review merge запрещён. Каталогизация построена на существующем `SiteContentPackage`, без сетевого доступа и PDF parsing; CI/полная приёмка этапа проверяются отдельно. PDF ingestion, Unified Snapshot, retrieval integration, LLM/provider, API/UI, deployment ещё не реализованы. `UkWood/Saturn-Main-Site` строго READ-ONLY; source trust не разрешает cloud egress.
+**Стадия:** PR #22 — GitHub Snapshot Provider v0.1 — MERGED into main (`ff9baa8819714d5cb4ba9c61827dbf4666acd0b6`), main CI #42777814511 SUCCESS. Этап 3A — Support Catalog Adapter v0.1 — реализован в открытом [PR #23](https://github.com/UkWood/LLM-RAG-chat-bot/pull/23), проверяется на exact head; до независимого Acceptance Review merge запрещён. Каталогизация построена на существующем `SiteContentPackage`, без сетевого доступа и PDF parsing; CI/полная приёмка этапа проверяются отдельно. PDF ingestion, Unified Snapshot, retrieval integration, LLM/provider, API/UI, deployment ещё не реализованы. `UkWood/Saturn-Main-Site` строго READ-ONLY; source trust не разрешает cloud egress.
 
 ## Память проекта
 
