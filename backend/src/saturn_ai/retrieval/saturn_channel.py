@@ -412,7 +412,7 @@ def _make_manifest(snapshot, records, documents, lexical, metadata, dense):
         dictionary_fingerprints=tuple(sorted((d.path, sha256(d.content).hexdigest())
                                              for d in snapshot.dictionaries)),
         dense_encoder_hash=dense.encoder_hash if dense else None,
-        qdrant_config="local/cosine" if dense else None,
+        qdrant_config=("local-"+dense.backend_mode+"/cosine/dim="+str(dense.dimensions)) if dense else None,
         evidence_count=len(records), document_count=len(documents),
         evidence_coverage_hash=_hash(tuple(r.evidence_id for r in records)),
         document_coverage_hash=_hash(tuple(d.match.document.document_id for d in documents)),
