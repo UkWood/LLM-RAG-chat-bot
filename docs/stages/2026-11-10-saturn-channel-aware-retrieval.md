@@ -8,6 +8,18 @@ Baseline `main`: `2da357db4543c9ca173db7663bbd18396d221cc3` (PR #25 merged)
 PR: [#26](https://github.com/UkWood/LLM-RAG-chat-bot/pull/26)  
 Статус: Consolidated Acceptance Review Corrections — implementation updated, exact-head CI required; **NO MERGE**.
 
+## Final Acceptance Correction — CR-03: adjacent decimal engineering units
+
+**Starting review head:** `d182b369fd1e1e6c5735491b772459ff09ffd225`.  
+**Scope:** только Saturn tokenizer, targeted regression tests и этот отчёт; принятые CR-01 immutable publication и CR-02 prepared BM25, `saturn_qdrant.py`, ADR, canonical contracts, ingestion adapters и legacy retrieval не изменялись. Тот же [PR #26](https://github.com/UkWood/LLM-RAG-chat-bot/pull/26), без merge и без этапа 5.
+
+- **Tokenizer identity:** `saturn-technical-tokenizer/0.2.1` (вместо `0.2.0`). Значение включено в `SaturnIndexManifest.tokenizer_version`, `lexical_config_hash` и deterministic `bundle_id`; corpus indexes должны быть пересобраны для нового tokenizer. Поисковый source text, `REPRESENTATION_VERSION` и encoder/Qdrant vector representation не менялись.
+- **Правило:** только явно перечисленные, непосредственно примыкающие буквенные единицы измерения разбиваются лексически на два searchable tokens — *literal signed numeric value* и *unit token*. Например, `0,5МПа` → (`0,5`, `мпа`), `12.5V` → (`12.5`, `v`), `-0,5бар` → (`-0,5`, `бар`), `10.5кВт` → (`10.5`, `квт`), `-20.5°C` → (`-20.5`, `°c`). Разделённое `0,5 МПа` получает те же tokens. Оригинальный `SearchRecord.text`, evidence ID и provenance остаются без изменений; единица не отбрасывается.
+- **Ограниченный literal unit vocabulary:** `мпа`, `кпа`, `па`, `бар`, `квт`, `вт`, `гц`, `кгц`, `мгц`, `в`, `а`, `mpa`, `kpa`, `bar`, `kw`, `w`, `hz`, `kv`, `mv`, `ma`, `v`, `a`, `°c`, `°f` (с Unicode `casefold`). Неизвестный suffix не интерпретируется как физическая единица. **Нет** пересчёта единиц, semantic equivalence, распознавания физических величин либо новых инженерных facts.
+- **Безопасность идентификаторов:** `RS-485`, `БКД-ПК-РФ.2`, `БКД-ПК-RF.2` остаются цельными, разными searchable identifiers. `12.5V-CONTROL`, `12.5V2`, `0,5unknown` и `АБ-12.5V` не разбиваются на предполагаемые numeric facts. Значения `-20`, `+20`, `20` сохраняют различие; `−20` (U+2212) нормализуется в `-20` только лексически, без изменения source. Decimal comma/dot и literal ranges не преобразуются.
+- **Tests:** четыре targeted CR-03 метода добавлены в `backend/tests/unit/test_saturn_channel_retrieval.py`: separated/attached units и signed Unicode forms; отрицательные opaque-device cases; `SaturnBM25Index.search` по literal numeric query, включая `0,5`, `12.5`, `-0,5`, `10.5`, `-20.5`, source IDs, deterministic ranking и parity с reference `_bm25`; versioned manifest и повторная сборка. Все прежние 398 backend тестов остаются в полном suite; итоговые counts и оба CI jobs на **final exact PR head** фиксируются в PR после GitHub Actions, без новых SHA-only commits.
+- **Ограничение:** bounded allowlist позволяет распознавать перечисленные единицы, не любые возможные сокращения или Unicode-символы; это сознательно консервативный lexical baseline.
+
 ## Consolidated Acceptance Review Corrections — PR #26 (CR-01–CR-03)
 
 **Source review head:** `2ef92e3e69acbd9999ad3bb15b43e610e95e7106`.  
