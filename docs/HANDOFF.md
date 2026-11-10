@@ -1,5 +1,14 @@
 # Передача контекста — реализация кода
 
+## Текущий этап 3B — External Document Adapter v0.1 (2026-11-10)
+
+- PR #23 MERGED в main: dee6011fa67de0bcc62b8304b7549b4ebde396b1, main CI #42838702444 SUCCESS. Это текущий baseline.
+- Рабочая ветка: feat/external-document-adapter-v0.1. Код и offline-тесты 3B: secure HTTPS host/path + DNS pinning, bounded transport, отдельный PDF worker (только явный тестовый режим, production sandbox не подтверждена), SHA-256 revision/evidence, immutable associations/cache.
+- Требуется полный exact-head CI и независимый Acceptance Review сессией A. **Не сливать PR и не начинать этап 4.** Статусы PR #23 OPEN ниже являются историческими.
+- [Отчёт этапа 3B](stages/2026-11-10-external-document-adapter.md). Сайт Saturn-Main-Site READ-ONLY.
+
+
+
 ## Consolidated CR-01–CR-04 PR #23 — исправления и code CI (2026-11-10)
 
 PR [#23](https://github.com/UkWood/LLM-RAG-chat-bot/pull/23) **OPEN, NOT MERGED**. Исправленная code revision `b2ee0164c49f53cba7121df92c6538e557b4b7e3`; implementation commit `60ca2856265e2d3a8f5276897892122a7c20a9e3`. [Push CI #42816240259](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42816240259) и [PR CI #42816246557](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42816246557): **SUCCESS**, 288 backend tests (11 skips), ONNX PASS. В том же PR исправлены Markdown/HTML links, URL traversal/identity, добавлены 8 exact read-only Saturn fixtures и универсальный session prompt. [Consolidated stage report](stages/2026-11-10-support-catalog-adapter.md). Последний PR head и его CI проверить после документационной синхронизации; merge и этап 3B запрещены до команды владельца.
