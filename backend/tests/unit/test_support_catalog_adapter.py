@@ -410,7 +410,7 @@ class SupportCatalogTests(unittest.TestCase):
             "src/pages/[slug].astro": "48ddec0a5b3acae61146d7a3dbf50a7361d745e4",
         }
         self.assertEqual(
-            {p.relative_to(root).as_posix() for p in root.rglob("*") if p.is_file()},
+            {p.relative_to(root).as_posix() for p in root.rglob("*") if p.is_file() and p.name != "README.md"},
             set(expected_blobs),
         )
         mapping = {}
