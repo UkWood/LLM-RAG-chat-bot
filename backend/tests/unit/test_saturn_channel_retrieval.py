@@ -320,6 +320,19 @@ class SaturnRetrievalTests(unittest.TestCase):
         self.assertFalse(any(c.evidence_type == "pdf_passage"
                              for c in result.answer_evidence))
 
+    def test_document_block_alone_revokes_linked_pdf_answer_evidence(self):
+        did = self.snap.document_matches[0].document.document_id
+        policy = SaturnOperationalPolicy("doc-only", blocked_document_ids=frozenset((did,)))
+        service = SaturnRetrievalService(SaturnPolicyProvider(policy))
+        service.publish(build_saturn_retrieval_bundle(self.snap))
+        result = service.search_saturn("Alpha guide", top_k=40)
+        self.assertFalse(result.document_matches)
+        self.assertFalse(any(c.evidence_type == "pdf_passage"
+                             for c in result.answer_evidence))
+        self.assertTrue(any(c.evidence_type != "pdf_passage"
+                            for c in result.answer_evidence)
+                        or result.answer_evidence == ())
+
     def test_policy_update_during_search_rechecks_post_query(self):
         match = self.snap.document_matches[0]
         pdf = next(e for e in self.snap.answer_evidence if e.evidence_type == "pdf_passage")
