@@ -621,7 +621,7 @@ class SaturnRetrievalTests(unittest.TestCase):
             PRODUCT: source("Instrument", body="## Note\nOne\n")
         }))
         large = build_saturn_knowledge_snapshot(*make_inputs({
-            PRODUCT: source("Instrument", fields="novel_field: 37\n",
+            PRODUCT: source("Instrument", fields="zzunseenworldx: 37\n",
                             body="## Note\nOne\nTwo new passages\n"),
             SECOND: source("Extra", body="New evidence")
         }))
@@ -632,12 +632,12 @@ class SaturnRetrievalTests(unittest.TestCase):
         self.assertNotEqual(initial.lexical._prepared, updated.lexical._prepared)
         service = SaturnRetrievalService()
         service.publish(initial)
-        old = service.search_saturn("novel_field")
+        old = service.search_saturn("zzunseenworldx")
         self.assertFalse(old.answer_evidence)
         service.publish(updated)
-        self.assertTrue(service.search_saturn("novel_field").answer_evidence)
+        self.assertTrue(service.search_saturn("zzunseenworldx").answer_evidence)
         service.publish(initial)
-        self.assertFalse(service.search_saturn("novel_field").answer_evidence)
+        self.assertFalse(service.search_saturn("zzunseenworldx").answer_evidence)
 
     def test_cr02_corrupted_prepared_counts_or_tokens_fail_publication(self):
         service = SaturnRetrievalService()
