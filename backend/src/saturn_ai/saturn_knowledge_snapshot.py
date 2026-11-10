@@ -146,6 +146,11 @@ def stage_saturn_knowledge_snapshot(
         SnapshotIssue(name + "_not_ready", name)
         for name, flag in zip(("site", "catalog", "external"), gates) if not flag
     ]
+    for name, upstream in (("site", site.issues), ("catalog", catalog.issues)):
+        for upstream_issue in upstream:
+            issues.append(SnapshotIssue(
+                name + "_" + upstream_issue.code, upstream_issue.path,
+                upstream_issue.severity))
     for relation in validation.unresolved_relations:
         issues.append(SnapshotIssue("unresolved_relation", relation.relation_id,
                                     "warning"))

@@ -2,7 +2,7 @@
 
 Отдельный технический консультант: ответы только по доверенным материалам сайта и PDF с источниками и отказом при недостатке доказательств. Статический интерфейс Astro, отдельный FastAPI backend, локальная KB и сменный LLM provider.
 
-**Стадия (2026-11-10):** PR #24 — External Document Adapter v0.1 **MERGED** в \`main\` (\`01cb640e1b67ee84b4dff00afa6a798bc5203c54\`). Этап 4A — Unified Knowledge Snapshot v0.1 — реализуется в [PR #25](https://github.com/UkWood/LLM-RAG-chat-bot/pull/25), ветка \`feat/unified-knowledge-snapshot-v0.1\`. Добавлены offline immutable snapshot/manifest, strict integrity/readiness, evidence assembly, document lookup, in-memory atomic activation и тесты. До независимого Acceptance Review PR не сливать. Этап 4B (retrieval), LLM/UI, deployment ещё не реализованы; production PDF worker без OS sandbox запрещён. Saturn-Main-Site строго READ-ONLY.
+**Стадия (2026-11-10):** PR #24 — External Document Adapter v0.1 **MERGED** в `main` (`01cb640e1b67ee84b4dff00afa6a798bc5203c54`). Этап 4A — Unified Knowledge Snapshot v0.1 — реализуется в [PR #25](https://github.com/UkWood/LLM-RAG-chat-bot/pull/25), ветка `feat/unified-knowledge-snapshot-v0.1`. Добавлены offline immutable snapshot/manifest, strict integrity/readiness, evidence assembly, document lookup, in-memory atomic activation и тесты. До независимого Acceptance Review PR не сливать. Этап 4B (retrieval), LLM/UI, deployment ещё не реализованы; production PDF worker без OS sandbox запрещён. Saturn-Main-Site строго READ-ONLY.
 
 ## Память проекта
 

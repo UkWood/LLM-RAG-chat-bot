@@ -148,6 +148,19 @@ def validate_saturn_snapshot_inputs(site, catalog, external) -> ValidationResult
 
     records = index(site.raw_records, lambda x: x.path, "duplicate_raw_record")
     dictionaries = index(site.dictionaries, lambda x: x.path, "duplicate_dictionary")
+    expected_records = {
+        path for path in rev_by_path
+        if path.startswith("src/content/") and path.endswith(".md")
+    }
+    if set(records) != expected_records:
+        issue("raw_record_inventory_mismatch", "src/content/*.md")
+    expected_dictionaries = {
+        path for path in rev_by_path
+        if path.startswith("src/data/") and path.endswith((".yaml", ".yml"))
+    }
+    if set(dictionaries) != expected_dictionaries:
+        issue("dictionary_source_inventory_mismatch", "src/data/*.yaml")
+
     for record in (*site.raw_records, *site.dictionaries):
         revision = revisions.get(record.source_revision_id)
         if (revision is None or revision.path != record.path or

@@ -2,10 +2,10 @@
 
 ## Актуальный этап 4A — Unified Knowledge Snapshot v0.1 (2026-11-10)
 
-- **PR #24 MERGED** в main: \`01cb640e1b67ee84b4dff00afa6a798bc5203c54\`.
-- **PR #25 OPEN, NOT MERGED:** [Unified Knowledge Snapshot v0.1](https://github.com/UkWood/LLM-RAG-chat-bot/pull/25); ветка \`feat/unified-knowledge-snapshot-v0.1\` от указанного main.
-- Реализованы независимые immutable contracts, validator трёх каналов, stable evidence/manifest, отдельные \`answer_evidence\` и \`document_matches\`, stage candidate и атомарный in-memory manager.
-- \`partial_text\`, failed PDF и OCR-required не могут заменить активный snapshot. Unknown data сохраняются, неопределённые relations не создают dangling evidence.
+- **PR #24 MERGED** в main: `01cb640e1b67ee84b4dff00afa6a798bc5203c54`.
+- **PR #25 OPEN, NOT MERGED:** [Unified Knowledge Snapshot v0.1](https://github.com/UkWood/LLM-RAG-chat-bot/pull/25); ветка `feat/unified-knowledge-snapshot-v0.1` от указанного main.
+- Реализованы независимые immutable contracts, validator трёх каналов, stable evidence/manifest, отдельные `answer_evidence` и `document_matches`, stage candidate и атомарный in-memory manager.
+- `partial_text`, failed PDF и OCR-required не могут заменить активный snapshot. Unknown data сохраняются, неопределённые relations не создают dangling evidence.
 - [Отчёт 4A](stages/2026-11-10-unified-knowledge-snapshot.md). Результаты exact-head CI — в PR #25; независимый Acceptance Review обязателен. Не выполнять merge. Этап 4B не начат. Saturn-Main-Site только READ-ONLY.
 - Все устаревшие статусы OPEN для PR #24 в исторических разделах ниже относятся к времени до его merge.
 

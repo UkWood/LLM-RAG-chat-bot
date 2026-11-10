@@ -2,8 +2,8 @@
 
 ## Этап 4A — Unified Knowledge Snapshot v0.1 (2026-11-10)
 
-**Baseline:** PR #24 MERGED, \`main=01cb640e1b67ee84b4dff00afa6a798bc5203c54\`.
-**PR #25:** [feat: implement Unified Knowledge Snapshot v0.1](https://github.com/UkWood/LLM-RAG-chat-bot/pull/25), **OPEN, NOT MERGED**. Рабочая ветка \`feat/unified-knowledge-snapshot-v0.1\`.
+**Baseline:** PR #24 MERGED, `main=01cb640e1b67ee84b4dff00afa6a798bc5203c54`.
+**PR #25:** [feat: implement Unified Knowledge Snapshot v0.1](https://github.com/UkWood/LLM-RAG-chat-bot/pull/25), **OPEN, NOT MERGED**. Рабочая ветка `feat/unified-knowledge-snapshot-v0.1`.
 
 Новые Saturn-only contracts/validator/builder/atomic manager, isolated answer/document channels, stable manifest, exact source/physical PDF provenance, stage diagnostics, strict readiness gates, offline contract/integration tests. Независимый Acceptance Review после exact-head CI; merge только по отдельному разрешению. Не затронуты synthetic/registry, canonical adapters/ADR и read-only Saturn-Main-Site. Этап 4B ещё не начат.
 

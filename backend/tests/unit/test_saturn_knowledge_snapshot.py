@@ -12,7 +12,7 @@ from saturn_ai.ingestion.external_document_transport import (
     DocumentError, DocumentFetchPolicy,
 )
 from saturn_ai.ingestion.saturn_site_adapter import (
-    PinnedSiteSnapshot, adapt_snapshot, git_blob_sha1,
+    PinnedSiteSnapshot, SiteParseIssue, adapt_snapshot, git_blob_sha1,
 )
 from saturn_ai.ingestion.support_catalog_adapter import adapt_support_catalog
 from saturn_ai.ingestion.saturn_contracts import SiteRelation, stable_id
@@ -259,6 +259,10 @@ class SaturnKnowledgeSnapshotTests(unittest.TestCase):
             source_field_path="title",
         )
         cases = [
+            (replace(site, raw_records=site.raw_records[:-1]), catalog, ext,
+             "raw_record_inventory_mismatch"),
+            (replace(site, dictionaries=()), catalog, ext,
+             "dictionary_source_inventory_mismatch"),
             (replace(site, relations=(forged,)), catalog, ext,
              "relation_source_mismatch"),
             (replace(site, facts=site.facts + site.facts[:1]), catalog, ext,
@@ -295,6 +299,23 @@ class SaturnKnowledgeSnapshotTests(unittest.TestCase):
                 with self.assertRaises(SnapshotBuildError):
                     build_saturn_knowledge_snapshot(
                         changed_site, changed_catalog, changed_ext)
+
+    def test_upstream_error_codes_remain_visible_in_stage(self):
+        site, catalog, ext = make_inputs({
+            PRODUCT: source(fields="documents:\n - " + doc() + "\n")
+        })
+        bad_site = replace(site, issues=site.issues + (
+            SiteParseIssue(PRODUCT, "content", "synthetic_test_error",
+                           "Input invalid"),))
+        bad_catalog = replace(catalog, upstream_ready=False)
+        bad_ext = replace(ext, ready_for_promotion=False)
+        staged = stage_saturn_knowledge_snapshot(bad_site, bad_catalog, bad_ext)
+        self.assertIsNotNone(staged.candidate)
+        self.assertFalse(staged.ready_for_promotion)
+        self.assertIn("site_synthetic_test_error",
+                      {issue.code for issue in staged.issues})
+        with self.assertRaises(SnapshotBuildError):
+            build_saturn_knowledge_snapshot(bad_site, bad_catalog, bad_ext)
 
     def test_atomic_activation_rejects_tampering_and_retains_old(self):
         manager = SaturnSnapshotManager()
