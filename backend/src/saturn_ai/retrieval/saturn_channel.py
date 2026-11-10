@@ -384,7 +384,7 @@ class SaturnRetrievalBundle:
         if self.dense is not None:
             if self.dense.snapshot_id != self.snapshot.snapshot_id:
                 raise ValueError("Dense snapshot mismatch")
-            self.dense.validate()
+            self.dense.validate(self.records)
         expected = _make_manifest(self.snapshot, self.records, self.documents,
                                   self.lexical, self.metadata, self.dense)
         if expected != self.manifest:
