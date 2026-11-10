@@ -1,5 +1,15 @@
 # Состояние проекта
 
+## Этап 4A — Unified Knowledge Snapshot v0.1 (2026-11-10)
+
+**Baseline:** PR #24 MERGED, \`main=01cb640e1b67ee84b4dff00afa6a798bc5203c54\`.
+**PR #25:** [feat: implement Unified Knowledge Snapshot v0.1](https://github.com/UkWood/LLM-RAG-chat-bot/pull/25), **OPEN, NOT MERGED**. Рабочая ветка \`feat/unified-knowledge-snapshot-v0.1\`.
+
+Новые Saturn-only contracts/validator/builder/atomic manager, isolated answer/document channels, stable manifest, exact source/physical PDF provenance, stage diagnostics, strict readiness gates, offline contract/integration tests. Независимый Acceptance Review после exact-head CI; merge только по отдельному разрешению. Не затронуты synthetic/registry, canonical adapters/ADR и read-only Saturn-Main-Site. Этап 4B ещё не начат.
+
+[Отчёт этапа](stages/2026-11-10-unified-knowledge-snapshot.md). Исторические разделы ниже сохраняют pre-merge статусы PR #24, не являются текущим checkpoint.
+
+
 ## PR #24 — CR-01/CR-02 Consolidated Acceptance Review Corrections (2026-11-10)
 
 Исправляющий code commit `86c352adc3bfed4cbc80265812b77f6f5a6e07b5`: заменён unbounded subprocess stdout/stderr capture на bounded multiplexed pipes с прекращением worker и reaping; signal termination перед JSON parsing детерминированно даёт resource_limit. Девять CR regression methods, **328 backend tests OK (11 skips)**, 5 project tests PASS; [push CI #42852633667](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42852633667) SUCCESS, offline-checks / onnx-contracts. Final docs/head CI и independent re-review проверять через [PR #24](https://github.com/UkWood/LLM-RAG-chat-bot/pull/24). OPEN, NOT MERGED. Production OS sandbox не реализована. Saturn-Main-Site READ-ONLY; этап 4 не начат.

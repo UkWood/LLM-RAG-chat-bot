@@ -1,5 +1,15 @@
 # Передача контекста — реализация кода
 
+## Актуальный этап 4A — Unified Knowledge Snapshot v0.1 (2026-11-10)
+
+- **PR #24 MERGED** в main: \`01cb640e1b67ee84b4dff00afa6a798bc5203c54\`.
+- **PR #25 OPEN, NOT MERGED:** [Unified Knowledge Snapshot v0.1](https://github.com/UkWood/LLM-RAG-chat-bot/pull/25); ветка \`feat/unified-knowledge-snapshot-v0.1\` от указанного main.
+- Реализованы независимые immutable contracts, validator трёх каналов, stable evidence/manifest, отдельные \`answer_evidence\` и \`document_matches\`, stage candidate и атомарный in-memory manager.
+- \`partial_text\`, failed PDF и OCR-required не могут заменить активный snapshot. Unknown data сохраняются, неопределённые relations не создают dangling evidence.
+- [Отчёт 4A](stages/2026-11-10-unified-knowledge-snapshot.md). Результаты exact-head CI — в PR #25; независимый Acceptance Review обязателен. Не выполнять merge. Этап 4B не начат. Saturn-Main-Site только READ-ONLY.
+- Все устаревшие статусы OPEN для PR #24 в исторических разделах ниже относятся к времени до его merge.
+
+
 ## PR #24 — CR-01/CR-02 исправлены (2026-11-10)
 
 Consolidated implementation head: `86c352adc3bfed4cbc80265812b77f6f5a6e07b5`. Subprocess stdout bounded во время обработки, stderr DEVNULL, shutdown/reap при отказе или timeout; returncode<0 → resource_limit до JSON parsing. Девять новых CR-01/CR-02 test methods (один прежний заменён), итого 328 backend tests OK (11 skips), 5 project tests PASS. [Push CI #42852633667](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42852633667) SUCCESS: offline-checks и onnx-contracts. Отдельный docs commit и его exact-head CI проверять по PR #24. **PR остаётся OPEN, NOT MERGED; требуется независимый Acceptance Review.** Production PDF OS isolation не реализована, Saturn-Main-Site READ-ONLY.
