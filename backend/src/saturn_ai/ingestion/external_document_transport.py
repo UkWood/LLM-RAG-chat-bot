@@ -158,13 +158,39 @@ def validate_url(url: str, policy: DocumentFetchPolicy) -> tuple[str, str, int]:
     return host, urlunsplit(("", "", parts.path, parts.query, "")), port
 
 
-def _public_addresses(host: str, port: int) -> tuple[str, ...]:
-    try:
-        answers = socket.getaddrinfo(host, port, type=socket.SOCK_STREAM,
-                                     proto=socket.IPPROTO_TCP)
-        ips = tuple(sorted({entry[4][0] for entry in answers}))
-    except (socket.gaierror, OSError, ValueError):
-        raise DocumentError("dns_or_ssrf_denied") from None
+def _public_addresses(host: str, port: int, timeout: float | None = None) -> tuple[str, ...]:
+    """Resolve once, including a deadline for potentially blocking OS DNS.
+
+    A timed-out resolver daemon may finish later; it cannot affect the pinned
+    connection. The bounded request budget limits lingering resolver threads.
+    """
+    if timeout is not None:
+        from threading import Event, Thread
+        done = Event()
+        answer = {}
+
+        def resolve():
+            try:
+                answer["value"] = socket.getaddrinfo(
+                    host, port, type=socket.SOCK_STREAM, proto=socket.IPPROTO_TCP)
+            except (socket.gaierror, OSError, ValueError):
+                answer["error"] = True
+            finally:
+                done.set()
+
+        Thread(target=resolve, daemon=True, name="saturn-pdf-dns").start()
+        if not done.wait(max(0, timeout)):
+            raise DocumentError("timeout")
+        if answer.get("error"):
+            raise DocumentError("dns_or_ssrf_denied")
+        answers = answer["value"]
+    else:
+        try:
+            answers = socket.getaddrinfo(
+                host, port, type=socket.SOCK_STREAM, proto=socket.IPPROTO_TCP)
+        except (socket.gaierror, OSError, ValueError):
+            raise DocumentError("dns_or_ssrf_denied") from None
+    ips = tuple(sorted({entry[4][0] for entry in answers}))
     if not ips:
         raise DocumentError("dns_or_ssrf_denied")
     for value in ips:
@@ -198,7 +224,7 @@ class HTTPSPdfTransport:
     def fetch(self, url: str, policy: DocumentFetchPolicy) -> bytes:
         host, target, port = validate_url(url, policy)
         started = time.monotonic()
-        addresses = _public_addresses(host, port)
+        addresses = _public_addresses(host, port, timeout=policy.download_deadline)
         if time.monotonic() - started >= policy.download_deadline:
             raise DocumentError("timeout")
         remaining = policy.download_deadline - (time.monotonic() - started)

@@ -125,6 +125,15 @@ class TransportTests(unittest.TestCase):
                         _public_addresses("www.mnppsaturn.ru", 443)
                     self.assertEqual(exc.exception.code, "dns_or_ssrf_denied")
 
+    def test_dns_deadline_fail_closed(self):
+        from threading import Event
+        slow = Event()
+        with patch("socket.getaddrinfo", side_effect=lambda *args, **kwargs: slow.wait(0.2)):
+            with self.assertRaises(DocumentError) as exc:
+                _public_addresses("www.mnppsaturn.ru", 443, timeout=0.001)
+        self.assertEqual(exc.exception.code, "timeout")
+        slow.set()
+
     def test_dns_failure_and_empty_answers(self):
         for answer in ([], socket.gaierror("bad DNS")):
             with patch("socket.getaddrinfo", side_effect=answer if isinstance(answer, Exception) else None,

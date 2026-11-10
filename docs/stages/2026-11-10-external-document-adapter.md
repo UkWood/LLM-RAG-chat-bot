@@ -31,7 +31,7 @@ Default-deny, без allowlist запросы запрещены. Exact lower-ca
 
 Фактически worker запускается через отдельный процесс Python -I -B, получает bytes только через stdin, выдаёт JSON pages/stdout. POSIX RLIMIT_AS/CPU/FSIZE/CORE, лимит процесса по времени, input/output и отказ от encrypted/active/attached content. Сохраняется физическая нумерация PDF страниц начиная с 1, включая пустые страницы в отчёте. OCR не выполняется. Извлечение текстового слоя со страниц без него не имитируется.
 
-НЕТ production-grade OS sandbox: RLIMIT и -I не устраняют все угрозы системных вызовов, сетевого доступа или filesystem. Поэтому SubprocessPdfExtractor() запрещает запуск по умолчанию (policy_denied). Для офлайн-тестов явно используется enable_development_worker=True; production запуск требует отдельного решения и внедрения OS-level confinement (seccomp/container namespace, FS/network deny и проверенной политики доступа). Также требуется оценить гарантированный DNS resolution deadline для боевой эксплуатации.
+НЕТ production-grade OS sandbox: RLIMIT и -I не устраняют все угрозы системных вызовов, сетевого доступа или filesystem. Поэтому SubprocessPdfExtractor() запрещает запуск по умолчанию (policy_denied). Для офлайн-тестов явно используется enable_development_worker=True; production запуск требует отдельного решения и внедрения OS-level confinement (seccomp/container namespace, FS/network deny и проверенной политики доступа). Для блокирующего DNS lookup введён bounded daemon resolver с общим download deadline; остаточные зависшие daemon DNS threads ограничиваются лимитом числа документов, но требуют эксплуатационной оценки.
 
 PDF reader/worker не выполняет OCR, JavaScript или вложения. Данный модуль не объявляется production-safe.
 
