@@ -1,5 +1,15 @@
 # Передача контекста — реализация кода
 
+## Актуальный handoff — этап 3A, 2026-11-10
+
+- PR #22 **MERGED** в `main` коммитом `ff9baa8819714d5cb4ba9c61827dbf4666acd0b6`; main CI [#42777814511](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42777814511) SUCCESS.
+- Текущая implementation branch: `feat/support-catalog-adapter-v0.1`, base exact merge commit выше. Этап: Support Catalog Adapter v0.1; до независимого Acceptance Review PR **не сливать**.
+- Interface: `adapt_support_catalog(SiteContentPackage) -> SupportCatalogResult`; `documents`, `pdf_candidates`, `occurrences` (полная metadata/provenance всех вхождений), `issues`, `ready_for_promotion`.
+- Support Catalog pure/offline, получает результат существующего site adapter; не делает fetch, PDF parsing, approvals или мутации source. Документы вне PDF остаются metadata-only; PDF candidates отделены от extracted evidence.
+- См. [stage report](stages/2026-11-10-support-catalog-adapter.md); exact branch SHA и CI проверять после последних изменений.
+- Весь следующий текст о PR #22 OPEN и ожидающемся ревью сохранён как **исторический checkpoint до merge**, а не текущий статус.
+
+
 Дата: 2026-11-10  
 Основной репозиторий: [UkWood/LLM-RAG-chat-bot](https://github.com/UkWood/LLM-RAG-chat-bot)  
 Текущий этап: GitHub Snapshot Provider v0.1 — [PR #22](https://github.com/UkWood/LLM-RAG-chat-bot/pull/22)
