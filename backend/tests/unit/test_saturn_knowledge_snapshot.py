@@ -93,7 +93,7 @@ class SaturnKnowledgeSnapshotTests(unittest.TestCase):
         self.assertEqual(len(snapshot.document_matches), len(catalog.documents))
         self.assertEqual(len(snapshot.document_occurrences), len(catalog.occurrences))
         self.assertEqual({x.evidence_type for x in snapshot.answer_evidence},
-                         {"site_field", "site_passage", "pdf_passage"})
+                         {"site_field", "site_passage", "relation", "pdf_passage"})
         self.assertEqual(sorted(e.page_number for e in snapshot.answer_evidence
                                 if e.evidence_type == "pdf_passage"), [1, 2])
         for e in snapshot.answer_evidence:
