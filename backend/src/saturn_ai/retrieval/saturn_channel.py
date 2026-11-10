@@ -9,6 +9,7 @@ from hashlib import sha256
 import json
 from math import isfinite, log
 from threading import RLock
+from types import MappingProxyType
 import re
 
 from ..ingestion.saturn_contracts import canonical_json, stable_id
@@ -16,8 +17,8 @@ from ..saturn_knowledge_contracts import (
     DocumentMatch, SaturnKnowledgeSnapshot, SaturnSnapshotManager,
 )
 
-REPRESENTATION_VERSION = "saturn-evidence-representation/0.1.0"
-TOKENIZER_VERSION = "saturn-technical-tokenizer/0.1.0"
+REPRESENTATION_VERSION = "saturn-evidence-representation/0.1.1"
+TOKENIZER_VERSION = "saturn-technical-tokenizer/0.2.0"
 ALIAS_VERSION = "saturn-explicit-dictionary-alias/0.1.0"
 BM25_K1 = 1.2
 BM25_B = 0.75
@@ -31,13 +32,18 @@ MAX_TOTAL_CHARS = 2_000_000
 MAX_DIMENSIONS = 8192
 MAX_EMBEDDING_BATCH = 16
 MAX_VECTOR_VALUES = 2_000_000
-_TOKEN = re.compile(r"[^\W_]+(?:[-./][^\W_]+)*", re.UNICODE)
+# Signed numeric tokens are matched BEFORE general technical identifiers.
+# U+2212 (mathematical minus) is normalized to ASCII hyphen-minus ONLY
+# when it participates in a numeric token. Comma/dot decimals are preserved
+# as written; range punctuation is retained, never interpreted.
+_NUMERIC = r"[+\\-\\u2212]?\\d+(?:[.,]\\d+)*(?:(?:\\.\\.|…|–|—|-)\\s*[+\\-\\u2212]?\\d+(?:[.,]\\d+)*)?"
+_TOKEN = re.compile(r"(?<![\\w])" + _NUMERIC + r"(?![\\w])|[^\\W_]+(?:[-./][^\\W_]+)*", re.UNICODE)
 
 
 def tokenize(text: str) -> tuple[str, ...]:
     if not isinstance(text, str):
         raise TypeError("Search text must be a string")
-    return tuple(_TOKEN.findall(text.casefold()))
+    return tuple(token.replace("\u2212", "-") for token in _TOKEN.findall(text.casefold()))
 
 
 def _hash(value) -> str:
@@ -308,8 +314,7 @@ def _dictionary_aliases(snapshot):
     return {key: tuple(sorted(values)) for key, values in sorted(result.items())}
 
 
-def _bm25(query: str, texts, limit: int, aliases=None):
-    """Same BM25 mathematical baseline as retrieval.lexical; deterministic ties."""
+def _expanded_terms(query, aliases=None):
     terms = set(tokenize(query))
     if aliases:
         additions = []
@@ -318,70 +323,132 @@ def _bm25(query: str, texts, limit: int, aliases=None):
             if len(additions) >= 32:
                 break
         terms.update(additions[:32])
-    if not terms or not texts:
+    return terms
+
+
+def _score_prepared(query, prepared, allowed, limit, aliases=None):
+    """BM25 using precomputed (id, sorted term frequencies, length).
+
+    Document-frequency, N and average length are recalculated only from
+    policy-eligible records, preserving the previous filtered-corpus semantics.
+    Search never tokenizes unchanged document text or reads evaluation labels.
+    """
+    terms = _expanded_terms(query, aliases)
+    if not terms:
         return ()
-    corpus = [(key, tokenize(text)) for key, text in texts]
+    corpus = [(cid, freqs, length) for cid, freqs, length in prepared if cid in allowed]
+    if not corpus:
+        return ()
     n = len(corpus)
-    avg = sum(len(tokens) for _, tokens in corpus) / n
-    if avg == 0:
+    average = sum(length for _, _, length in corpus) / n
+    if not average:
         return ()
-    dfs = Counter(t for _, words in corpus for t in set(words))
+    frequencies = Counter(term for _, freq, _ in corpus for term, count in freq if count)
     scored = []
-    for key, words in corpus:
-        tf = Counter(words)
-        score = 0.0
+    for cid, freq, length in corpus:
+        counts = dict(freq)
+        score = 0.
         for term in sorted(terms):
-            if not tf[term]:
+            tf = counts.get(term, 0)
+            if not tf:
                 continue
-            score += log(1 + (n - dfs[term] + 0.5) / (dfs[term] + 0.5)) * (
-                tf[term] * (BM25_K1 + 1) /
-                (tf[term] + BM25_K1 * (1 - BM25_B + BM25_B * len(words) / avg)))
+            score += log(1 + (n - frequencies[term] + 0.5) / (frequencies[term] + 0.5)) * (
+                tf * (BM25_K1 + 1) /
+                (tf + BM25_K1 * (1 - BM25_B + BM25_B * length / average)))
         if not isfinite(score):
             raise ValueError("Non-finite lexical score")
         if score > 0:
-            scored.append((key, score))
+            scored.append((cid, score))
     return tuple(sorted(scored, key=lambda pair: (-pair[1], pair[0]))[:limit])
 
 
+def _bm25(query: str, texts, limit: int, aliases=None):
+    """Reference implementation for parity tests; NOT the query-time index."""
+    prepared = []
+    for cid, text in texts:
+        words = tokenize(text)
+        prepared.append((cid, tuple(sorted(Counter(words).items())), len(words)))
+    return _score_prepared(query, prepared, {cid for cid, _ in texts}, limit, aliases)
+
+
+@dataclass(frozen=True)
 class SaturnBM25Index:
+    tokens: tuple[tuple[str, tuple[str, ...]], ...]
+    _prepared: tuple[tuple[str, tuple[tuple[str, int], ...], int], ...]
+    coverage_hash: str
+
     def __init__(self, records):
-        self.tokens = tuple((r.evidence_id, tokenize(r.text)) for r in records)
-        self.coverage_hash = _hash(self.tokens)
+        tokens = tuple((r.evidence_id, tokenize(r.text)) for r in records)
+        prepared = tuple((cid, tuple(sorted(Counter(words).items())), len(words))
+                         for cid, words in tokens)
+        object.__setattr__(self, "tokens", tokens)
+        object.__setattr__(self, "_prepared", prepared)
+        object.__setattr__(self, "coverage_hash", _hash((tokens, prepared)))
 
     def validate(self, records):
         expected = tuple((r.evidence_id, tokenize(r.text)) for r in records)
-        if expected != self.tokens or self.coverage_hash != _hash(self.tokens):
+        prepared = tuple((cid, tuple(sorted(Counter(words).items())), len(words))
+                         for cid, words in expected)
+        if (expected != self.tokens or prepared != self._prepared or
+                self.coverage_hash != _hash((self.tokens, self._prepared))):
             raise ValueError("Tampered Saturn BM25 index")
 
     def search(self, query, records, allowed, aliases=None):
-        self.validate(records)
-        return _bm25(query, [(r.evidence_id, r.text) for r in records if r.evidence_id in allowed],
-                     CANDIDATE_LIMIT, aliases)
+        if len(records) != len(self._prepared):
+            raise ValueError("Prepared BM25 record cardinality mismatch")
+        return _score_prepared(query, self._prepared, allowed, CANDIDATE_LIMIT, aliases)
 
 
+@dataclass(frozen=True)
 class SaturnMetadataIndex:
+    tokens: tuple[tuple[str, tuple[str, ...]], ...]
+    _prepared: tuple[tuple[str, tuple[tuple[str, int], ...], int], ...]
+    coverage_hash: str
+
     def __init__(self, records):
-        self.tokens = tuple((r.match.document.document_id, tokenize(r.text)) for r in records)
-        self.coverage_hash = _hash(self.tokens)
+        tokens = tuple((r.match.document.document_id, tokenize(r.text)) for r in records)
+        prepared = tuple((cid, tuple(sorted(Counter(words).items())), len(words))
+                         for cid, words in tokens)
+        object.__setattr__(self, "tokens", tokens)
+        object.__setattr__(self, "_prepared", prepared)
+        object.__setattr__(self, "coverage_hash", _hash((tokens, prepared)))
 
     def validate(self, records):
         expected = tuple((r.match.document.document_id, tokenize(r.text)) for r in records)
-        if self.tokens != expected or self.coverage_hash != _hash(self.tokens):
+        prepared = tuple((cid, tuple(sorted(Counter(words).items())), len(words))
+                         for cid, words in expected)
+        if (self.tokens != expected or self._prepared != prepared or
+                self.coverage_hash != _hash((self.tokens, self._prepared))):
             raise ValueError("Tampered Saturn document index")
 
     def search(self, query, records, allowed, aliases=None):
-        self.validate(records)
-        return _bm25(query, [(r.match.document.document_id, r.text) for r in records
-                             if r.match.document.document_id in allowed], CANDIDATE_LIMIT, aliases)
+        if len(records) != len(self._prepared):
+            raise ValueError("Prepared metadata record cardinality mismatch")
+        return _score_prepared(query, self._prepared, allowed, CANDIDATE_LIMIT, aliases)
 
 
+@dataclass(frozen=True)
 class SaturnRetrievalBundle:
-    """Process-local immutable search corpus with independently checked artifacts."""
+    """Frozen snapshot + exact index bindings, swapped as ONE active pointer."""
+    snapshot: SaturnKnowledgeSnapshot
+    records: tuple[SearchRecord, ...]
+    documents: tuple[DocumentRecord, ...]
+    lexical: SaturnBM25Index
+    metadata: SaturnMetadataIndex
+    dense: object | None
+    manifest: SaturnIndexManifest
+    aliases: object
+
     def __init__(self, snapshot, records, documents, lexical, metadata, dense, manifest):
-        self.snapshot, self.records, self.documents = snapshot, records, documents
-        self.lexical, self.metadata, self.dense = lexical, metadata, dense
-        self.aliases = _dictionary_aliases(snapshot)
-        self.manifest = manifest
+        object.__setattr__(self, "snapshot", snapshot)
+        object.__setattr__(self, "records", tuple(records))
+        object.__setattr__(self, "documents", tuple(documents))
+        object.__setattr__(self, "lexical", lexical)
+        object.__setattr__(self, "metadata", metadata)
+        object.__setattr__(self, "dense", dense)
+        object.__setattr__(self, "manifest", manifest)
+        # Read-only mapping; no shared mutable dict escapes into a published bundle.
+        object.__setattr__(self, "aliases", MappingProxyType(_dictionary_aliases(snapshot)))
 
     def validate(self):
         if not isinstance(self.snapshot, SaturnKnowledgeSnapshot):
@@ -508,17 +575,59 @@ class SaturnRetrievalService:
     def publish(self, bundle: SaturnRetrievalBundle):
         if not isinstance(bundle, SaturnRetrievalBundle):
             raise ValueError("Invalid Saturn retrieval bundle")
-        # Includes the strict 4A source-replay validation, not a hash-only check.
-        _valid_snapshot(bundle.snapshot)
-        bundle.validate()
-        with self._lock:
-            self._active = bundle
+        dense = bundle.dense
+        # Retain the candidate index before structural checks: an external
+        # close() cannot destroy it between validation and atomic publication.
+        if dense is not None:
+            dense._retain()
+        try:
+            _valid_snapshot(bundle.snapshot)
+            bundle.validate()
+            with self._lock:
+                previous = self._active
+                if previous is bundle:
+                    # The active bundle already owns one separate retain.
+                    if dense is not None:
+                        dense._release()
+                    return bundle.manifest.bundle_id
+                self._active = bundle
+            if previous is not None and previous.dense is not None:
+                # Retire only after swap. In-flight queries have their own
+                # retain and finish before the old Qdrant client is closed.
+                previous.dense.close()
+                previous.dense._release()
             return bundle.manifest.bundle_id
+        except BaseException:
+            # Do not release active ownership after a successful swap.
+            # An invalid candidate never changes the authoritative pointer.
+            if self.capture_or_none() is not bundle and dense is not None:
+                dense._release()
+            raise
+
+    def capture_or_none(self):
+        with self._lock:
+            return self._active
 
     def search_saturn(self, query: str, *, mode="lexical", top_k=5):
         _valid_query(query, top_k, mode)
-        bundle = self.capture()  # capture exactly once before any search work
-        bundle.validate()
+        # Capture under the same publication lock and retain an in-flight
+        # Qdrant lease BEFORE the old active bundle can be retired.
+        with self._lock:
+            bundle = self._active
+            if bundle is None:
+                raise LookupError("No active Saturn retrieval bundle")
+            dense = bundle.dense
+            if dense is not None:
+                dense._retain()
+        try:
+            return self._search_captured(bundle, query, mode, top_k)
+        finally:
+            if dense is not None:
+                dense._release()
+
+    def _search_captured(self, bundle, query, mode, top_k):
+        # Indexes were structurally validated on publication and thereafter
+        # sealed. No repeated full-corpus tokenization per query.
         if mode != "lexical" and bundle.dense is None:
             raise RuntimeError("Dense index/encoder unavailable; no hidden lexical fallback")
 
