@@ -11,6 +11,7 @@ from math import isfinite, log
 from threading import RLock
 from types import MappingProxyType
 import re
+import warnings
 
 from ..ingestion.saturn_contracts import canonical_json, stable_id
 from ..saturn_knowledge_contracts import (
@@ -364,6 +365,7 @@ def _score_prepared(query, prepared, allowed, limit, aliases=None):
 
 def _bm25(query: str, texts, limit: int, aliases=None):
     """Reference implementation for parity tests; NOT the query-time index."""
+    texts = tuple(texts)
     prepared = []
     for cid, text in texts:
         words = tokenize(text)
@@ -606,11 +608,17 @@ class SaturnRetrievalService:
             object.__setattr__(self, "_active", bundle)
         if previous is not None and previous.dense is not None:
             # Close is deferred until the old active retain AND all in-flight
-            # query retains have been released. Cleanup is not a rollback.
+            # query retains have been released. The pointer is ALREADY committed:
+            # cleanup errors must not turn a successful publish into a reported
+            # failure, and never roll the active pointer back.
             try:
-                previous.dense.close()
-            finally:
-                previous.dense._release()
+                try:
+                    previous.dense.close()
+                finally:
+                    previous.dense._release()
+            except Exception as exc:
+                warnings.warn("Retired Qdrant cleanup error: " +
+                              type(exc).__name__, RuntimeWarning)
         return bundle.manifest.bundle_id
 
     def search_saturn(self, query: str, *, mode="lexical", top_k=5):
