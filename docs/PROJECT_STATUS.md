@@ -1,5 +1,14 @@
 # Состояние проекта
 
+## Текущий этап 3A — Support Catalog Adapter v0.1 (2026-11-10)
+
+**Основа:** PR #22 MERGED в `main`, merge commit `ff9baa8819714d5cb4ba9c61827dbf4666acd0b6`; main CI [#42777814511](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42777814511) SUCCESS.
+
+**В работе:** `feat/support-catalog-adapter-v0.1` от указанного main. Реализуется чистый offline каталогизатор `SiteContentPackage → SupportDocument[]`, отдельные PDF-кандидаты и источник-специфичные occurrences/diagnostics. Canonical contracts, Site Content Adapter, ADR и сайт не меняются. Exact PR head/CI фиксировать после завершения проверок; без независимого Acceptance Review merge запрещён.
+
+[Детали и ограничения этапа](stages/2026-11-10-support-catalog-adapter.md). Предыдущая запись о PR #22 ниже — исторический pre-merge checkpoint; статус OPEN утратил актуальность после merge.
+
+
 ## GitHub Snapshot Provider v0.1 — PR #22 consolidated review corrections (2026-11-10)
 
 **PR #22:** [feat: implement GitHub Snapshot Provider v0.1](https://github.com/UkWood/LLM-RAG-chat-bot/pull/22) — **OPEN; NOT MERGED; awaiting independent re-review**.
