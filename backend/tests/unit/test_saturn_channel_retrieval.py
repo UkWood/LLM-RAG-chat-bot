@@ -3,9 +3,10 @@
 Controlled vectors test Qdrant integration, not real semantic quality.
 """
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import replace
+from dataclasses import FrozenInstanceError, replace
 from hashlib import sha256
 from pathlib import Path
+from threading import Event
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 from qdrant_client import models
@@ -20,7 +21,8 @@ from saturn_ai.ingestion.external_document_transport import DocumentFetchPolicy
 from saturn_ai.retrieval.saturn_channel import (
     SaturnOperationalPolicy, SaturnPolicyProvider, SaturnRetrievalService,
     build_saturn_retrieval_bundle, search_saturn, tokenize, _bm25,
-    _check_channel, _candidate,
+    _check_channel, _candidate, SaturnBM25Index, SearchRecord,
+    TOKENIZER_VERSION, _make_manifest,
 )
 from saturn_ai.saturn_knowledge_snapshot import build_saturn_knowledge_snapshot
 from unit.test_saturn_knowledge_snapshot import (
@@ -222,16 +224,16 @@ class SaturnRetrievalTests(unittest.TestCase):
         service = SaturnRetrievalService()
         service.publish(bundle)
         other = build_saturn_retrieval_bundle(self.snap)
-        other.lexical.tokens = ()
+        object.__setattr__(other.lexical, 'tokens', ())
         with self.assertRaises(ValueError):
             service.publish(other)
         self.assertIs(service.capture(), bundle)
         other2 = build_saturn_retrieval_bundle(self.snap)
-        other2.metadata.tokens = ()
+        object.__setattr__(other2.metadata, 'tokens', ())
         with self.assertRaises(ValueError):
             service.publish(other2)
         other3 = build_saturn_retrieval_bundle(self.snap)
-        other3.manifest = replace(other3.manifest, evidence_count=0)
+        object.__setattr__(other3, 'manifest', replace(other3.manifest, evidence_count=0))
         with self.assertRaises(ValueError):
             service.publish(other3)
         self.assertIs(service.capture(), bundle)
@@ -241,7 +243,7 @@ class SaturnRetrievalTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             build_saturn_retrieval_bundle(forged)
         failed = build_saturn_retrieval_bundle(self.snap)
-        failed.records = failed.records[:-1]
+        object.__setattr__(failed, 'records', failed.records[:-1])
         with self.assertRaises(ValueError):
             SaturnRetrievalService().publish(failed)
 
@@ -257,7 +259,12 @@ class SaturnRetrievalTests(unittest.TestCase):
             service = SaturnRetrievalService()
             service.publish(restored)
             self.assertTrue(service.search_saturn("BACnet", mode="dense").answer_evidence)
+            # Published Qdrant close is deferred until retirement, including
+            # Windows local-path locks; a lexical successor retires it.
             restored.dense.close()
+            self.assertFalse(restored.dense._lifetime.closed)
+            service.publish(build_saturn_retrieval_bundle(self.snap))
+            self.assertTrue(restored.dense._lifetime.closed)
 
     def test_tampered_qdrant_payload_and_points_fail_closed(self):
         bundle = build_saturn_retrieval_bundle(self.snap, encoder=ControlledEncoder())
@@ -274,11 +281,14 @@ class SaturnRetrievalTests(unittest.TestCase):
         bundle = build_saturn_retrieval_bundle(self.snap, encoder=ControlledEncoder())
         dense = bundle.dense
         original = dense._payloads
-        dense._payloads = (dict(original[0], source_revision_id="forged"), *original[1:])
+        object.__setattr__(dense, "_payloads", (
+            tuple(sorted(dict(original[0], source_revision_id="forged").items())),
+            *original[1:]))
         with self.assertRaisesRegex(ValueError, "canonical evidence"):
             bundle.validate()
-        dense._payloads = original
-        dense.point_ids = ("00000000-0000-4000-8000-000000000000", *dense.point_ids[1:])
+        object.__setattr__(dense, '_payloads', original)
+        object.__setattr__(dense, "point_ids",
+            ("00000000-0000-4000-8000-000000000000", *dense.point_ids[1:]))
         with self.assertRaisesRegex(ValueError, "point IDs"):
             bundle.validate()
         dense.close()
@@ -397,7 +407,7 @@ class SaturnRetrievalTests(unittest.TestCase):
         second = build_saturn_retrieval_bundle(fixture_snapshot(commit="b"*40))
         service = SaturnRetrievalService()
         service.publish(first)
-        second.lexical.tokens = ()
+        object.__setattr__(second.lexical, 'tokens', ())
         with self.assertRaises(ValueError):
             service.publish(second)
         self.assertIs(service.capture(), first)
@@ -422,6 +432,230 @@ class SaturnRetrievalTests(unittest.TestCase):
                                 for c in result.answer_evidence))
             self.assertTrue(all(d.snapshot_id == result.snapshot_id
                                 for d in result.document_matches))
+
+    def test_cr01_published_bundle_and_nested_bindings_reject_assignment(self):
+        bundle = build_saturn_retrieval_bundle(self.snap, encoder=ControlledEncoder())
+        service = SaturnRetrievalService()
+        service.publish(bundle)
+        for attr, replacement in (
+            ("snapshot", fixture_snapshot(commit="b"*40)),
+            ("records", ()),
+            ("documents", ()),
+            ("lexical", SaturnBM25Index(bundle.records)),
+            ("metadata", None),
+            ("dense", None),
+            ("manifest", replace(bundle.manifest, evidence_count=0)),
+            ("aliases", {}),
+        ):
+            with self.subTest(attr=attr), self.assertRaises(FrozenInstanceError):
+                setattr(bundle, attr, replacement)
+        for attr, replacement in (
+            ("tokens", ()),
+            ("_prepared", ()),
+            ("coverage_hash", "tampered"),
+        ):
+            with self.subTest(index_attr=attr), self.assertRaises(FrozenInstanceError):
+                setattr(bundle.lexical, attr, replacement)
+                setattr(bundle.metadata, attr, replacement)
+        with self.assertRaises(TypeError):
+            bundle.aliases["rs485"] = ("tampered",)
+        for attr in ("snapshot_id", "_payloads", "point_ids", "_client", "collection"):
+            with self.subTest(dense_attr=attr), self.assertRaises(FrozenInstanceError):
+                setattr(bundle.dense, attr, None)
+        self.assertIs(service.capture(), bundle)
+        self.assertEqual(service.search_saturn("BACnet", mode="hybrid").snapshot_id,
+                         bundle.snapshot.snapshot_id)
+        service.publish(build_saturn_retrieval_bundle(self.snap))
+        self.assertTrue(bundle.dense._lifetime.closed)
+
+    def test_cr01_close_active_dense_is_deferred_until_retirement(self):
+        old = build_saturn_retrieval_bundle(self.snap, encoder=ControlledEncoder())
+        service = SaturnRetrievalService()
+        service.publish(old)
+        old.dense.close()
+        self.assertFalse(old.dense._lifetime.closed)
+        self.assertTrue(service.search_saturn("BACnet", mode="dense").answer_evidence)
+        service.publish(build_saturn_retrieval_bundle(self.snap))
+        self.assertTrue(old.dense._lifetime.closed)
+
+    def test_cr01_old_inflight_dense_query_finishes_after_new_publication(self):
+        old = build_saturn_retrieval_bundle(self.snap, encoder=ControlledEncoder())
+        new = build_saturn_retrieval_bundle(
+            fixture_snapshot(commit="b"*40), encoder=ControlledEncoder())
+        service = SaturnRetrievalService()
+        service.publish(old)
+        entered, resume = Event(), Event()
+        method = type(old.dense).search
+        def delayed(index, query, allowed):
+            if index is old.dense:
+                entered.set()
+                if not resume.wait(timeout=15):
+                    raise AssertionError("Timed out waiting for publication")
+            return method(index, query, allowed)
+        try:
+            with patch.object(type(old.dense), "search", delayed), \
+                 ThreadPoolExecutor(max_workers=2) as pool:
+                future = pool.submit(service.search_saturn, "BACnet",
+                                     mode="hybrid", top_k=10)
+                self.assertTrue(entered.wait(timeout=10))
+                service.publish(new)
+                self.assertFalse(old.dense._lifetime.closed)
+                self.assertIs(service.capture(), new)
+                fresh = service.search_saturn("BACnet", mode="hybrid", top_k=10)
+                self.assertEqual(fresh.snapshot_id, new.snapshot.snapshot_id)
+                resume.set()
+                in_flight = future.result(timeout=20)
+            self.assertEqual(in_flight.snapshot_id, old.snapshot.snapshot_id)
+            self.assertEqual(in_flight.bundle_id, old.manifest.bundle_id)
+            self.assertTrue(all(x.snapshot_id == in_flight.snapshot_id
+                                for x in in_flight.answer_evidence))
+            self.assertTrue(old.dense._lifetime.closed)
+            self.assertFalse(new.dense._lifetime.closed)
+        finally:
+            resume.set()
+            service.publish(build_saturn_retrieval_bundle(self.snap))
+
+    def test_cr01_concurrent_mutation_attempts_and_publication(self):
+        old = build_saturn_retrieval_bundle(self.snap)
+        revisions = [build_saturn_retrieval_bundle(fixture_snapshot(commit=x*40))
+                     for x in "bcd"]
+        service = SaturnRetrievalService()
+        service.publish(old)
+        def reader(_):
+            result = service.search_saturn("BACnet", top_k=30)
+            with self.assertRaises(FrozenInstanceError):
+                service.capture().manifest = old.manifest
+            return result
+        with ThreadPoolExecutor(max_workers=7) as pool:
+            futures = [pool.submit(reader, i) for i in range(35)]
+            publishes = [pool.submit(service.publish, item) for item in revisions]
+            results = [f.result(timeout=25) for f in futures]
+            published = [f.result(timeout=25) for f in publishes]
+        known = {x.manifest.bundle_id: x.snapshot.snapshot_id for x in [old, *revisions]}
+        self.assertEqual(set(published), set(known) - {old.manifest.bundle_id})
+        for result in results:
+            self.assertEqual(result.snapshot_id, known[result.bundle_id])
+            self.assertEqual(result.index_manifest.snapshot_id, result.snapshot_id)
+            self.assertTrue(all(x.snapshot_id == result.snapshot_id
+                                for x in result.answer_evidence))
+        self.assertIn(service.capture(), revisions)
+
+    def test_cr02_prepared_bm25_never_retokenizes_record_text_on_search(self):
+        service = SaturnRetrievalService()
+        bundle = build_saturn_retrieval_bundle(self.snap)
+        service.publish(bundle)
+        with patch("saturn_ai.retrieval.saturn_channel.tokenize", wraps=tokenize) as spy:
+            for _ in range(3):
+                self.assertTrue(service.search_saturn("RS-485").answer_evidence)
+            self.assertEqual(spy.call_count, 6)  # 3 queries x 2 separate channels
+            self.assertTrue(all(call.args == ("RS-485",) for call in spy.call_args_list))
+        self.assertEqual(bundle.lexical.coverage_hash, bundle.lexical.coverage_hash)
+
+    def test_cr02_prepared_policy_filtered_scoring_matches_reference(self):
+        sample = [
+            SearchRecord(key, "site_passage", "snap", "rev", None,
+                         "body:line=1-1", None, text, sha256(text.encode()).hexdigest())
+            for key, text in (
+                ("a", "alpha alpha beta"), ("b", "alpha beta"),
+                ("c", "alpha gamma gamma"), ("d", "beta beta"),
+            )
+        ]
+        index = SaturnBM25Index(sample)
+        for allowed in (set(x.evidence_id for x in sample), {"a", "c"}, {"b"},
+                        {"d"}, set()):
+            for query in ("alpha", "beta gamma", "none"):
+                with self.subTest(allowed=allowed, query=query):
+                    reference = _bm25(query, [(r.evidence_id, r.text) for r in sample
+                                              if r.evidence_id in allowed], 40)
+                    self.assertEqual(index.search(query, sample, allowed), reference)
+        self.assertEqual(index.search("none", sample, {"a", "b"}), ())
+
+    def test_cr02_add_remove_evidence_rebuilds_prepared_index(self):
+        small = build_saturn_knowledge_snapshot(*make_inputs({
+            PRODUCT: source("Instrument", body="## Note\nOne\n")
+        }))
+        large = build_saturn_knowledge_snapshot(*make_inputs({
+            PRODUCT: source("Instrument", fields="novel_field: 37\n",
+                            body="## Note\nOne\nTwo new passages\n"),
+            SECOND: source("Extra", body="New evidence")
+        }))
+        initial = build_saturn_retrieval_bundle(small)
+        updated = build_saturn_retrieval_bundle(large)
+        self.assertNotEqual(initial.manifest.bundle_id, updated.manifest.bundle_id)
+        self.assertNotEqual(initial.lexical.coverage_hash, updated.lexical.coverage_hash)
+        self.assertNotEqual(initial.lexical._prepared, updated.lexical._prepared)
+        service = SaturnRetrievalService()
+        service.publish(initial)
+        old = service.search_saturn("novel_field")
+        self.assertFalse(old.answer_evidence)
+        service.publish(updated)
+        self.assertTrue(service.search_saturn("novel_field").answer_evidence)
+        service.publish(initial)
+        self.assertFalse(service.search_saturn("novel_field").answer_evidence)
+
+    def test_cr02_corrupted_prepared_counts_or_tokens_fail_publication(self):
+        service = SaturnRetrievalService()
+        good = build_saturn_retrieval_bundle(self.snap)
+        service.publish(good)
+        for component, attribute, value in (
+            ("lexical", "tokens", ()),
+            ("lexical", "_prepared", ()),
+            ("metadata", "tokens", ()),
+            ("metadata", "_prepared", ()),
+        ):
+            with self.subTest(component=component, attribute=attribute):
+                candidate = build_saturn_retrieval_bundle(self.snap)
+                object.__setattr__(getattr(candidate, component), attribute, value)
+                with self.assertRaises(ValueError):
+                    service.publish(candidate)
+                self.assertIs(service.capture(), good)
+
+    def test_cr03_signed_decimal_range_and_identifiers_tokens(self):
+        self.assertEqual(tokenize("-20 +20 20 −20"), ("-20", "+20", "20", "-20"))
+        self.assertNotEqual(tokenize("-20"), tokenize("+20"))
+        self.assertNotEqual(tokenize("-20"), tokenize("20"))
+        self.assertEqual(tokenize("0,5 0.5 0 5"), ("0,5", "0.5", "0", "5"))
+        self.assertEqual(tokenize("-20..+20 10-20 5–7"),
+                         ("-20..+20", "10-20", "5–7"))
+        self.assertEqual(tokenize("RS-485 БКД-ПК-РФ.2 БКД-ПК-RF.2"),
+                         ("rs-485", "бкд-пк-рф.2", "бкд-пк-rf.2"))
+
+    def test_cr03_numeric_ranking_preserves_sign_and_decimal(self):
+        values = ("-20", "+20", "20", "−20", "0,5", "0.5", "-20..+20")
+        records = tuple(SearchRecord(str(i), "site_passage", "snap", "rev",
+                        None, "body:line=1-1", None, "температура "+value+" °C",
+                        sha256(value.encode()).hexdigest())
+                        for i, value in enumerate(values))
+        index = SaturnBM25Index(records)
+        allowed = {r.evidence_id for r in records}
+        expected = {
+            "-20": {"0", "3"},
+            "+20": {"1"},
+            "20": {"2"},
+            "0,5": {"4"},
+            "0.5": {"5"},
+            "-20..+20": {"6"},
+        }
+        for query, ids in expected.items():
+            with self.subTest(query=query):
+                result = index.search(query, records, allowed)
+                self.assertEqual({cid for cid, _ in result}, ids)
+                self.assertEqual(result, index.search(query, records, allowed))
+        self.assertEqual(index.search("−20", records, allowed),
+                         index.search("-20", records, allowed))
+
+    def test_cr03_tokenizer_version_changes_lexical_identity(self):
+        bundle = build_saturn_retrieval_bundle(self.snap)
+        self.assertEqual(bundle.manifest.tokenizer_version, TOKENIZER_VERSION)
+        with patch("saturn_ai.retrieval.saturn_channel.TOKENIZER_VERSION",
+                   "saturn-technical-tokenizer/next"):
+            updated = _make_manifest(bundle.snapshot, bundle.records, bundle.documents,
+                                     bundle.lexical, bundle.metadata, bundle.dense)
+        self.assertNotEqual(updated.lexical_config_hash,
+                            bundle.manifest.lexical_config_hash)
+        self.assertNotEqual(updated.bundle_id, bundle.manifest.bundle_id)
+        self.assertEqual(bundle.manifest,
+                         build_saturn_retrieval_bundle(self.snap).manifest)
 
     def test_source_derived_saturn_fixture_integration_offline(self):
         paths = {}
