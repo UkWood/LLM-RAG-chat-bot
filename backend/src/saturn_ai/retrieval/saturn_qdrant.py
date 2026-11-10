@@ -166,7 +166,9 @@ class SaturnQdrantIndex:
         # Query covers all bounded eligible points, then ties use stable IDs.
         # Qdrant float32 values can change near-ties at 1e-7.
         scored.sort(key=lambda x: (-round(x[1], 6), x[0]))
-        return tuple(scored[:CANDIDATE_LIMIT])
+        # Qdrant local cosine may vary at ~1e-12 between identical calls;
+        # expose the same six-decimal precision used for deterministic ranking.
+        return tuple((eid, round(score, 6)) for eid, score in scored[:CANDIDATE_LIMIT])
 
     def close(self):
         self._client.close()
