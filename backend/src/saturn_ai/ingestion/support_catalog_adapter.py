@@ -14,8 +14,8 @@ from .saturn_site_adapter import SiteContentPackage, SiteParseIssue
 
 CATALOG_VERSION = "saturn-support-catalog/0.1.0"
 
-_INLINE = re.compile(r'(?<!!)\[([^\]\n]+)\]\(\s*(<[^>\n]+>|[^)\s]+)(?:\s+["\x27][^"\x27]+["\x27])?\s*\)')
-_REFERENCE = re.compile(r'(?<!!)\[([^\]\n]+)\](?:\[([^\]\n]*)\])?')
+_INLINE = re.compile(r'(?<![!\\])\[([^\]\n]+)\]\(\s*(<[^>\n]+>|(?:[^()\s]|\([^()\n]*\))+)(?:\s+["\x27][^"\x27]+["\x27])?\s*\)')
+_REFERENCE = re.compile(r'(?<![!\\])\[([^\]\n]+)\](?:\[([^\]\n]*)\])?')
 _DEFINITION = re.compile(r'^\s{0,3}\[([^\]\n]+)\]:\s*(?:<([^>\n]+)>|(\S+))')
 _HTML = re.compile(r'<a\b[^>]*\bhref\s*=\s*(["\x27])([^"\x27]+)\1[^>]*>', re.I)
 _FENCE = re.compile(r'^\s{0,3}(' + chr(96) + r'{3,}|~{3,})')
@@ -157,6 +157,33 @@ def _mask_inline_code(line: str) -> str:
     return "".join(chars)
 
 
+def _mask_html_comments(line: str, inside: bool) -> tuple[str, bool]:
+    """Suppress HTML comments, including multiline comments, at exact offsets."""
+    chars = list(line)
+    pos = 0
+    while pos < len(line):
+        if inside:
+            end = line.find("-->", pos)
+            stop = len(line) if end < 0 else end + 3
+            for i in range(pos, stop):
+                chars[i] = " "
+            if end < 0:
+                break
+            inside = False
+            pos = stop
+            continue
+        start = line.find("<!--", pos)
+        if start < 0:
+            break
+        end = line.find("-->", start + 4)
+        stop = len(line) if end < 0 else end + 3
+        for i in range(start, stop):
+            chars[i] = " "
+        inside = end < 0
+        pos = stop
+    return "".join(chars), inside
+
+
 def _markdown_links(body: str):
     """Yield direct links with one-based line, column, heading and occurrence.
 
@@ -167,6 +194,7 @@ def _markdown_links(body: str):
     fence_char = ""
     fence_len = 0
     heading = None
+    in_comment = False
     for number, line in enumerate(body.splitlines(), 1):
         fence = _FENCE.match(line)
         if fence:
@@ -181,6 +209,7 @@ def _markdown_links(body: str):
             clean.append((number, "", heading))
             continue
         visible = _mask_inline_code(line)
+        visible, in_comment = _mask_html_comments(visible, in_comment)
         marker = _HEADING.match(visible)
         if marker:
             heading = marker.group(1)
