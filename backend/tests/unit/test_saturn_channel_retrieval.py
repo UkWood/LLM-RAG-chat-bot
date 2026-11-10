@@ -147,6 +147,24 @@ class SaturnRetrievalTests(unittest.TestCase):
             with self.subTest(query=query):
                 self.assertTrue(service.search_saturn(query).document_matches)
 
+    def test_bounded_dictionary_alias_requires_explicit_source_declaration(self):
+        additions = {
+            PRODUCT: source("Instrument", fields="protocol: RS-485\\n"),
+            "src/data/interfaces.yaml": (
+                "- code: RS-485\\n"
+                "  aliases: [RS485]\\n"
+                "- code: БКД-ПК-РФ.2\\n"
+                "  label: Example\\n"
+            ),
+        }
+        snapshot = build_saturn_knowledge_snapshot(*make_inputs(additions))
+        service = SaturnRetrievalService()
+        bundle = build_saturn_retrieval_bundle(snapshot)
+        service.publish(bundle)
+        self.assertTrue(service.search_saturn("RS485").answer_evidence)
+        self.assertFalse(service.search_saturn("БКД-ПК-RF.2").answer_evidence)
+        self.assertEqual(bundle.aliases.get("rs485"), ("rs-485",))
+
     def test_manifest_determinism_and_snapshot_change(self):
         one = build_saturn_retrieval_bundle(self.snap)
         two = build_saturn_retrieval_bundle(self.snap)
