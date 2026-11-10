@@ -690,6 +690,114 @@ class SaturnRetrievalTests(unittest.TestCase):
         self.assertEqual(index.search("−20", records, allowed),
                          index.search("-20", records, allowed))
 
+    def test_cr03_adjacent_engineering_unit_numeric_tokens(self):
+        cases = {
+            "0,5 МПа": ("0,5", "мпа"),
+            "0,5МПа": ("0,5", "мпа"),
+            "12.5V": ("12.5", "v"),
+            "-0,5бар": ("-0,5", "бар"),
+            "−0,5бар": ("-0,5", "бар"),
+            "+0,5бар": ("+0,5", "бар"),
+            "10.5кВт": ("10.5", "квт"),
+            "-20.5°C": ("-20.5", "°c"),
+            "−20.5°C": ("-20.5", "°c"),
+            "+20.5°C": ("+20.5", "°c"),
+        }
+        for text, expected in cases.items():
+            with self.subTest(text=text):
+                self.assertEqual(tokenize(text), expected)
+                self.assertEqual(tokenize(text), tokenize(text))
+        self.assertNotEqual(tokenize("-20.5°C"), tokenize("+20.5°C"))
+        self.assertNotEqual(tokenize("-20.5°C"), tokenize("20.5°C"))
+        self.assertEqual(tokenize("−20.5°C"), tokenize("-20.5°C"))
+        self.assertNotEqual(tokenize("0,5МПа"), tokenize("0.5МПа"))
+
+    def test_cr03_attached_unit_does_not_split_technical_identifiers(self):
+        codes = {
+            "RS-485": ("rs-485",),
+            "БКД-ПК-РФ.2": ("бкд-пк-рф.2",),
+            "БКД-ПК-RF.2": ("бкд-пк-rf.2",),
+            "12.5V-CONTROL": ("12.5v-control",),
+            "12.5V2": ("12.5v2",),
+            "0,5unknown": ("0,5unknown",),
+            "АБ-12.5V": ("аб-12.5v",),
+        }
+        for text, expected in codes.items():
+            with self.subTest(text=text):
+                self.assertEqual(tokenize(text), expected)
+                self.assertNotIn("12.5", tokenize(text))
+                self.assertNotIn("0,5", tokenize(text))
+        self.assertNotEqual(tokenize("БКД-ПК-РФ.2"), tokenize("БКД-ПК-RF.2"))
+        self.assertNotIn("485", tokenize("RS-485"))
+
+    def test_cr03_bm25_finds_decimal_numbers_attached_to_units(self):
+        examples = (
+            ("spaced_pressure", "Диапазон 0,5 МПа"),
+            ("joined_pressure", "Диапазон 0,5МПа"),
+            ("voltage", "Напряжение 12.5V"),
+            ("negative_pressure", "Предел -0,5бар"),
+            ("unicode_pressure", "Предел −0,5бар"),
+            ("positive_pressure", "Предел +0,5бар"),
+            ("power", "Мощность 10.5кВт"),
+            ("negative_temp", "Температура -20.5°C"),
+            ("unicode_temp", "Температура −20.5°C"),
+            ("positive_temp", "Температура +20.5°C"),
+            ("plain_temp", "Температура 20.5°C"),
+            ("rs485_code", "Интерфейс RS-485"),
+            ("cyr_code", "Модель БКД-ПК-РФ.2"),
+            ("mixed_code", "Модель БКД-ПК-RF.2"),
+            ("opaque_code", "Модель 12.5V-CONTROL"),
+            ("opaque_comma", "Модель 0,5unknown"),
+        )
+        records = tuple(
+            SearchRecord(key, "site_passage", "snapshot", "source", None,
+                         "body:line=1-1", None, text,
+                         sha256(text.encode("utf-8")).hexdigest())
+            for key, text in examples
+        )
+        prepared = SaturnBM25Index(records)
+        allowed = {record.evidence_id for record in records}
+        expected = {
+            "0,5": {"spaced_pressure", "joined_pressure"},
+            "12.5": {"voltage"},
+            "-0,5": {"negative_pressure", "unicode_pressure"},
+            "−0,5": {"negative_pressure", "unicode_pressure"},
+            "+0,5": {"positive_pressure"},
+            "10.5": {"power"},
+            "-20.5": {"negative_temp", "unicode_temp"},
+            "20.5": {"plain_temp"},
+            "+20.5": {"positive_temp"},
+            "RS-485": {"rs485_code"},
+            "БКД-ПК-РФ.2": {"cyr_code"},
+            "БКД-ПК-RF.2": {"mixed_code"},
+        }
+        for query, keys in expected.items():
+            with self.subTest(query=query):
+                ranked = prepared.search(query, records, allowed)
+                self.assertEqual({key for key, _ in ranked}, keys)
+                self.assertEqual(ranked, prepared.search(query, records, allowed))
+                reference = _bm25(query, examples, 40)
+                self.assertEqual(tuple(key for key, _ in ranked),
+                                 tuple(key for key, _ in reference))
+        self.assertEqual(dict(examples)["joined_pressure"], records[1].text)
+        self.assertEqual(dict(examples)["unicode_pressure"], records[4].text)
+
+    def test_cr03_adjacent_unit_tokenizer_version_and_rebuild_identity(self):
+        self.assertEqual(TOKENIZER_VERSION, "saturn-technical-tokenizer/0.2.1")
+        first = build_saturn_retrieval_bundle(self.snap)
+        again = build_saturn_retrieval_bundle(self.snap)
+        self.assertEqual(first.manifest, again.manifest)
+        self.assertEqual(first.lexical.tokens, again.lexical.tokens)
+        self.assertEqual(first.manifest.tokenizer_version, TOKENIZER_VERSION)
+        with patch("saturn_ai.retrieval.saturn_channel.TOKENIZER_VERSION",
+                   "saturn-technical-tokenizer/0.2.0"):
+            previous = _make_manifest(first.snapshot, first.records,
+                                      first.documents, first.lexical,
+                                      first.metadata, first.dense)
+        self.assertNotEqual(first.manifest.lexical_config_hash,
+                            previous.lexical_config_hash)
+        self.assertNotEqual(first.manifest.bundle_id, previous.bundle_id)
+
     def test_cr03_tokenizer_version_changes_lexical_identity(self):
         bundle = build_saturn_retrieval_bundle(self.snap)
         self.assertEqual(bundle.manifest.tokenizer_version, TOKENIZER_VERSION)
