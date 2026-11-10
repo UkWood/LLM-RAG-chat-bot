@@ -331,9 +331,13 @@ def validate_saturn_snapshot_inputs(site, catalog, external) -> ValidationResult
                              "duplicate_relation")
     if set(expected_relations) != set(actual_relations):
         issue("relation_projection_coverage_mismatch", "source-declared references")
-    for key in set(expected_relations) & set(actual_relations):
-        if actual_relations[key] != expected_relations[key]:
-            issue("relation_projection_mismatch", key)
+    for key, supplied in actual_relations.items():
+        if supplied != expected_relations.get(key):
+            # Preserve the established stage-4A diagnostic code while also
+            # reporting the new source-completeness failure precisely.
+            issue("relation_source_mismatch", key)
+            if key in expected_relations:
+                issue("relation_projection_mismatch", key)
 
     valid_relations, unresolved = [], []
     for relation in site.relations:

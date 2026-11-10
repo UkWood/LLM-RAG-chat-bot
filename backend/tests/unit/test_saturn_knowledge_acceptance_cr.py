@@ -115,7 +115,7 @@ class CR01SourceProjection(unittest.TestCase):
                 self.assertIsNone(result.candidate)
 
     def test_rejection_keeps_previous_active(self):
-        inputs = make_inputs()
+        inputs = make_inputs({PRODUCT: source()})
         previous = build_saturn_knowledge_snapshot(*inputs)
         manager = SaturnSnapshotManager()
         manager.activate(previous)
@@ -137,9 +137,12 @@ class CR02RelationCoverage(unittest.TestCase):
 
     def test_missing_single_and_all(self):
         site, cat, pdf = self.inputs()
-        self.assertEqual(len([r for r in site.relations
-                              if r.predicate == "related"]), 2)
-        for sub in (site.relations[:-1], ()):
+        source_relations = tuple(
+            r for r in site.relations if r.predicate == "related"
+            and r.subject_entity_id == entity_for(site).entity_id)
+        self.assertEqual(len(source_relations), 2)
+        for sub in (tuple(r for r in site.relations
+                          if r != source_relations[0]), ()):
             with self.subTest(length=len(sub)):
                 errors, result = check(replace(site, relations=sub), cat, pdf)
                 self.assertIn("relation_projection_coverage_mismatch", errors)
@@ -176,7 +179,10 @@ class CR02RelationCoverage(unittest.TestCase):
             PRODUCT: source(fields="related:\n - catalog-b\n"),
             SECOND: source("Second", draft=True),
         })
-        self.assertFalse(any(r.predicate == "related" for r in draft[0].relations))
+        self.assertFalse(any(
+            r.predicate == "related" and
+            r.subject_entity_id == entity_for(draft[0]).entity_id
+            for r in draft[0].relations))
         self.assertTrue(build_saturn_knowledge_snapshot(*draft).ready_for_promotion)
         wrong_site = replace(draft[0], relations=(site.relations[0],))
         self.assertIn("relation_projection_coverage_mismatch",
