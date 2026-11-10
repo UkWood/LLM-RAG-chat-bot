@@ -68,6 +68,8 @@ class SearchRecord:
     pdf_parser_version: str | None = None
     physical_page: int | None = None
     pdf_document_id: str | None = None
+    pdf_link_source_revisions: tuple[str, ...] = ()
+    pdf_owner_entity_ids: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -190,6 +192,7 @@ def _evidence_records(snapshot):
     relation = {r.relation_id: r for r in snapshot.relations}
     pdf = {stable_id("saturn-pdf-revision-v1", p.document_id, p.url, p.bytes_sha256,
                      p.parser_version): p for p in snapshot.pdf_revisions}
+    document_matches = {m.document.document_id: m for m in snapshot.document_matches}
     evidence_ids = set()
     result = []
     for evidence in snapshot.answer_evidence:
@@ -217,6 +220,9 @@ def _evidence_records(snapshot):
         if evidence.evidence_type == "pdf_passage" and (pdf_revision is None or
                 pdf_revision.extraction_state != "extracted"):
             raise ValueError("Unverified PDF passage")
+        pdf_match = document_matches.get(pdf_revision.document_id) if pdf_revision else None
+        if pdf_revision and pdf_match is None:
+            raise ValueError("PDF passage has no verified owner metadata")
         if len(text) > MAX_RECORD_CHARS:
             raise ValueError("Evidence search text exceeds limit")
         result.append(SearchRecord(
@@ -227,6 +233,9 @@ def _evidence_records(snapshot):
             pdf_revision.parser_version if pdf_revision else None,
             evidence.page_number,
             pdf_revision.document_id if pdf_revision else None,
+            tuple(sorted(set(o.source_revision_id for o in pdf_match.occurrences)))
+                if pdf_match else (),
+            pdf_match.document.owner_entity_ids if pdf_match else (),
         ))
     if evidence_ids != set(pointer_map):
         raise ValueError("Canonical evidence-pointer coverage mismatch")
@@ -436,6 +445,8 @@ def build_saturn_retrieval_bundle(snapshot: SaturnKnowledgeSnapshot, *, encoder=
 def _allowed_record(record, policy):
     return (record.evidence_id not in policy.blocked_evidence_ids and
             (record.pdf_document_id is None or record.pdf_document_id not in policy.blocked_document_ids) and
+            not any(s in policy.blocked_source_revision_ids for s in record.pdf_link_source_revisions) and
+            not any(i in policy.blocked_entity_ids for i in record.pdf_owner_entity_ids) and
             record.source_revision_id not in policy.blocked_source_revision_ids and
             record.source_revision_id not in policy.blocked_pdf_revision_ids and
             (record.entity_id is None or record.entity_id not in policy.blocked_entity_ids))
