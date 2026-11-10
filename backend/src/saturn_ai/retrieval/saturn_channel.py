@@ -67,6 +67,7 @@ class SearchRecord:
     pdf_bytes_sha256: str | None = None
     pdf_parser_version: str | None = None
     physical_page: int | None = None
+    pdf_document_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -225,6 +226,7 @@ def _evidence_records(snapshot):
             pdf_revision.bytes_sha256 if pdf_revision else None,
             pdf_revision.parser_version if pdf_revision else None,
             evidence.page_number,
+            pdf_revision.document_id if pdf_revision else None,
         ))
     if evidence_ids != set(pointer_map):
         raise ValueError("Canonical evidence-pointer coverage mismatch")
@@ -433,6 +435,7 @@ def build_saturn_retrieval_bundle(snapshot: SaturnKnowledgeSnapshot, *, encoder=
 
 def _allowed_record(record, policy):
     return (record.evidence_id not in policy.blocked_evidence_ids and
+            (record.pdf_document_id is None or record.pdf_document_id not in policy.blocked_document_ids) and
             record.source_revision_id not in policy.blocked_source_revision_ids and
             record.source_revision_id not in policy.blocked_pdf_revision_ids and
             (record.entity_id is None or record.entity_id not in policy.blocked_entity_ids))
