@@ -1,26 +1,49 @@
 # Состояние проекта
 
-## Snapshot Provider Contract — ADR-0014 accepted; documentation-only PR #21 open (2026-11-09)
+## GitHub Snapshot Provider v0.1 — PR #22 consolidated review corrections (2026-11-10)
 
-**PR #21:** [docs: approve provider-neutral Snapshot Provider contract](https://github.com/UkWood/LLM-RAG-chat-bot/pull/21) — **OPEN, not merged**.  
-**Branch:** docs-snapshot-provider-contract-2026-11-09  
-**Base:** main at c1840b071e077ae6019f1b9e7930c3aa15d08ef3.
+**PR #22:** [feat: implement GitHub Snapshot Provider v0.1](https://github.com/UkWood/LLM-RAG-chat-bot/pull/22) — **OPEN; NOT MERGED; awaiting independent re-review**.
+**Branch:** `feat/github-snapshot-provider-v0.1`. Base main `9b2e0882b81fa2737e7efebb109c079a39b392d8`.
 
-Owner-approved Snapshot Provider Contract v0.1 and ADR-0014 are documented in this PR:
-- Git REST API is the primary transport; GitHub is first, Gitea is a later implementation of the same provider-neutral contract.
-- The provider resolves refs/heads/main once. All subsequent operations use immutable commit/tree/blob IDs; there is no final branch recheck within the same sync.
-- The Git provider is trusted for ref → commit → tree identity mapping and complete tree enumeration. Independent cryptographic verification of raw commit/tree objects is not claimed.
-- Selected blob bytes are independently checked against the canonical Git object hash for the repository object format. Raw content SHA-256 is retained separately.
-- Current canonical snapshot/adapter contracts support SHA-1 object IDs; another format fails closed pending a separately approved canonical-contract evolution.
-- Only Markdown collections, YAML dictionaries, content schema, Astro routes and audited route/config dependencies are selected. Under `src/pages/`, only `.astro` and `.ts` route files (excluding `.d.ts`) are supported; other types trigger route-source drift and fail closed rather than being downloaded or silently skipped. The audited site baseline is 23 files: 19 `.astro`, 4 `.ts`. Unrelated binary assets are not bulk-downloaded.
-- PDF remains a full and mandatory part of the knowledge corpus. Support Catalog Adapter discovers/catalogues it; External Document Adapter fetches and extracts it. A future selective Git-blob PDF path is reserved, not implemented.
+- Four review issues corrected in the existing PR: nonrecursive endpoint without `recursive` (BLOCKER), source-directory symlink/gitlink detection (BLOCKER), selective fallback traversal excluding assets/archives (IMPORTANT), exact `refs/heads/main` response identity check (MINOR).
+- RED tests commit `491f14fe1e926958d8d934113a014398a76b2140`: CI [#42774670369](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42774670369) **FAILURE** — 12 expected failing outcomes out of 254 tests.
+- Corrective implementation code head `27b64b439b699bef396122c395cf091fb60735f0`: push CI [#42774964424](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42774964424) **SUCCESS**, 254 backend tests passed with 11 existing optional skips; ONNX contracts PASS.
+- 42 provider regression tests (nine new methods). Additional test hardening includes over 300 unrelated archive/asset directories and nested symlink in fallback.
+- Direct read-only GitHub API verification against `Saturn-Main-Site@084d7594`: `/git/trees/{sha}` returned 16 immediate root entries, while `?recursive=0` and `?recursive=1` returned 1,119 recursive entries; child-tree direct lookups also returned only immediate entries with matching SHA.
+- No local shell test execution: runner has no checkout/network. Offline and ONNX suites were actually run in GitHub Actions. Exact commands and RED→GREEN evidence are in [stage report](stages/2026-11-09-github-snapshot-provider.md).
+- No changes to canonical contracts, pure Saturn Site Content Adapter, ADR-0012/0013/0014 or `Saturn-Main-Site`. No Git clone/CLI, new dependencies, Gitea/PDF/retrieval/runtime work.
+- Final documentation/test commit changes PR head; check its exact SHA and CI before independent acceptance. Merge only on separate owner command.
 
-No GitHub/Gitea Provider, PDF ingestion, Git-backed PDF retrieval, adapter/canonical-contract code changes, runtime integration or deployment is included. Saturn-Main-Site remains strictly READ-ONLY.
+## Previous implementation checkpoint — PR #22 before consolidated review (2026-11-09)
 
-**Current stage:** architecture/documentation only. PR #21 is OPEN (not merged). Reviewed architecture/contract head `0f2a1226b757ae346d65b05df13be657e3581d35` passed PR-head CI [#42624653260](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42624653260) and push CI [#42624644980](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42624644980); both jobs `offline-checks` and `onnx-contracts` completed successfully on this exact reviewed head. Awaiting owner review/merge. Provider implementation remains NOT STARTED and requires a separate instruction.
+**PR #22:** [feat: implement GitHub Snapshot Provider v0.1](https://github.com/UkWood/LLM-RAG-chat-bot/pull/22) — **OPEN, not merged**.
+**Branch:** `feat/github-snapshot-provider-v0.1`  
+**Base:** `main` at `9b2e0882b81fa2737e7efebb109c079a39b392d8`.  
+**Implementation code head:** `ce501d2df5d120a3a437f6e32359a71e7d0543b6`.
 
+Добавлены provider-neutral `SnapshotProvider` Protocol и первая GitHub REST реализация `GitHubSnapshotProvider`. Provider pin-ит `refs/heads/main` один раз, читает immutable commit/tree/blob IDs, поддерживает GitHub recursive-tree truncation fallback, применяет утверждённую selection policy и формирует существующий `PinnedSiteSnapshot` без изменений adapter/contracts.
 
+**CI implementation code head:** push [run #42696950473](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42696950473) и PR [run #42696961675](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42696961675) — оба `offline-checks` и `onnx-contracts` **SUCCESS**. Offline suite: **245 backend tests passed, 11 existing optional skips**; project checks PASS.
 
+Добавлено 33 provider-specific offline tests: pinning/branch movement, recursive and fallback tree completeness, deterministic selection, route-source drift, symlink/submodule rejection, Git blob SHA-1, SHA-256 provenance, sizes/base64, errors/retries/resource limits, partial-snapshot rejection и integration с `adapt_snapshot()`.
+
+Read-only metadata audit текущего `Saturn-Main-Site@main` на commit `084d759487bfab6e111549c9b5469711ac5fc13e`: recursive tree complete (`truncated=false`), 1,119 entries, 477 selected files / 2,233,425 bytes, largest selected file 32,186 bytes; `src/pages/` 23 files (19 `.astro`, 4 `.ts`), route drift отсутствует. Исходный репозиторий не изменялся.
+
+GitHub repository metadata не предоставляет `object_format`; runtime требует явный `SATURN_GITHUB_OBJECT_FORMAT=sha1` и read-only `SATURN_GITHUB_TOKEN`. Каждый blob проверяется по canonical SHA-1. Live provider smoke test и runtime/scheduling integration не выполнялись. Новых зависимостей нет.
+
+Не реализованы: Gitea Provider, PDF ingestion, Git-backed PDF retrieval, retrieval/embeddings/reranking, LLM/provider, API/UI, deployment и production scheduling. `UkWood/Saturn-Main-Site` остаётся строго READ-ONLY.
+
+Перед merge нужен один полный Acceptance Review текущего PR head. Все замечания выдаются единым консолидированным списком. Merge запрещён без отдельной команды владельца.
+
+## Previous completed stage — Snapshot Provider Contract (PR #21 merged, 2026-11-09)
+
+**PR #21:** [docs: approve provider-neutral Snapshot Provider contract](https://github.com/UkWood/LLM-RAG-chat-bot/pull/21) — **MERGED**.  
+**Merge commit:** `9b2e0882b81fa2737e7efebb109c079a39b392d8`.  
+**Reviewed architecture/contract head:** `0f2a1226b757ae346d65b05df13be657e3581d35`.
+
+PR #21 был documentation-only этапом: принят provider-neutral Snapshot Provider Contract v0.1 и ADR-0014. При первоначальном review PR был OPEN; впоследствии владелец дал команду merge, после чего PR #21 был слит. PR-head CI [#42624653260](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42624653260) и push CI [#42624644980](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42624644980) прошли SUCCESS на reviewed architecture head. Main CI после merge [#42688738332](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42688738332) также SUCCESS.
+
+PR #21 не содержал provider implementation, PDF ingestion или runtime changes. Его исторический scope и reviewed head сохранены в [stage report](stages/2026-11-09-snapshot-provider-contract.md).
 ## Previous completed stage — Saturn Site Content Adapter (PR #20 merged, 2026-11-09)
 
 **PR #20:** [feat: add trusted Saturn site content adapter](https://github.com/UkWood/LLM-RAG-chat-bot/pull/20) — **MERGED**.  

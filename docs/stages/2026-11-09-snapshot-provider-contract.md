@@ -1,11 +1,13 @@
 # Snapshot Provider Contract — architecture decision
 
 Date: 2026-11-09  
-Status: **PR #21 OPEN; CI SUCCESS; documentation-only architecture change**  
+Status: **MERGED; CI SUCCESS; documentation-only architecture change** (PR was OPEN at initial review)  
 Repository: UkWood/LLM-RAG-chat-bot  
 Base: main at c1840b071e077ae6019f1b9e7930c3aa15d08ef3  
 PR: https://github.com/UkWood/LLM-RAG-chat-bot/pull/21  
-Branch: docs-snapshot-provider-contract-2026-11-09
+Branch: docs-snapshot-provider-contract-2026-11-09  
+Merge commit in main: `9b2e0882b81fa2737e7efebb109c079a39b392d8`  
+Main CI after merge: [run #42688738332](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42688738332) — **SUCCESS**.
 
 ## Scope
 
@@ -48,7 +50,7 @@ The design reserves a future selective Git-blob retrieval path when a PDF is sto
 
 This is a documentation-only architecture stage. No source code, dependencies, tests, runtime configuration, credentials, source website files or deployment settings are changed.
 
-PR #21 is open and not merged.
+At the time of the initial review, PR #21 was OPEN and not merged. It was subsequently merged into `main` at commit `9b2e0882b81fa2737e7efebb109c079a39b392d8`. Main CI after merge [#42688738332](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42688738332) completed SUCCESS. The historical OPEN state above is retained as the status at initial review.
 
 Reviewed architecture/contract head: `0f2a1226b757ae346d65b05df13be657e3581d35`.
 
@@ -56,4 +58,4 @@ Reviewed architecture/contract head: `0f2a1226b757ae346d65b05df13be657e3581d35`.
 - Matching push run [#42624644980](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42624644980): **SUCCESS**.
 - Both runs completed jobs `offline-checks` and `onnx-contracts` successfully on this exact reviewed architecture/contract head.
 
-The current documentation revision has therefore passed both required CI workflows. No provider implementation or PDF ingestion is authorized by this stage.
+The current documentation revision has therefore passed both required CI workflows. PR #21 itself contained no provider implementation or PDF ingestion. The later GitHub Snapshot Provider implementation is a separate bounded stage tracked in PR #22; it does not change the historical documentation-only scope of this PR #21 stage.
