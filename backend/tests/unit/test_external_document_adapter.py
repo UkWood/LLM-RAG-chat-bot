@@ -3,6 +3,7 @@ from dataclasses import FrozenInstanceError, replace
 from hashlib import sha256
 from pathlib import Path
 import subprocess
+import sys
 import unittest
 from unittest.mock import patch
 
@@ -10,7 +11,7 @@ from saturn_ai.ingestion.external_document_adapter import (
     CatalogValidationError, adapt_external_documents,
 )
 from saturn_ai.ingestion.external_document_extractor import (
-    ExtractedPdf, SubprocessPdfExtractor,
+    ExtractedPdf, SubprocessPdfExtractor, _run_worker_bounded, _parse_worker_reply,
 )
 from saturn_ai.ingestion.external_document_transport import (
     DocumentError, DocumentFetchPolicy,
@@ -315,18 +316,125 @@ class ExternalWorkerTests(unittest.TestCase):
                     parser.extract(raw, p)
                 self.assertEqual(context.exception.code, expected)
 
-    def test_worker_timeout_crash_and_malformed_reply(self):
-        parser = SubprocessPdfExtractor(enable_development_worker=True)
-        with patch("saturn_ai.ingestion.external_document_extractor.subprocess.run",
-                   side_effect=subprocess.TimeoutExpired("test", 1)):
-            with self.assertRaises(DocumentError) as context:
-                parser.extract(PDF, policy())
-            self.assertEqual(context.exception.code, "timeout")
-        for result in [
-            subprocess.CompletedProcess([], -9, b"", b""),
-            subprocess.CompletedProcess([], 0, b'{"page_count":2,"pages":[]}', b""),
-            subprocess.CompletedProcess([], 0, b"not-json", b""),
-        ]:
-            with patch("saturn_ai.ingestion.external_document_extractor.subprocess.run", return_value=result):
-                with self.assertRaises(DocumentError):
-                    parser.extract(PDF, policy())
+    def _script_worker(self, script, config=None):
+        """Use a real isolated test process, never a network request."""
+        cmd = [sys.executable, "-u", "-c", script]
+        return _run_worker_bounded(cmd, PDF, config or policy())
+
+    def test_cr01_stdout_over_limit_is_resource_limit_and_worker_reaped(self):
+        config = replace(policy(), max_text_bytes=32, max_pages=1)
+        processes = []
+        original = subprocess.Popen
+
+        def capture(*args, **kwargs):
+            child = original(*args, **kwargs)
+            processes.append(child)
+            return child
+
+        script = ("import sys,time\n"
+                  "while True:\n"
+                  " sys.stdout.buffer.write(b'X'*65536)\n"
+                  " sys.stdout.flush()\n"
+                  " time.sleep(.001)\n")
+        with patch("saturn_ai.ingestion.external_document_extractor.subprocess.Popen",
+                   side_effect=capture):
+            with self.assertRaises(DocumentError) as caught:
+                self._script_worker(script, config)
+        self.assertEqual(caught.exception.code, "resource_limit")
+        self.assertEqual(len(processes), 1)
+        self.assertIsNotNone(processes[0].returncode)
+        self.assertIsNotNone(processes[0].poll())
+        self.assertNotEqual(processes[0].returncode, 0)
+
+    def test_cr01_large_stderr_is_discarded_without_deadlock(self):
+        script = (
+            "import json,sys\n"
+            "sys.stderr.buffer.write(b'private-PDF-worker-error'*30000)\n"
+            "sys.stderr.flush()\n"
+            "print(json.dumps({'page_count':1,'pages':[{'number':1,'text':'ok'}]}))\n"
+        )
+        returncode, output = self._script_worker(
+            script, replace(policy(), max_text_bytes=256, max_pages=1))
+        self.assertEqual(returncode, 0)
+        self.assertNotIn(b"private-PDF-worker-error", output)
+        self.assertEqual(_parse_worker_reply(returncode, output)["page_count"], 1)
+
+    def test_cr01_overflow_fail_closed_no_pdf_evidence_or_successful_revision(self):
+        with patch("saturn_ai.ingestion.external_document_extractor._run_worker_bounded",
+                   side_effect=DocumentError("resource_limit")):
+            result = adapt_external_documents(
+                sample(), policy(), transport=MemoryTransport(),
+                extractor=SubprocessPdfExtractor(enable_development_worker=True))
+        self.assertEqual(result.statuses[0].status, "resource_limit")
+        self.assertEqual(result.diagnostics[0].code, "resource_limit")
+        self.assertEqual(result.revisions[0].bytes_sha256, sha256(PDF).hexdigest())
+        self.assertEqual(result.revisions[0].extraction_state, "failed")
+        self.assertEqual(result.evidence, ())
+        self.assertEqual(result.cached_extractions, ())
+        self.assertFalse(result.ready_for_promotion)
+
+    def test_cr02_signal_minus_nine_empty_stdout_resource_limit(self):
+        ret, out = self._script_worker(
+            "import os,signal; os.kill(os.getpid(), signal.SIGKILL)")
+        self.assertEqual(ret, -9)
+        self.assertEqual(out, b"")
+        with self.assertRaises(DocumentError) as caught:
+            _parse_worker_reply(ret, out)
+        self.assertEqual(caught.exception.code, "resource_limit")
+
+    def test_cr02_signal_with_invalid_json_prioritizes_resource_limit(self):
+        ret, out = self._script_worker(
+            "import os,signal,sys\n"
+            "sys.stdout.write('broken'); sys.stdout.flush()\n"
+            "os.kill(os.getpid(), signal.SIGKILL)")
+        self.assertEqual(ret, -9)
+        with self.assertRaises(DocumentError) as caught:
+            _parse_worker_reply(ret, out)
+        self.assertEqual(caught.exception.code, "resource_limit")
+
+    def test_cr02_success_invalid_json_is_parser_error(self):
+        ret, out = self._script_worker("print('not valid json')")
+        self.assertEqual(ret, 0)
+        with self.assertRaises(DocumentError) as caught:
+            _parse_worker_reply(ret, out)
+        self.assertEqual(caught.exception.code, "parser_error")
+
+    def test_cr02_structured_nonzero_error_response(self):
+        ret, out = self._script_worker(
+            "import sys; print('{\"error\":\"encrypted_pdf\"}'); sys.exit(2)")
+        self.assertEqual(ret, 2)
+        with self.assertRaises(DocumentError) as caught:
+            _parse_worker_reply(ret, out)
+        self.assertEqual(caught.exception.code, "encrypted_pdf")
+        for broken in (b"nonsense", b'{"error": []}'):
+            with self.assertRaises(DocumentError) as caught:
+                _parse_worker_reply(2, broken)
+            self.assertEqual(caught.exception.code, "parser_error")
+
+    def test_cr02_timeout_kills_and_reaps_worker(self):
+        config = replace(policy(), worker_wall_seconds=1)
+        processes = []
+        original = subprocess.Popen
+
+        def capture(*args, **kwargs):
+            child = original(*args, **kwargs)
+            processes.append(child)
+            return child
+
+        with patch("saturn_ai.ingestion.external_document_extractor.subprocess.Popen",
+                   side_effect=capture):
+            with self.assertRaises(DocumentError) as caught:
+                self._script_worker("import time; time.sleep(5)", config)
+        self.assertEqual(caught.exception.code, "timeout")
+        self.assertEqual(len(processes), 1)
+        self.assertIsNotNone(processes[0].poll())
+
+    def test_cr02_valid_json_response_unchanged(self):
+        ret, out = self._script_worker(
+            "import json; print(json.dumps({'page_count':1,'pages':[{'number':1,'text':'ok'}]}))")
+        self.assertEqual(ret, 0)
+        self.assertEqual(_parse_worker_reply(ret, out),
+                         {"page_count": 1, "pages": [{"number": 1, "text": "ok"}]})
+        parsed = SubprocessPdfExtractor(enable_development_worker=True).extract(
+            make_pdf(("real page text",)), policy())
+        self.assertEqual(parsed.pages, ((1, "real page text"),))
