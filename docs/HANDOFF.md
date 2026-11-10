@@ -1,5 +1,13 @@
 # Передача контекста — реализация кода
 
+## PR #25 — Consolidated Acceptance Review Corrections (2026-11-10)
+
+- **Existing PR #25:** [Unified Knowledge Snapshot v0.1](https://github.com/UkWood/LLM-RAG-chat-bot/pull/25), branch `feat/unified-knowledge-snapshot-v0.1`, **OPEN, NOT MERGED**; baseline main `01cb640e1b67ee84b4dff00afa6a798bc5203c54`.
+- Corrected implementation code head `812f5156d5613b90b39dfd5f1a25454795d434dc`. CR-01 исходные байты → source projections; CR-02 полное множество declared relations; CR-03 точные Markdown links через повторный Support Catalog Adapter; CR-04 structural replay при activation вместо одного reseal.
+- 18 новых CR regression methods. Проверка code head: **360 backend tests OK (11 skips), 5 project checks PASS**, [push CI #42892414054](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42892414054), [PR CI #42892426380](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42892426380). Exact final PR head/checks сверять в PR после документационной синхронизации.
+- **Контрактное ограничение для сессии A:** в `SiteContentPackage` отсутствуют байты `astro.config.mjs`, поэтому verified canonical route да, независимое доказательство единого production host — нет. Это не обходится фиктивной проверкой. Отдельное архитектурное решение о config-provenance — только вне scope 4A.
+- [Consolidated stage report](stages/2026-11-10-unified-knowledge-snapshot.md). Никаких изменений 3 адаптеров, canonical contracts, ADR, legacy, `Saturn-Main-Site`. **MERGE только по разрешению владельца, 4B не начинать.**
+
 ## Актуальный этап 4A — Unified Knowledge Snapshot v0.1 (2026-11-10)
 
 - **PR #24 MERGED** в main: `01cb640e1b67ee84b4dff00afa6a798bc5203c54`.

@@ -7,6 +7,40 @@ Baseline main: 01cb640e1b67ee84b4dff00afa6a798bc5203c54 (PR #24 merged)
 PR: https://github.com/UkWood/LLM-RAG-chat-bot/pull/25
 Статус: реализация для независимого Acceptance Review; merge запрещён.
 
+## Consolidated Acceptance Review Corrections — PR #25 (CR-01–CR-04)
+
+**Корректирующий code head:** `812f5156d5613b90b39dfd5f1a25454795d434dc`.
+Один консолидированный цикл исправлений в прежней ветке и PR #25. После исправления собственных тестовых предположений и сохранения legacy diagnostic code выполнено `python scripts/verify_offline.py`: **360 backend tests OK (11 existing optional skips), 5 project checks PASS**, все 18 новых тестовых методов CR-01–CR-04 проходят. Существующие 342 теста не регрессировали.
+Проверки code head: [push Actions #42892414054](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42892414054) и [PR Actions #42892426380](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42892426380). На проверенном code head `onnx-contracts` SUCCESS, push `offline-checks` SUCCESS; exact status обоих запусков и итогового документационного PR head фиксируется в [PR #25](https://github.com/UkWood/LLM-RAG-chat-bot/pull/25). **Не заменять проверку финального PR head прежним code-head CI.**
+
+### CR-01 — Source-derived projection integrity
+
+Строгое повторное offline-чтение `RawSiteRecord.content` через уже утверждённые `_split_markdown` / `_load_yaml`; сравнение с `raw_frontmatter_text`, `body`, `draft`, collection/slug. Независимо восстанавливаются `SiteEntity.raw_frontmatter_json`, title, type и route-based canonical path по source mapping; `SiteFact` полностью сравнивается с `_facts_for_entity` (включая unit, normalized value и qualifiers). YAML dictionaries повторно парсятся из тех же bytes и сравниваются с обоими raw представлениями. Хэши Git blob и content SHA-256 проверяются независимо от supplied projections. Несоответствие — fail closed. Нет выполнения Astro/TypeScript, сети или новых canonical IDs.
+
+Негативные тесты: title, entity_type, canonical path/individual host, синхронная подмена frontmatter + facts, unit, normalized/qualifiers, dictionary raw JSON и изменение raw body/frontmatter/draft без изменения исходных байтов.
+
+**Существенная граница доказуемости:** `SiteContentPackage` хранит Git SHA `astro.config.mjs`, но **не сами байты** production `SITE_URL` fallback. Поэтому 4A доказывает канонический маршрут, однородность origin разных записей и исходное происхождение иных значений, но **не может независимо доказать абсолютный host всех URL, если все они одновременно согласованно подменены**. Это не объявляется успешной верификацией отсутствующих config bytes. Сессии A предлагается отдельно решить, нужен ли в будущем versioned read-only config-provenance contract (или доказуемый trusted origin); текущие ADR и Site Adapter не меняются.
+
+### CR-02 — Complete source-declared relations
+
+Ожидаемое множество `SiteRelation` независимо восстанавливается через существующую `_relation_candidates` из **проверенного** YAML frontmatter, с точными predicate, array index/field path, immutable revision и stable ID. Draft targets исключаются по исходному `draft`, отсутствующие non-draft targets сохраняются в `unresolved_relations` с предупреждением. Пропущенные, добавленные, изменённые, повторные relations блокируют сборку. Сохранён ранее ожидаемый код `relation_source_mismatch`, добавлены более точные `relation_projection_coverage_mismatch` / `relation_projection_mismatch`. Engineering inference не добавлялся.
+
+### CR-03 — Exact Markdown PDF link provenance
+
+`adapt_support_catalog(site)` повторно вызывается **offline** на source-verified site package; результат целиком сравнивается с присланными `documents`, `pdf_candidates`, `occurrences`, `issues` и readiness. Используется единственный уже проверенный scanner Support Catalog Adapter для inline/reference/autolink/HTML и защиты от code/comments. Подмена `raw_url`, `resolved_url`, origin owner, source field/line/column, occurrence ordinal, document ID, PDF candidate owner/URL/locator отклоняется даже при согласованной подмене нескольких catalog fields.
+
+### CR-04 — Validated atomic activation
+
+`SaturnKnowledgeSnapshot` сохраняет immutable `SnapshotValidationSources` (исходные три adapter result objects) **только как структурное основание для повторной проверки**; сравнение snapshot-корпуса остаётся независимым от порядка входных коллекций, прежняя stable-ID scheme сохранена. `SaturnSnapshotManager.activate()` перед установкой active заново выполняет полный offline builder/validator, сравнивает candidate включая counts, evidence/pointers, source and PDF revisions и readiness. Корректный `corpus_hash` и пересчитанный `snapshot_id` без совпадающей повторной структурной проверки уже недостаточны. При отказе active pointer не изменяется; pointer swap/capture остаётся атомарным под `RLock`.
+
+Негативные тесты: re-sealed изменённые manifest counts; удалённый evidence при оставшемся pointer; nonexistent canonical pointer; подмена PDF revision/page evidence; forged readiness gates; подмена validation sources. Положительные: первая и повторная activation; existing concurrent capture/activation; отказ не заменяет ранее опубликованный snapshot.
+
+### Изменённые файлы и тесты
+
+Код: `backend/src/saturn_ai/saturn_knowledge_validation.py`, `saturn_knowledge_contracts.py`, `saturn_knowledge_snapshot.py`. Добавлен `backend/tests/unit/test_saturn_knowledge_acceptance_cr.py` (18 методов; внутри — несколько adversarial subcases). Существующий `test_saturn_knowledge_snapshot.py` и ранее принятые adapters/canonical contracts/ADR/legacy path не менялись. В `Saturn-Main-Site` изменений нет.
+
+Ограничения прежние: stage 4A — только offline assembly/activation; production PDF sandbox, индексирование/retrieval/LLM/UI/deployment и проверка provenance реального Git commit и PDF bytes остаются на своих upstream/runtime границах. Сохранение входных immutable witness увеличивает memory footprint и стоимость повторной проверки при activation; performance benchmark не заявляется. **PR остаётся OPEN; независимый повторный Acceptance Review сессии A обязателен; merge и этап 4B запрещены.**
+
 ## 1. Новые модули
 
 - backend/src/saturn_ai/saturn_knowledge_contracts.py — immutable groups, content identity/seal, thread-safe in-memory pointer.
@@ -47,7 +81,7 @@ PR: https://github.com/UkWood/LLM-RAG-chat-bot/pull/25
 
 Manifest включает source site manifest (repo/branch/commit/tree; parser/adapter/mapping; inventory/fingerprints), версии catalog/PDF parser/builder, canonical revision IDs, PDF revision/status/hashes, counts по группам и evidence types. Корпус идентифицируется canonical JSON + stable_id; input collections сортируются детерминированно перед сборкой; timestamps и random nonce отсутствуют.
 
-Изменения source commit/content, документов/owners/occurrences, relations, PDF bytes, parser, statuses, evidence и diagnostics меняют snapshot identity. Удалённые записи не переносятся из старого активного snapshot. Перед activation проверяется content seal и snapshot identity; pointer swap выполняется под RLock. Атомарная публикация BM25/vector индексов — отдельный этап 4B.
+Изменения source commit/content, документов/owners/occurrences, relations, PDF bytes, parser, statuses, evidence и diagnostics меняют snapshot identity. Удалённые записи не переносятся из старого активного snapshot. Перед activation проверяются content seal, snapshot identity и полная повторная структурная сборка из immutable validation sources; pointer swap выполняется под RLock. Атомарная публикация BM25/vector индексов — отдельный этап 4B.
 
 ## 6. Offline тесты
 

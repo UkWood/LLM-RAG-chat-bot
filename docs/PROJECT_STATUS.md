@@ -1,5 +1,9 @@
 # Состояние проекта
 
+## PR #25 — Consolidated Corrections CR-01–CR-04 (2026-11-10)
+
+Existing [PR #25](https://github.com/UkWood/LLM-RAG-chat-bot/pull/25): **OPEN, NOT MERGED**, corrected code head `812f5156d5613b90b39dfd5f1a25454795d434dc`. Source-derived projections/units/YAML, full relation reconstruction, catalog-link exact replay and independently revalidated atomic activation; 18 новых adversarial test methods. **Code-head offline: 360 backend tests OK (11 skips), 5 project checks PASS**; [push CI](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42892414054), [PR CI](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42892426380). Exact final PR head/CI — в описании PR. Ограничение: production URL origin `astro.config.mjs` не может быть отдельно доказан без config bytes в source package; вопрос передан архитектурной сессии A. [Отчёт](stages/2026-11-10-unified-knowledge-snapshot.md). Независимый re-review, **NO MERGE / NO 4B**. Saturn-Main-Site READ-ONLY.
+
 ## Этап 4A — Unified Knowledge Snapshot v0.1 (2026-11-10)
 
 **Baseline:** PR #24 MERGED, `main=01cb640e1b67ee84b4dff00afa6a798bc5203c54`.
