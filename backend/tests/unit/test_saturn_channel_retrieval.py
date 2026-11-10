@@ -463,6 +463,12 @@ class SaturnRetrievalTests(unittest.TestCase):
             with self.subTest(dense_attr=attr), self.assertRaises(FrozenInstanceError):
                 setattr(bundle.dense, attr, None)
         self.assertIs(service.capture(), bundle)
+        with self.assertRaises(AttributeError):
+            service._active = build_saturn_retrieval_bundle(fixture_snapshot(commit="b"*40))
+        with self.assertRaises(AttributeError):
+            service._lock = None
+        with self.assertRaises(AttributeError):
+            service.policy_provider = SaturnPolicyProvider()
         self.assertEqual(service.search_saturn("BACnet", mode="hybrid").snapshot_id,
                          bundle.snapshot.snapshot_id)
         service.publish(build_saturn_retrieval_bundle(self.snap))
