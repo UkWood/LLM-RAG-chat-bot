@@ -2,12 +2,13 @@
 import dataclasses
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from saturn_ai.ingestion.saturn_site_adapter import (
     PinnedSiteSnapshot, adapt_snapshot, git_blob_sha1,
 )
 from saturn_ai.ingestion.support_catalog_adapter import (
-    adapt_support_catalog, _markdown_links, _resolve_url,
+    adapt_support_catalog, _markdown_links, _resolve_url, _is_pdf,
 )
 
 FIXTURE = Path(__file__).resolve().parents[1] / "fixtures" / "saturn_site"
@@ -295,6 +296,175 @@ class SupportCatalogTests(unittest.TestCase):
         self.assertTrue(result.ready_for_promotion)
         self.assertEqual(len(result.pdf_candidates), 2)
         self.assertEqual(len(result.occurrences), 2)
+
+    def test_cr01_autolinks_and_quoted_unquoted_html_href(self):
+        body = ("## Downloads\n"
+                "<https://example.org/absolute.pdf>\n"
+                "<a href=/ftp/unquoted.pdf>Open</a>\n"
+                '<a href="/ftp/quoted.pdf">Quoted</a>\n'
+                '<a data-href="/ftp/not-a-link.pdf">Ignored</a>\n'
+                '<a aria-href="/ftp/also-not.pdf">Ignored</a>\n')
+        result = catalog({PRODUCT: source(body=body)})
+        self.assertTrue(result.ready_for_promotion)
+        self.assertEqual(len(result.pdf_candidates), 3)
+        self.assertEqual({x.field_path for x in result.occurrences}, {
+            'body:line=2:column=1:heading="Downloads":occurrence=1',
+            'body:line=3:column=1:heading="Downloads":occurrence=2',
+            'body:line=4:column=1:heading="Downloads":occurrence=3',
+        })
+        self.assertIn("https://example.org/absolute.pdf", {x.url for x in result.documents})
+
+    def test_cr01_escaped_nested_brackets_parentheses_and_locators(self):
+        body = (r"## Manual" + "\n"
+                r"[Escaped \[part\]](/ftp/manual\(2\).pdf)" + "\n"
+                r"[Outer [inner]](/ftp/a(b(c)d).pdf)" + "\n"
+                r"[Angle](</ftp/test\(4\).pdf>)" + "\n"
+                r"\[Escaped label](/ftp/inert.pdf)" + "\n"
+                r"![Image](/ftp/image.pdf)" + "\n"
+                r"[Link][guide]" + "\n"
+                r"[guide]: /ftp/ref\(1\).pdf" + "\n")
+        result = catalog({PRODUCT: source(body=body)})
+        self.assertTrue(result.ready_for_promotion)
+        self.assertEqual(len(result.pdf_candidates), 4)
+        by_raw = {x.raw_url: x for x in result.occurrences}
+        self.assertEqual(by_raw[r"/ftp/manual\(2\).pdf"].resolved_url,
+                         ORIGIN + "/ftp/manual(2).pdf")
+        self.assertEqual(by_raw[r"/ftp/ref\(1\).pdf"].field_path,
+                         'body:line=7:column=1:heading="Manual":occurrence=4')
+        self.assertIn(ORIGIN + "/ftp/a(b(c)d).pdf", {x.url for x in result.documents})
+
+    def test_cr01_html_comments_with_inert_fences_and_inline_code(self):
+        ticks = chr(96) * 3
+        body = ("<!-- hidden\n" + ticks + "\n"
+                + "[not](/ftp/comment.pdf)\n"
+                + "-->\n"
+                + "[real](/ftp/real.pdf)\n"
+                + ticks + "md\n"
+                + "[not](/ftp/code.pdf)\n"
+                + ticks + "\n"
+                + "Inline " + chr(96) + "[not](/ftp/inline.pdf)" + chr(96) + "\n"
+                + "[another](/ftp/another.pdf)\n")
+        result = catalog({PRODUCT: source(body=body)})
+        self.assertTrue(result.ready_for_promotion)
+        self.assertEqual(len(result.documents), 2)
+        self.assertEqual([x.field_path for x in result.occurrences],
+                         ['body:line=5:column=1:heading=null:occurrence=1',
+                          'body:line=10:column=1:heading=null:occurrence=2'])
+
+    def test_cr02_html_entities_and_distinct_raw_interpreted_resource(self):
+        body = ('<a href="/ftp/test%20file%2Epdf?x=1&amp;y=2#page=3">PDF</a>\n'
+                '[same](/ftp/test%20file%2Epdf?x=1&y=2#page=4)\n'
+                '[query differs](/ftp/test%20file%2Epdf?x=1&y=3)\n')
+        result = catalog({PRODUCT: source(body=body)})
+        self.assertTrue(result.ready_for_promotion)
+        self.assertEqual(len(result.documents), 2)
+        self.assertEqual(len(result.pdf_candidates), 2)
+        first = result.occurrences[0]
+        html_item = next(x for x in result.occurrences if "&amp;" in x.raw_url)
+        self.assertIn("&amp;", html_item.raw_url)
+        self.assertEqual(html_item.resolved_url,
+                         ORIGIN + "/ftp/test%20file%2Epdf?x=1&y=2#page=3")
+        identity = next(x for x in result.documents if "y=2" in x.url)
+        self.assertEqual(identity.url, ORIGIN + "/ftp/test%20file%2Epdf?x=1&y=2")
+        self.assertEqual(len(identity.source_locators), 2)
+        self.assertEqual(len({x.document_id for x in result.occurrences}), 2)
+
+    def test_cr02_encoded_pdf_extension_and_safe_encoded_filenames(self):
+        result = catalog({PRODUCT: source(body=
+            "[one](/ftp/re%20FPS%2Epdf)\n"
+            "[two](/ftp/Manual%28Rev2%29.PDF)\n"
+            "[non-pdf](/ftp/file%2Ezip)\n")})
+        self.assertTrue(result.ready_for_promotion)
+        self.assertEqual(len(result.pdf_candidates), 2)
+        self.assertIn(ORIGIN + "/ftp/re%20FPS%2Epdf", {x.url for x in result.documents})
+        self.assertIn(ORIGIN + "/ftp/Manual%28Rev2%29.PDF", {x.url for x in result.documents})
+        self.assertTrue(_is_pdf("/ftp/manual%2Epdf#page=2"))
+
+    def test_cr02_encoded_separators_and_multi_encoding_fail_closed(self):
+        invalid = ("/ftp/%2e%2e/manual.pdf", "/ftp/%252e%252e/manual.pdf",
+                   "/ftp/%25252e%25252e/manual.pdf", "/ftp/%2fsecret.pdf",
+                   "/ftp/%252fsecret.pdf", "/ftp/%5csecret.pdf",
+                   "/ftp/%255csecret.pdf", "/ftp/a/../manual.pdf",
+                   "../manual.pdf", "/ftp/%00/manual.pdf")
+        for raw in invalid:
+            with self.subTest(url=raw):
+                with self.assertRaises(ValueError):
+                    _resolve_url(raw, ORIGIN + "/products/catalog-a/", ORIGIN)
+        result = catalog({PRODUCT: source(fields="documents:\n - " +
+            doc(url="/ftp/%252e%252e/manual.pdf") + "\n")})
+        self.assertFalse(result.ready_for_promotion)
+        self.assertIn("invalid_document_url", {x.code for x in result.issues})
+
+    def test_cr03_exact_source_derived_fixture_integration(self):
+        # All 8 files are byte-for-byte copied from the same Saturn source commit.
+        # Only the curated subset is assembled; no real-site full ingestion.
+        root = Path(__file__).resolve().parents[1] / "fixtures" / "saturn_support_real"
+        expected_blobs = {
+            "src/content/products/fps.md": "4bf3c1de3bca10ec4d9203f789a602f878d83ab1",
+            "src/content/products/bsk-69.md": "c1db8a1733db672b66d8da272fdec63eacd08cf4",
+            "src/content/products/archtool.md": "a05995ce25bc27762dae307da0490e9cad053f5d",
+            "src/content/pages/spisok-podderzhivaemogo-oborudovaniya.md": "1106958ac9a3fe175c531fe7a49fd65a122f40d3",
+            "astro.config.mjs": "58b013ab2bc00eb5718ee036ab351354d06d84da",
+            "src/content.config.ts": "2eaa0913798b9301314e9bdcbeb2b8318417ae13",
+            "src/pages/products/[slug].astro": "a3c47da9d6a35583a2fd6284aabf5ff9993a9555",
+            "src/pages/[slug].astro": "48ddec0a5b3acae61146d7a3dbf50a7361d745e4",
+        }
+        self.assertEqual(
+            {p.relative_to(root).as_posix() for p in root.rglob("*") if p.is_file()},
+            set(expected_blobs),
+        )
+        mapping = {}
+        for path, expected_sha in expected_blobs.items():
+            raw = (root / path).read_bytes()
+            self.assertEqual(git_blob_sha1(raw), expected_sha, path)
+            mapping[path] = (expected_sha, raw)
+        revision = "084d759487bfab6e111549c9b5469711ac5fc13e"
+        snapshot = PinnedSiteSnapshot.from_mapping(
+            commit_sha=revision,
+            tree_sha="a5297822bf3a5e071b10cc1dca553481c1b84d47",
+            files=mapping,
+        )
+        # Reject all opportunistic networking; the adapter is pure/offline.
+        with patch("socket.create_connection", side_effect=AssertionError("network forbidden")), \
+             patch("urllib.request.urlopen", side_effect=AssertionError("network forbidden")):
+            package = adapt_snapshot(snapshot)
+            result = adapt_support_catalog(package)
+            again = adapt_support_catalog(adapt_snapshot(snapshot))
+        self.assertTrue(package.ready_for_promotion)
+        self.assertTrue(result.ready_for_promotion)
+        self.assertEqual(result, again)
+        self.assertEqual(len(result.documents), 10)
+        self.assertEqual(len(result.pdf_candidates), 8)
+        self.assertEqual(len(result.occurrences), 10)
+        entities = {(e.collection, e.slug): e for e in package.entities}
+        self.assertEqual(len(entities), 4)
+        source_rev = {x.revision_id: x for x in package.source_revisions}
+        self.assertEqual(len({o.owner_entity_id for o in result.occurrences}), 4)
+        for occurrence in result.occurrences:
+            revision_record = source_rev[occurrence.source_revision_id]
+            self.assertEqual(revision_record.commit_sha, revision)
+            self.assertEqual(revision_record.path, occurrence.source_path)
+            self.assertEqual(revision_record.blob_sha, expected_blobs[occurrence.source_path])
+            self.assertEqual(occurrence.source_locator,
+                             occurrence.source_revision_id + "#" + occurrence.field_path)
+            self.assertIn(occurrence.owner_entity_id, {e.entity_id for e in package.entities})
+        urls = {doc.url: doc for doc in result.documents}
+        self.assertIn(ORIGIN + "/ftp/public/doc/fps/re%20FPS.pdf", urls)
+        self.assertIn(ORIGIN + "/ftp/public/doc/bsk/to%20bsk.pdf", urls)
+        self.assertIn(ORIGIN + "/ftp/public/soft/ArchTool/last/archtool.zip", urls)
+        self.assertIn(ORIGIN + "/photos/1863686720510304.jpg", urls)
+        self.assertIn(ORIGIN + "/public/soft/opros/supported.pdf", urls)
+        self.assertIn(ORIGIN + "/photos/3253892618087850.pdf", urls)
+        self.assertEqual(urls[ORIGIN + "/ftp/public/soft/ArchTool/last/archtool.zip"].kind,
+                         "software")
+        self.assertEqual(urls[ORIGIN + "/photos/1863686720510304.jpg"].kind, "scan")
+        self.assertNotIn(ORIGIN + "/photos/1863686720510304.jpg",
+                         {x.resolved_url for x in result.pdf_candidates})
+        for doc in result.documents:
+            self.assertEqual(len(doc.owner_entity_ids), 1)
+            self.assertEqual(len(doc.source_locators), 1)
+        self.assertTrue(any("body:line=10" in x.field_path for x in result.occurrences))
+        self.assertEqual(len({doc.document_id for doc in result.documents}), 10)
 
     def test_upstream_fail_closed(self):
         result = catalog({PRODUCT: source(fields="documents: broken\n")})

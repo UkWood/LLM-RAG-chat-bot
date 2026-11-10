@@ -1,0 +1,29 @@
+---
+import { getCollection, getEntry, getEntries } from 'astro:content';
+import ProductView from '../../components/ProductView.astro';
+
+export async function getStaticPaths() {
+  const items = await getCollection('products', (p) => !p.data.draft);
+  const byId = new Map(items.map((p) => [p.id, p]));
+  return Promise.all(items.map(async (entry) => ({
+    params: { slug: entry.id },
+    props: {
+      entry,
+      group: entry.data.group ? await getEntry(entry.data.group) : undefined,
+      systems: await getEntries(entry.data.systems),
+      related: await getEntries(entry.data.related),
+      // обратные связи считаются при сборке: исполнения этого изделия, изделия, которые указывают на него как на связанное,
+      // и устройства, для которых это изделие указано как совместимое ПО
+      base: entry.data.variant_of ? byId.get(entry.data.variant_of.id) : undefined,
+      variants: items.filter((p) => p.data.variant_of?.id === entry.id),
+      relatedBack: items.filter((p) => p.data.related.some((r) => r.id === entry.id) && !entry.data.related.some((r) => r.id === p.id)),
+      software: await getEntries(entry.data.software),
+      devices: items.filter((p) => p.data.software.some((s) => s.id === entry.id)),
+      articles: await getEntries(entry.data.articles),
+      solutions: await getEntries(entry.data.solutions),
+    },
+  })));
+}
+const { entry, group, systems, related, base, variants, relatedBack, software, devices, articles, solutions } = Astro.props;
+---
+<ProductView entry={entry} group={group} systems={systems} related={[...related, ...relatedBack]} base={base} variants={variants} software={software} devices={devices} articles={articles} solutions={solutions} />

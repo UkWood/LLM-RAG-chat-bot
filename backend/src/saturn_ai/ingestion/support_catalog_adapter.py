@@ -4,8 +4,10 @@ Only trusted SiteContentPackage data are consumed. No fetch, PDF parsing,
 legacy source approval, or mutation of the site adapter/contracts takes place.
 """
 from dataclasses import dataclass
+from html import unescape as html_unescape
 import json
 import re
+import string
 from urllib.parse import urljoin, urlsplit, urlunsplit, unquote
 
 from .saturn_contracts import SupportDocument, stable_id
@@ -14,10 +16,10 @@ from .saturn_site_adapter import SiteContentPackage, SiteParseIssue
 
 CATALOG_VERSION = "saturn-support-catalog/0.1.0"
 
-_INLINE = re.compile(r'(?<![!\\])\[([^\]\n]+)\]\(\s*(<[^>\n]+>|(?:[^()\s]|\([^()\n]*\))+)(?:\s+["\x27][^"\x27]+["\x27])?\s*\)')
-_REFERENCE = re.compile(r'(?<![!\\])\[([^\]\n]+)\](?:\[([^\]\n]*)\])?')
 _DEFINITION = re.compile(r'^\s{0,3}\[([^\]\n]+)\]:\s*(?:<([^>\n]+)>|(\S+))')
-_HTML = re.compile(r'<a\b[^>]*\bhref\s*=\s*(["\x27])([^"\x27]+)\1[^>]*>', re.I)
+_HTML_TAG = re.compile(r"""<a(?=[\s/>])(?:(?:"[^"]*"|'[^']*'|[^'"<>])*)>""", re.I)
+_HTML_ATTR = re.compile(r"""(?<!\S)([^\s=/>]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>]+)))?""")
+_AUTOLINK = re.compile(r"<(https://[^\s<>]+)>", re.I)
 _FENCE = re.compile(r'^\s{0,3}(' + chr(96) + r'{3,}|~{3,})')
 _HEADING = re.compile(r'^\s{0,3}#{1,6}\s+(.+?)\s*#*\s*$')
 _PERCENT_BAD = re.compile(r'%(?![0-9A-Fa-f]{2})')
@@ -71,9 +73,10 @@ class SupportCatalogResult:
 
 
 def _is_pdf(value: str) -> bool:
+    """One percent-decoding pass for PDF detection; no query or fragment inference."""
     try:
-        return urlsplit(value).path.lower().endswith(".pdf")
-    except ValueError:
+        return unquote(urlsplit(value).path).lower().endswith(".pdf")
+    except (ValueError, TypeError):
         return False
 
 
@@ -86,10 +89,42 @@ def _origin(entities) -> str | None:
     return next(iter(origins)) if len(origins) == 1 else None
 
 
-def _resolve_url(raw: str, base: str | None, public_origin: str | None) -> str:
-    """Conservative URL resolution, without redirects, HTTP requests or lossy decoding."""
-    if not isinstance(raw, str) or not raw or raw != raw.strip():
-        raise ValueError("URL must be a non-empty unpadded string")
+def _checked_path(path: str) -> None:
+    """Check each encoded path segment before resolution, without rewriting it."""
+    for segment in path.split("/"):
+        value = segment
+        for _ in range(8):
+            if value in (".", "..") or "/" in value or "\\" in value:
+                raise ValueError("URL contains path traversal or encoded separators")
+            if any(ord(ch) < 32 or ord(ch) == 127 for ch in value):
+                raise ValueError("URL contains encoded control characters")
+            try:
+                decoded = unquote(value, errors="strict")
+            except UnicodeDecodeError:
+                raise ValueError("Invalid encoded URL path") from None
+            if decoded == value:
+                break
+            value = decoded
+        else:
+            raise ValueError("URL exceeds safe percent-decoding depth")
+        if value in (".", "..") or "/" in value or "\\" in value:
+            raise ValueError("URL contains path traversal or encoded separators")
+
+
+def _resolve_url(
+    raw: str,
+    base: str | None,
+    public_origin: str | None,
+    *,
+    preserve_fragment: bool = False,
+) -> str:
+    """Resolve interpreted URL without lossy path/query normalization.
+
+    With preserve_fragment=True this is a per-occurrence destination.
+    With preserve_fragment=False this is the stable document resource identity.
+    """
+    if not isinstance(raw, str) or not raw or raw != raw.strip() or len(raw) > 8192:
+        raise ValueError("URL must be a non-empty bounded unpadded string")
     if "\\" in raw or _CONTROL.search(raw) or _PERCENT_BAD.search(raw):
         raise ValueError("URL has unsafe characters or malformed percent encoding")
     try:
@@ -98,6 +133,7 @@ def _resolve_url(raw: str, base: str | None, public_origin: str | None) -> str:
         raise ValueError("Invalid URL structure") from None
     if raw.startswith("//"):
         raise ValueError("Protocol-relative URL is ambiguous")
+    _checked_path(parsed.path)  # MUST precede urljoin (which collapses dot segments)
     if parsed.scheme:
         if parsed.scheme.lower() != "https":
             raise ValueError("Only HTTPS URLs are accepted")
@@ -122,16 +158,13 @@ def _resolve_url(raw: str, base: str | None, public_origin: str | None) -> str:
             result.username is not None or result.password is not None or
             not result.netloc or not result.path.startswith("/")):
         raise ValueError("Invalid HTTPS origin or credentials")
-    # Do not collapse dot segments, encoded slashes, case, or query values:
-    # potentially different resources must never silently become one.
-    for segment in result.path.split("/"):
-        if segment in (".", "..") or unquote(segment) in (".", ".."):
-            raise ValueError("URL contains path traversal")
+    _checked_path(result.path)
     host = hostname.lower()
     if ":" in host and not host.startswith("["):
         host = "[" + host + "]"
     authority = host if port in (None, 443) else f"{host}:{port}"
-    return urlunsplit(("https", authority, result.path or "/", result.query, ""))
+    return urlunsplit(("https", authority, result.path or "/", result.query,
+                       result.fragment if preserve_fragment else ""))
 
 
 def _mask_inline_code(line: str) -> str:
@@ -184,11 +217,124 @@ def _mask_html_comments(line: str, inside: bool) -> tuple[str, bool]:
     return "".join(chars), inside
 
 
-def _markdown_links(body: str):
-    """Yield direct links with one-based line, column, heading and occurrence.
+def _is_escaped(value: str, pos: int) -> bool:
+    count = 0
+    while pos > count and value[pos - count - 1] == "\\":
+        count += 1
+    return count % 2 == 1
 
-    Supports inline, full/collapsed/shortcut references and quoted HTML href.
-    Code fences, inline backticks and reference declarations are not links.
+
+def _markdown_unescape(value: str) -> str:
+    """Unescape only Markdown's backslash-escaped ASCII punctuation."""
+    output = []
+    index = 0
+    while index < len(value):
+        if (value[index] == "\\" and index + 1 < len(value) and
+                value[index + 1] in string.punctuation):
+            output.append(value[index + 1])
+            index += 2
+        else:
+            output.append(value[index])
+            index += 1
+    return "".join(output)
+
+
+def _read_label(value: str, pos: int) -> tuple[str, int] | None:
+    """Balanced label, including escaped and nested square brackets."""
+    if pos >= len(value) or value[pos] != "[":
+        return None
+    depth = 1
+    index = pos + 1
+    while index < len(value):
+        ch = value[index]
+        if ch == "\\" and index + 1 < len(value):
+            index += 2
+            continue
+        if ch == "[":
+            depth += 1
+            if depth > 12:
+                return None
+        elif ch == "]":
+            depth -= 1
+            if depth == 0:
+                return value[pos + 1:index], index + 1
+        index += 1
+    return None
+
+
+def _read_inline_destination(value: str, pos: int) -> tuple[str, int] | None:
+    """Bounded Markdown destination with nested/escaped parentheses and optional title."""
+    if pos >= len(value) or value[pos] != "(":
+        return None
+    index = pos + 1
+    while index < len(value) and value[index] in " \t":
+        index += 1
+    if index >= len(value):
+        return None
+    if value[index] == "<":
+        start = index + 1
+        index += 1
+        while index < len(value) and (value[index] != ">" or _is_escaped(value, index)):
+            index += 1
+        if index == len(value):
+            return None
+        raw = value[start:index]
+        index += 1
+    else:
+        start = index
+        depth = 0
+        while index < len(value):
+            ch = value[index]
+            if ch == "\\" and index + 1 < len(value):
+                index += 2
+                continue
+            if ch == "(":
+                depth += 1
+                if depth > 12:
+                    return None
+            elif ch == ")":
+                if depth == 0:
+                    break
+                depth -= 1
+            elif ch in " \t" and depth == 0:
+                break
+            index += 1
+        if depth or index == start:
+            return None
+        raw = value[start:index]
+    if not raw:
+        return None
+    if index < len(value) and value[index] in " \t":
+        while index < len(value) and value[index] in " \t":
+            index += 1
+        if index < len(value) and value[index] in ("'", '"'):
+            quote = value[index]
+            index += 1
+            while index < len(value) and (value[index] != quote or _is_escaped(value, index)):
+                index += 1
+            if index >= len(value):
+                return None
+            index += 1
+            while index < len(value) and value[index] in " \t":
+                index += 1
+    if index >= len(value) or value[index] != ")":
+        return None
+    return raw, index + 1
+
+
+def _anchor_href(tag: str) -> str | None:
+    """Only href is a link; data-href, other attributes and bare tokens are not."""
+    for match in _HTML_ATTR.finditer(tag[2:-1]):
+        if match.group(1).lower() == "href":
+            return next((value for value in match.groups()[1:] if value is not None), None)
+    return None
+
+
+def _markdown_links(body: str):
+    """Scan supported PDF links with exact original line, column, heading, ordinal.
+
+    Yields (raw_url, interpreted_destination, locator, parse_error). No
+    Markdown renderer, JavaScript execution, network calls, or PDF reading.
     """
     clean = []
     fence_char = ""
@@ -196,59 +342,102 @@ def _markdown_links(body: str):
     heading = None
     in_comment = False
     for number, line in enumerate(body.splitlines(), 1):
-        fence = _FENCE.match(line)
-        if fence:
-            marker = fence.group(1)
-            if not fence_char:
-                fence_char, fence_len = marker[0], len(marker)
-            elif marker[0] == fence_char and len(marker) >= fence_len:
-                fence_char, fence_len = "", 0
-            clean.append((number, "", heading))
-            continue
         if fence_char:
+            fence = _FENCE.match(line)
+            if fence:
+                marker = fence.group(1)
+                if marker[0] == fence_char and len(marker) >= fence_len:
+                    fence_char, fence_len = "", 0
             clean.append((number, "", heading))
             continue
+        # Inline code is inert; comments can contain inert fence-like text.
         visible = _mask_inline_code(line)
         visible, in_comment = _mask_html_comments(visible, in_comment)
-        marker = _HEADING.match(visible)
-        if marker:
-            heading = marker.group(1)
+        fence = _FENCE.match(visible)
+        if fence:
+            marker = fence.group(1)
+            fence_char, fence_len = marker[0], len(marker)
+            clean.append((number, "", heading))
+            continue
+        match = _HEADING.match(visible)
+        if match:
+            heading = match.group(1)
         clean.append((number, visible, heading))
 
-    references = {}
+    references: dict[str, str] = {}
     for _, line, _ in clean:
-        match = _DEFINITION.match(line)
-        if match:
-            key = " ".join(match.group(1).lower().split())
-            references.setdefault(key, match.group(2) or match.group(3))
+        definition = _DEFINITION.match(line)
+        if definition:
+            key = " ".join(definition.group(1).lower().split())
+            references.setdefault(key, definition.group(2) or definition.group(3))
 
     ordinal = 0
     for number, line, heading in clean:
         if _DEFINITION.match(line):
             continue
-        hits = []
-        used = []
-        for match in _INLINE.finditer(line):
-            raw = match.group(2).strip("<>")
-            hits.append((match.start(), raw))
-            used.append((match.start(), match.end()))
-        for match in _HTML.finditer(line):
-            hits.append((match.start(), match.group(2)))
-            used.append((match.start(), match.end()))
-        for match in _REFERENCE.finditer(line):
-            if any(a <= match.start() < b for a, b in used):
+        hits: list[tuple[int, str, str]] = []
+        occupied: list[tuple[int, int]] = []
+        for match in _HTML_TAG.finditer(line):
+            occupied.append((match.start(), match.end()))
+            raw = _anchor_href(match.group(0))
+            if raw is not None:
+                interpreted = html_unescape(raw)
+                if _is_pdf(interpreted):
+                    hits.append((match.start(), raw, interpreted))
+        for match in _AUTOLINK.finditer(line):
+            if any(start <= match.start() < end for start, end in occupied):
                 continue
-            label = match.group(2) or match.group(1)
-            key = " ".join(label.lower().split())
-            if key in references:
-                hits.append((match.start(), references[key]))
-        for column, url in sorted(hits):
-            if _is_pdf(url):
-                ordinal += 1
-                yield url, f"body:line={number}:column={column + 1}:heading={json.dumps(heading, ensure_ascii=False)}:occurrence={ordinal}", None
-        # A malformed linked PDF is diagnostic, not an ordinary file mention.
-        if re.search(r'\[[^\]\n]+\]\([^)\n]*\.pdf(?:[?#][^)\n]*)?$', line, re.I):
-            yield None, f"body:line={number}", "malformed_markdown_link"
+            occupied.append((match.start(), match.end()))
+            raw = match.group(1)
+            if _is_pdf(raw):
+                hits.append((match.start(), raw, raw))
+        index = 0
+        while index < len(line):
+            if (line[index] != "[" or _is_escaped(line, index) or
+                    any(start <= index < end for start, end in occupied)):
+                index += 1
+                continue
+            if (index > 0 and line[index - 1] == "!" and
+                    not _is_escaped(line, index - 1)):
+                index += 1
+                continue  # image, never a document
+            label = _read_label(line, index)
+            if label is None:
+                index += 1
+                continue
+            text, end = label
+            raw = None
+            finish = end
+            if end < len(line) and line[end] == "(":
+                target = _read_inline_destination(line, end)
+                if target is not None:
+                    raw, finish = target
+            elif end < len(line) and line[end] == "[":
+                reference = _read_label(line, end)
+                if reference is not None:
+                    ref_label, finish = reference
+                    key = " ".join((ref_label or text).lower().split())
+                    raw = references.get(key)
+            else:
+                raw = references.get(" ".join(text.lower().split()))
+            if raw is not None:
+                interpreted = _markdown_unescape(raw)
+                if _is_pdf(interpreted):
+                    hits.append((index, raw, interpreted))
+                index = finish
+            else:
+                index = end
+        for column, raw, interpreted in sorted(hits, key=lambda item: item[0]):
+            ordinal += 1
+            locator = (
+                f"body:line={number}:column={column + 1}:"
+                f"heading={json.dumps(heading, ensure_ascii=False)}:"
+                f"occurrence={ordinal}"
+            )
+            yield raw, interpreted, locator, None
+        # Diagnose a clear incomplete PDF link, only on unmasked source text.
+        if re.search(r'(?<!\\)\[[^\]\n]+\]\([^)\n]*\.pdf(?:[?#][^)\n]*)?$', line, re.I):
+            yield None, None, f"body:line={number}", "malformed_markdown_link"
 
 
 def adapt_support_catalog(package: SiteContentPackage) -> SupportCatalogResult:
@@ -264,7 +453,7 @@ def adapt_support_catalog(package: SiteContentPackage) -> SupportCatalogResult:
     def problem(path: str, code: str, message: str, severity="error") -> None:
         issues.append(SiteParseIssue(path, "support_catalog", code, message, severity))
 
-    def emit(entity, field_path, raw_url, title, kind, version=None, date=None):
+    def emit(entity, field_path, raw_url, title, kind, version=None, date=None, *, interpreted_url=None):
         revision = revisions.get(entity.source_revision_id)
         path = revision.path if revision else f"entity:{entity.entity_id}"
         if entity.entity_id not in owners or revision is None:
@@ -274,7 +463,10 @@ def adapt_support_catalog(package: SiteContentPackage) -> SupportCatalogResult:
             problem(path, "missing_url", field_path + ": URL is required")
             return
         try:
-            url = _resolve_url(raw_url, entity.canonical_url, public_origin)
+            destination = interpreted_url if interpreted_url is not None else raw_url
+            url = _resolve_url(destination, entity.canonical_url, public_origin)
+            source_url = _resolve_url(destination, entity.canonical_url, public_origin,
+                                      preserve_fragment=True)
         except ValueError as exc:
             problem(path, "invalid_document_url", field_path + ": " + str(exc))
             return
@@ -282,7 +474,7 @@ def adapt_support_catalog(package: SiteContentPackage) -> SupportCatalogResult:
         locator = entity.source_revision_id + "#" + field_path
         occurrences.append(CatalogOccurrence(
             document_id, entity.entity_id, entity.source_revision_id, path,
-            field_path, locator, raw_url, url, title, kind, version, date,
+            field_path, locator, raw_url, source_url, title, kind, version, date,
         ))
 
     for entity in sorted(package.entities, key=lambda e: (e.collection, e.slug)):
@@ -344,13 +536,13 @@ def adapt_support_catalog(package: SiteContentPackage) -> SupportCatalogResult:
                     continue
                 emit(entity, pointer, raw_url, display_title, kind, version, date)
 
-        for url, pointer, error in _markdown_links(entity.body):
+        for raw, interpreted, pointer, error in _markdown_links(entity.body):
             if error:
                 problem(revision.path, error, pointer + ": incomplete PDF link")
             else:
                 # The link label is not a reliable document title. Provenance
                 # remains in the body; we do not manufacture metadata.
-                emit(entity, pointer, url, None, None)
+                emit(entity, pointer, raw, None, None, interpreted_url=interpreted)
 
     # A malformed manually constructed package must not silently hide orphan
     # document facts. Normal upstream packages always have matching entities.
@@ -368,7 +560,7 @@ def adapt_support_catalog(package: SiteContentPackage) -> SupportCatalogResult:
     for doc_id in sorted(grouped):
         linked = tuple(sorted(grouped[doc_id],
                               key=lambda x: (x.source_path, x.field_path, x.owner_entity_id)))
-        url = linked[0].resolved_url
+        url = _resolve_url(linked[0].resolved_url, None, None)
         owners_for_doc = tuple(sorted({x.owner_entity_id for x in linked}))
         locators = tuple(sorted({x.source_locator for x in linked}))
         chosen = {}
