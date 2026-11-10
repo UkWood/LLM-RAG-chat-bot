@@ -419,7 +419,6 @@ def _check_channel(raw, records, snapshot_id, channel):
                 candidate.snapshot_id != snapshot_id or candidate.channel != channel or
                 type(candidate.rank) is not int or candidate.rank != rank or
                 type(candidate.score) not in (float, int) or not isfinite(candidate.score) or
-                candidate.score < 0 or
                 candidate != _candidate(records[candidate.evidence_id], candidate.score, rank, channel)):
             raise ValueError("Invalid retrieval channel candidate/provenance")
         seen.add(candidate.evidence_id)
