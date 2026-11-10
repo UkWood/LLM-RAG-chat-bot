@@ -175,23 +175,32 @@ class SaturnQdrantIndex:
         points = self._client.query_points(
             self.collection, query=list(q), query_filter=filt,
             limit=len(allowed_points), with_payload=True).points
+        # Qdrant performs the actual filtered nearest-neighbor lookup and
+        # returns the canonical IDs. Validate complete bounded coverage first.
+        # Its float32 scores may drift across equal queries near a rounding
+        # boundary, so compute stable cosine from the already-validated
+        # *expected* normalized vectors instead of exposing Qdrant float32.
+        by_id = dict(zip(self.ids, self._vectors))
+        point_by_id = dict(zip(self.ids, self.point_ids))
+        eligible = set(allowed) & set(by_id)
+        seen = set()
         scored = []
-        eligible = set(allowed)
         for point in points:
             payload = point.payload
             eid = payload.get("evidence_id") if isinstance(payload, dict) else None
-            if (eid not in eligible or str(point.id) not in set(allowed_points)
-                    or not isfinite(float(point.score))):
+            if (eid not in eligible or eid in seen or
+                    str(point.id) != point_by_id[eid] or
+                    not isfinite(float(point.score))):
                 raise ValueError("Invalid Qdrant query candidate")
-            scored.append((eid, float(point.score)))
-        if len(scored) != len(set(eid for eid, _ in scored)):
-            raise ValueError("Duplicate dense candidates")
-        # Query covers all bounded eligible points, then ties use stable IDs.
-        # Qdrant float32 values can change near-ties at 1e-7.
-        scored.sort(key=lambda x: (-round(x[1], 6), x[0]))
-        # Qdrant local cosine may vary at ~1e-12 between identical calls;
-        # expose the same six-decimal precision used for deterministic ranking.
-        return tuple((eid, round(score, 6)) for eid, score in scored[:CANDIDATE_LIMIT])
+            seen.add(eid)
+            cosine = round(sum(a * b for a, b in zip(q, by_id[eid])), 12)
+            if not isfinite(cosine):
+                raise ValueError("Non-finite deterministic cosine")
+            scored.append((eid, cosine))
+        if seen != eligible:
+            raise ValueError("Qdrant query result coverage mismatch")
+        scored.sort(key=lambda pair: (-pair[1], pair[0]))
+        return tuple(scored[:CANDIDATE_LIMIT])
 
     def close(self):
         self._client.close()
