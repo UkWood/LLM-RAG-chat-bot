@@ -2,7 +2,7 @@
 
 Отдельный технический консультант: ответы только по доверенным материалам сайта и PDF с источниками и отказом при недостатке доказательств. Статический интерфейс Astro, отдельный FastAPI backend, локальная KB и сменный LLM provider.
 
-**Стадия (2026-11-10):** PR #24 — External Document Adapter v0.1 **MERGED** в `main` (`01cb640e1b67ee84b4dff00afa6a798bc5203c54`). Этап 4A — Unified Knowledge Snapshot v0.1 — реализуется в [PR #25](https://github.com/UkWood/LLM-RAG-chat-bot/pull/25), ветка `feat/unified-knowledge-snapshot-v0.1`. Добавлены offline immutable snapshot/manifest, strict integrity/readiness, evidence assembly, document lookup, in-memory atomic activation и тесты. До независимого Acceptance Review PR не сливать. Этап 4B (retrieval), LLM/UI, deployment ещё не реализованы; production PDF worker без OS sandbox запрещён. Saturn-Main-Site строго READ-ONLY.
+**Стадия (2026-11-10):** PR #25 — Unified Knowledge Snapshot v0.1 **MERGED** в `main` (merge commit `2da357db4543c9ca173db7663bbd18396d221cc3`). Этап **4B — Saturn Channel-Aware Retrieval v0.1** реализуется в ветке `feat/saturn-channel-aware-retrieval-v0.1`: offline BM25, optional local Qdrant, RRF, независимый document metadata search, versioned index manifest, process-local atomic publication и runtime operational policy. Требуются exact-head GitHub CI и независимый Acceptance Review; **NO MERGE / NO STAGE 5**. Production embedding model и measured Saturn semantic quality отсутствуют; исходный Saturn-Main-Site строго READ-ONLY.
 
 ## Память проекта
 
@@ -10,6 +10,7 @@
 - [Продолжение реализации](docs/HANDOFF.md)
 
 - [Текущее состояние и следующий шаг](docs/PROJECT_STATUS.md)
+- [Этап 4B: Channel-Aware Retrieval v0.1](docs/stages/2026-11-10-saturn-channel-aware-retrieval.md)
 - [Этап 4A: Unified Knowledge Snapshot v0.1](docs/stages/2026-11-10-unified-knowledge-snapshot.md)
 - [Этап 3B: External Document Adapter v0.1](docs/stages/2026-11-10-external-document-adapter.md)
 - [Согласованные критерии прототипа: offline / real sample](docs/acceptance/prototype-v1.md)

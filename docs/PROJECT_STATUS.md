@@ -1,3 +1,21 @@
+## PR #26 — Consolidated Acceptance Review Corrections CR-01–CR-03 (2026-11-10)
+
+- **Тот же PR и ветка:** [#26](https://github.com/UkWood/LLM-RAG-chat-bot/pull/26), `feat/saturn-channel-aware-retrieval-v0.1`. Review baseline `2ef92e3e69acbd9999ad3bb15b43e610e95e7106`. **CHANGES IMPLEMENTED; независимый re-review ещё не выполнен; NO MERGE / NO STAGE 5.**
+- **CR-01:** frozen active bundle + lexical/metadata artifacts, sealed Qdrant и immutable alias mapping, service active-pointer protection, единый atomic publish, deferred Qdrant close по active/in-flight leases.
+- **CR-02:** BM25 searches use prepared terms/counts; eligible-only DF/N/average; repeated queries не токенизируют весь корпус, original scoring verified by independent reference test.
+- **CR-03:** signed numbers, Unicode minus normalization, decimal comma/dot and literal ranges; identifiers preserved; tokenizer `0.2.0` + representation `0.1.1` участвуют в manifest/index identity.
+- **Тесты и CI:** исходный baseline 387 backend tests (11 optional skips), 5 project checks; после CR добавлены targeted regression methods. Итоговые actual counts/CI on exact final PR head — в [PR #26 Checks](https://github.com/UkWood/LLM-RAG-chat-bot/pull/26/checks), проверять после docs commit.
+- **Отчёт:** [Consolidated Acceptance Review Corrections](stages/2026-11-10-saturn-channel-aware-retrieval.md). Scope неизменен; source `UkWood/Saturn-Main-Site` только READ-ONLY, canonical/ADR/legacy/frozen evaluation untouched. Не делать merge до независимого re-review.
+
+## Текущий этап 4B — Saturn Channel-Aware Retrieval v0.1 (2026-11-10)
+
+- **Verified baseline:** `main=2da357db4543c9ca173db7663bbd18396d221cc3` — PR #25 **MERGED** (проверено по GitHub). Все старые записи «PR #25 OPEN» ниже — исторические checkpoint, не текущее состояние.
+- **Ветка:** `feat/saturn-channel-aware-retrieval-v0.1`, ожидаемый PR #26. Merge **не выполнять** до независимого Acceptance Review.
+- **Код:** отдельные `retrieval/saturn_channel.py` и `retrieval/saturn_qdrant.py`; BM25, optional local Qdrant, RRF, document metadata channel, exact snapshot/index manifest, runtime policy recheck, один atomically published bundle pointer. Legacy synthetic Registry и ingestion contracts не менялись.
+- **Тесты:** `test_saturn_channel_retrieval.py`, exact-head `offline-checks` / `onnx-contracts` проверяются по GitHub Actions. Не объявлять semantic relevance PASS: нет закреплённого реального encoder и согласованного Saturn benchmark.
+- **Границы:** нет generation, citations, UI, production Qdrant, cloud/remote endpoints; stage 5 не начат. Известное ограничение 4A по независимой верификации absolute SITE_URL origin сохраняется.
+- **Документ:** [отчёт 4B](stages/2026-11-10-saturn-channel-aware-retrieval.md). `UkWood/Saturn-Main-Site` строго READ-ONLY.
+
 # Состояние проекта
 
 ## PR #25 — Consolidated Corrections CR-01–CR-04 (2026-11-10)
