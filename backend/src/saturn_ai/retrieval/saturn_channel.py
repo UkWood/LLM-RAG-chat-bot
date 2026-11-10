@@ -19,7 +19,7 @@ from ..saturn_knowledge_contracts import (
 )
 
 REPRESENTATION_VERSION = "saturn-evidence-representation/0.1.1"
-TOKENIZER_VERSION = "saturn-technical-tokenizer/0.2.0"
+TOKENIZER_VERSION = "saturn-technical-tokenizer/0.2.1"
 ALIAS_VERSION = "saturn-explicit-dictionary-alias/0.1.0"
 BM25_K1 = 1.2
 BM25_B = 0.75
@@ -33,18 +33,45 @@ MAX_TOTAL_CHARS = 2_000_000
 MAX_DIMENSIONS = 8192
 MAX_EMBEDDING_BATCH = 16
 MAX_VECTOR_VALUES = 2_000_000
-# Signed numeric tokens are matched BEFORE general technical identifiers.
-# U+2212 (mathematical minus) is normalized to ASCII hyphen-minus ONLY
-# when it participates in a numeric token. Comma/dot decimals are preserved
-# as written; range punctuation is retained, never interpreted.
-_NUMERIC = r"[+\-\u2212]?\d+(?:[.,]\d+)*(?:(?:\.\.|…|–|—|-)\s*[+\-\u2212]?\d+(?:[.,]\d+)*)?"
-_TOKEN = re.compile(r"(?<![\w])" + _NUMERIC + r"(?![\w])|[^\W_]+(?:[-./][^\W_]+)*", re.UNICODE)
+# Recognize an explicitly bounded set of directly attached engineering units.
+# This is LEXICAL segmentation, not unit conversion or numeric inference.
+# An unknown suffix stays an opaque identifier; code-like continuations
+# ("12.5V-CTRL", "12.5V2") must not produce a numeric evidence hit.
+# The full original evidence text is never rewritten.
+_NUMBER = r"[+\-\u2212]?\d+(?:[.,]\d+)*"
+_NUMERIC = _NUMBER + r"(?:(?:\.\.|…|–|—|-)\s*" + _NUMBER + r")?"
+_ATTACHED_UNIT = (
+    r"(?:мпа|кпа|бар|квт|кгц|мгц|mpa|kpa|bar|kv|mv|ma|kw|hz|°c|°f|па|вт|гц|в|а|v|a|w)"
+)
+# U+2212 in a recognized signed number is normalized to ASCII "-".
+# Comma/dot decimals and explicit numeric ranges remain literal tokens.
+# Longer unknown alphanumeric decimal designations are opaque, rather than
+# silently split into guessed instrument properties.
+_OPAQUE_DECIMAL_CODE = (
+    r"(?<![\w])[+\-\u2212]?\d+[.,]\d+[^\W_]+(?:[-./][^\W_]+)*(?![\w])"
+)
+_TOKEN = re.compile(
+    rf"(?<![\w])(?P<quantity>{_NUMBER})(?P<unit>{_ATTACHED_UNIT})(?![\w./-])"
+    rf"|{_OPAQUE_DECIMAL_CODE}"
+    rf"|(?<![\w]){_NUMERIC}(?![\w.,/-])"
+    r"|°[cf](?![\w])|[^\W_]+(?:[-./][^\W_]+)*",
+    re.UNICODE,
+)
 
 
 def tokenize(text: str) -> tuple[str, ...]:
     if not isinstance(text, str):
         raise TypeError("Search text must be a string")
-    return tuple(token.replace("\u2212", "-") for token in _TOKEN.findall(text.casefold()))
+    terms = []
+    for match in _TOKEN.finditer(text.casefold()):
+        quantity = match.group("quantity")
+        if quantity is not None:
+            # An adjacent recognized unit yields BOTH the literal numeric
+            # search term and the unit. The source string itself is untouched.
+            terms.extend((quantity.replace("\u2212", "-"), match.group("unit")))
+        else:
+            terms.append(match.group().replace("\u2212", "-"))
+    return tuple(terms)
 
 
 def _hash(value) -> str:
