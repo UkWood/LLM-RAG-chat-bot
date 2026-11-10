@@ -428,6 +428,8 @@ class GitHubSnapshotProvider(SnapshotProvider):
         """Resolve main exactly once and return no object unless every check passes."""
         self._api.begin_operation()
         ref = self._api.get_json(_REPOSITORY_API_PATH + "/git/ref/heads/main")
+        if ref.get("ref") != "refs/heads/main":
+            raise TreeValidationError("GitHub ref response does not match refs/heads/main")
         ref_object = ref.get("object")
         if not isinstance(ref_object, dict) or ref_object.get("type") != "commit":
             raise TreeValidationError("refs/heads/main did not resolve to a commit object")
@@ -520,7 +522,7 @@ class GitHubSnapshotProvider(SnapshotProvider):
                 raise TreeValidationError("Cycle detected in Git tree object traversal")
             response = self._api.get_json(
                 _REPOSITORY_API_PATH + "/git/trees/"
-                + quote(tree_sha, safe="") + "?recursive=0"
+                + quote(tree_sha, safe="")
             )
             self._validate_tree_response_identity(response, tree_sha)
             truncated = response.get("truncated")
@@ -543,7 +545,9 @@ class GitHubSnapshotProvider(SnapshotProvider):
                 entries[path] = entry
                 if len(entries) > self.config.max_tree_entries:
                     raise ResourceLimitError("Git tree entry limit exceeded")
-                if entry.object_type == "tree":
+                if entry.object_type == "tree" and self._is_selected_source_area(path):
+                    # Outside the approved source roots, whole trees are irrelevant.
+                    # Every discovered content/data/pages subtree is still traversed.
                     walk(entry.sha, path, next_ancestors, depth + 1)
 
         walk(root_tree_sha, "", frozenset(), 0)
@@ -599,12 +603,43 @@ class GitHubSnapshotProvider(SnapshotProvider):
                         "Git tree inventory is missing a parent directory entry: " + parent
                     )
 
+    @staticmethod
+    def _is_selected_source_area(path: str) -> bool:
+        """Tree prefixes necessary for dynamic source discovery and route checks.
+
+        The three discovery roots are open-ended; their collection/dictionary/route
+        names must never become a fixed allowlist. src/lib has exact filenames.
+        """
+        return (
+            path in {"src", "src/content", "src/data", "src/pages", "src/lib"}
+            or path.startswith(("src/content/", "src/data/", "src/pages/"))
+        )
+
     def _select_files(self, entries: Mapping[str, _TreeEntry]) -> dict[str, _TreeEntry]:
         selected: dict[str, _TreeEntry] = {}
         route_drift = []
 
         for path in sorted(entries):
             entry = entries[path]
+
+            if self._is_selected_source_area(path):
+                # Reject directory replacements and unsupported objects anywhere
+                # in a discovery subtree, not merely selected .md/.yaml/.astro files.
+                # A Gitlink/symlink can otherwise hide an entire source collection.
+                if path in {"src", "src/content", "src/data", "src/pages", "src/lib"}:
+                    if entry.object_type != "tree":
+                        raise TreeValidationError(
+                            "Unsupported Git object replaces source directory: " + path
+                        )
+                if entry.object_type == "blob" and entry.mode not in _REGULAR_BLOB_MODES:
+                    raise TreeValidationError(
+                        "Unsupported Git symlink within source tree: " + path
+                    )
+                if entry.object_type == "commit":
+                    raise TreeValidationError(
+                        "Unsupported Git submodule within source tree: " + path
+                    )
+
             if entry.object_type == "tree":
                 continue
 
