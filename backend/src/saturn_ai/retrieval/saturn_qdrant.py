@@ -40,6 +40,7 @@ class SaturnQdrantIndex:
     def __init__(self, snapshot_id, records, encoder, *, path=None):
         self.snapshot_id = snapshot_id
         self.encoder = encoder
+        self.backend_mode = "memory" if path is None else "path"
         self.dimensions = getattr(encoder, "dimensions", None)
         if type(self.dimensions) is not int or not 1 <= self.dimensions <= MAX_DIMENSIONS:
             raise ValueError("Invalid local embedding dimensions")
