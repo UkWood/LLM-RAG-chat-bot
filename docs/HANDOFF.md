@@ -1,5 +1,10 @@
 # Передача контекста — реализация кода
 
+## PR #24 — CR-01/CR-02 исправлены (2026-11-10)
+
+Consolidated implementation head: `86c352adc3bfed4cbc80265812b77f6f5a6e07b5`. Subprocess stdout bounded во время обработки, stderr DEVNULL, shutdown/reap при отказе или timeout; returncode<0 → resource_limit до JSON parsing. Девять новых CR-01/CR-02 test methods (один прежний заменён), итого 328 backend tests OK (11 skips), 5 project tests PASS. [Push CI #42852633667](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42852633667) SUCCESS: offline-checks и onnx-contracts. Отдельный docs commit и его exact-head CI проверять по PR #24. **PR остаётся OPEN, NOT MERGED; требуется независимый Acceptance Review.** Production PDF OS isolation не реализована, Saturn-Main-Site READ-ONLY.
+
+
 ## Текущий этап 3B — External Document Adapter v0.1 (2026-11-10)
 
 - PR #23 MERGED в main: dee6011fa67de0bcc62b8304b7549b4ebde396b1, main CI #42838702444 SUCCESS. Это текущий baseline.

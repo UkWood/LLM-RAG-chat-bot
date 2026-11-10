@@ -1,5 +1,10 @@
 # Состояние проекта
 
+## PR #24 — CR-01/CR-02 Consolidated Acceptance Review Corrections (2026-11-10)
+
+Исправляющий code commit `86c352adc3bfed4cbc80265812b77f6f5a6e07b5`: заменён unbounded subprocess stdout/stderr capture на bounded multiplexed pipes с прекращением worker и reaping; signal termination перед JSON parsing детерминированно даёт resource_limit. Девять CR regression methods, **328 backend tests OK (11 skips)**, 5 project tests PASS; [push CI #42852633667](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42852633667) SUCCESS, offline-checks / onnx-contracts. Final docs/head CI и independent re-review проверять через [PR #24](https://github.com/UkWood/LLM-RAG-chat-bot/pull/24). OPEN, NOT MERGED. Production OS sandbox не реализована. Saturn-Main-Site READ-ONLY; этап 4 не начат.
+
+
 ## Этап 3B — External Document Adapter v0.1 (2026-11-10)
 
 PR #23 успешно MERGED в main `dee6011fa67de0bcc62b8304b7549b4ebde396b1`; main Actions run #42838702444 SUCCESS. Это подтверждённый baseline. Новая feature branch: feat/external-document-adapter-v0.1, [PR #24](https://github.com/UkWood/LLM-RAG-chat-bot/pull/24) OPEN, NOT MERGED. Добавляются независимый External Document Adapter, immutable PDF revisions/evidence, URL/SSRF policy, bounded transport и isolated development worker; новые offline tests. Реальная production OS sandbox **не подтверждена**, поэтому worker по умолчанию отключён. Проверенный 3B code head 887108ea65feec91ddcd01631d742aaceb8c2b62: push Actions [#42847781478](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42847781478) и PR [#42847795850](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42847795850) оба SUCCESS, 320 backend tests (11 skips), 5 project tests PASS, ONNX PASS. Финальный документационный head проверить отдельно. Независимый review и merge не выполнены. Saturn-Main-Site только READ-ONLY; этап 4 не начат.

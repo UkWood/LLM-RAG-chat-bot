@@ -61,3 +61,21 @@ EvidenceUnit(evidence_type=pdf_passage) создаётся только для �
 - Новые целевые тесты — 32 (31 в первом commit + 1 DNS deadline test), все PASS; real Saturn fixture проверен только offline с зафиксированными исходными source blobs и synthetic PDF bytes. Live HTTPS/PDF smoke: NOT_RUN; OS-level sandbox: NOT_IMPLEMENTED. Внешние реальные PDF не скачивались.
 
 Документ сохраняет исторически проверенный code head; при проверке следующего documentation head ссылаться на CI в PR, не изменяя эту запись ради SHA.
+
+
+## Consolidated Acceptance Review Corrections — CR-01 / CR-02 (2026-11-10)
+
+**Reviewed initial head:** 69e30066f159f3612dc738dd8ad23477a515d927.  
+**Corrective implementation/code head:** 86c352adc3bfed4cbc80265812b77f6f5a6e07b5.  
+**PR:** [#24](https://github.com/UkWood/LLM-RAG-chat-bot/pull/24), OPEN, NOT MERGED.  
+**Scope:** только bounded PDF subprocess stdout/stderr и точная диагностика termination. Existing URL/SSRF, revisions, canonical contracts и site repo не изменялись.
+
+**CR-01 — PASS:** заменён неограниченный subprocess.run(capture_output=True). Родитель использует subprocess.Popen с nonblocking stdin/stdout через POSIX selector. Данные stdout читаются порциями, накопление строго ограничено верхним пределом max_text_bytes * 6 + max_pages * 128; превышение немедленно даёт resource_limit. stderr направлен в DEVNULL, не буферизуется и не попадает в diagnostics. Дочерний процесс принудительно убивается и reaped при ошибке и timeout, обычный ответ обрабатывается без регрессии. Лимиты worker RAM/CPU/wall и input bytes сохранены. Production-worker не включён.
+
+**CR-02 — PASS:** отрицательный subprocess returncode проверяется **до** JSON decoding и всегда соответствует resource_limit, включая сигнал -9 с пустым или повреждённым stdout. Nonzero process exit с валидным структурированным error JSON сохраняет разрешённый код. Положительное завершение с malformed JSON/invalid worker reply даёт parser_error. Отсутствие evidence и PdfRevision(extraction_state=failed) после ошибки подтверждено.
+
+**Новые regression tests:** девять CR-01/CR-02 test methods вместо одного прежнего общего smoke-теста. Проверяют ограничение stdout, бесконечную запись и reaping, большой stderr без deadlock, failed revision без fake evidence, SIGKILL -9 с пустым и invalid stdout, invalid JSON при rc=0, structured worker error, malformed nonzero reply, timeout с kill/reap, valid JSON и реальный успешный pypdf worker.
+
+**Фактический code-head CI:** [push run #42852633667](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42852633667) на exact corrective code SHA 86c352adc3bfed4cbc80265812b77f6f5a6e07b5 — **SUCCESS**: offline-checks SUCCESS (5 project tests PASS; 328 backend tests OK, 11 existing optional skips; все 9 CR regression methods OK); onnx-contracts SUCCESS. Команда: python scripts/verify_offline.py. Предыдущий baseline — 320 backend tests (11 skips). Старые synthetic lexical metrics не являются PDF quality evaluation.
+
+**Оставшееся ограничение:** RLIMIT/subprocess и stdout cap не заменяют OS-level network/filesystem/syscall sandbox. Production PDF-worker запрещён по умолчанию; live site PDF smoke и OS isolation NOT_RUN / NOT_IMPLEMENTED. Финальный documentation-head CI и URL зафиксированы в описании PR после его завершения; исторические code SHA не обновляются косметическими commits.
