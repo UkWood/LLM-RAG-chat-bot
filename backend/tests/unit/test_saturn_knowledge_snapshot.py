@@ -132,7 +132,7 @@ class SaturnKnowledgeSnapshotTests(unittest.TestCase):
         self.assertTrue(snapshot.unresolved_relations)
         self.assertTrue(any(x.code == "unresolved_relation"
                             for x in snapshot.diagnostics))
-        self.assertFalse(any(x.evidence_type == "relation"
+        self.assertFalse(any(x.canonical_kind == "SiteRelation"
                              and x.canonical_id in {r.relation_id for r in snapshot.unresolved_relations}
                              for x in snapshot.evidence_pointers))
         self.assertTrue(snapshot.ready_for_promotion)
