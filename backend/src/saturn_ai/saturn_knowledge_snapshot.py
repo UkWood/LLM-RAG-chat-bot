@@ -151,6 +151,8 @@ def stage_saturn_knowledge_snapshot(
                                     "warning"))
 
     source_revisions = sorted_canonical(site.source_revisions)
+    source_records = tuple(sorted((r for r in site.raw_records if r.draft is False),
+                                  key=lambda r: r.path))
     entities = sorted_canonical(site.entities)
     facts = sorted_canonical(site.facts)
     relations = sorted_canonical(validation.resolved_relations)
@@ -222,6 +224,7 @@ def stage_saturn_knowledge_snapshot(
     issues = sorted_canonical(issues)
     counts_map = {
         "source_revisions": len(source_revisions),
+        "source_records": len(source_records),
         "entities": len(entities),
         "facts": len(facts),
         "relations": len(relations),
@@ -252,7 +255,7 @@ def stage_saturn_knowledge_snapshot(
         corpus_hash="", snapshot_id="",
     )
     snapshot = SaturnKnowledgeSnapshot(
-        source_revisions, entities, facts, relations, unresolved,
+        source_revisions, source_records, entities, facts, relations, unresolved,
         dictionaries, documents, occurrences, associations,
         pdf_revisions, statuses, pdf_diagnostics,
         evidence, pointers, matches, issues, gates, manifest,

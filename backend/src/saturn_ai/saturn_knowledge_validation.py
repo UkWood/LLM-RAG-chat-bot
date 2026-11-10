@@ -16,10 +16,12 @@ from .ingestion.saturn_contracts import (
 )
 from .ingestion.saturn_site_adapter import (
     RawSiteRecord, SiteContentPackage, SiteDictionary, SiteParseIssue,
+    _RELATION_FIELDS, _safe_reference_slug,
 )
 from .ingestion.support_catalog_adapter import (
     CatalogOccurrence, PdfCandidate, SupportCatalogResult, _is_pdf,
 )
+from .ingestion.external_document_transport import CODES
 from .ingestion.external_document_adapter import (
     CachedPdfExtraction, DocumentAssociation, DocumentDiagnostic,
     DocumentStatus, ExternalDocumentResult,
@@ -222,6 +224,20 @@ def validate_saturn_snapshot_inputs(site, catalog, external) -> ValidationResult
                     relation.object_entity_id, relation.source_revision_id,
                     relation.source_field_path)):
             issue("invalid_relation_provenance", relation.relation_id)
+        if owner is not None:
+            field_name = relation.source_field_path.split("[", 1)[0]
+            descriptor = _RELATION_FIELDS.get(owner.collection, {}).get(field_name)
+            try:
+                raw_target = json.loads(frontmatter[owner.entity_id][
+                    relation.source_field_path])
+                source_slug = _safe_reference_slug(raw_target)
+            except (KeyError, ValueError, TypeError):
+                issue("relation_source_mismatch", relation.relation_id)
+            else:
+                if (descriptor is None or field_name != relation.predicate or
+                        relation.object_entity_id != "saturn:" + stable_id(
+                            "saturn-site-entity-v1", descriptor[0], source_slug)):
+                    issue("relation_source_mismatch", relation.relation_id)
         if relation.object_entity_id in entities:
             valid_relations.append(relation)
         else:
@@ -247,6 +263,25 @@ def validate_saturn_snapshot_inputs(site, catalog, external) -> ValidationResult
                 occ.source_locator != occ.source_revision_id + "#" + occ.field_path or
                 canonical != doc.url):
             issue("invalid_document_occurrence", occ.source_locator)
+        if owner is not None:
+            if occ.field_path.startswith("body:"):
+                match = re.fullmatch(
+                    r"body:line=(\d+):column=(\d+):heading=.+:occurrence=(\d+)",
+                    occ.field_path)
+                lines = owner.body.splitlines()
+                if (match is None or int(match.group(1)) > len(lines) or
+                        int(match.group(1)) < 1 or int(match.group(2)) < 1 or
+                        int(match.group(2)) > len(lines[int(match.group(1)) - 1]) or
+                        lines[int(match.group(1)) - 1][int(match.group(2)) - 1] not in "[<"):
+                    issue("invalid_document_locator", occ.source_locator)
+            else:
+                try:
+                    original = json.loads(frontmatter[owner.entity_id][occ.field_path])
+                    if (not isinstance(original, dict) or
+                            occ.raw_url not in (original.get("url"), original.get("image"))):
+                        issue("invalid_document_locator", occ.source_locator)
+                except (ValueError, KeyError, TypeError):
+                    issue("invalid_document_locator", occ.source_locator)
     if set(documents) != set(by_doc):
         issue("incomplete_document_occurrences", "catalog")
     for doc in catalog.documents:
@@ -300,6 +335,8 @@ def validate_saturn_snapshot_inputs(site, catalog, external) -> ValidationResult
                 assoc.source_locators != candidate.source_locators or
                 assoc.source_revision_ids != candidate.source_revision_ids):
             issue("pdf_association_mismatch", doc_id)
+        if status.status not in CODES | {"extracted", "partial_text"}:
+            issue("invalid_pdf_status", doc_id)
         if status.revision_id is None:
             if status.status in {"extracted", "partial_text", "ocr_required"}:
                 issue("pdf_status_without_revision", doc_id)

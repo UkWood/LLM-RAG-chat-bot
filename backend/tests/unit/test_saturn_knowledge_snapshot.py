@@ -15,6 +15,7 @@ from saturn_ai.ingestion.saturn_site_adapter import (
     PinnedSiteSnapshot, adapt_snapshot, git_blob_sha1,
 )
 from saturn_ai.ingestion.support_catalog_adapter import adapt_support_catalog
+from saturn_ai.ingestion.saturn_contracts import SiteRelation, stable_id
 from saturn_ai.saturn_knowledge_contracts import (
     SaturnSnapshotManager, SnapshotBuildError, verify_snapshot_seal,
 )
@@ -86,13 +87,15 @@ class SaturnKnowledgeSnapshotTests(unittest.TestCase):
         self.assertTrue(snapshot.ready_for_promotion)
         self.assertTrue(verify_snapshot_seal(snapshot))
         self.assertEqual(snapshot.manifest.site_manifest, site.manifest)
+        self.assertTrue(snapshot.source_records)
+        self.assertTrue(all(not rec.draft for rec in snapshot.source_records))
         self.assertEqual(snapshot.manifest.pdf_parser_version, external.parser_version)
         self.assertEqual(len(snapshot.document_matches), len(catalog.documents))
         self.assertEqual(len(snapshot.document_occurrences), len(catalog.occurrences))
         self.assertEqual({x.evidence_type for x in snapshot.answer_evidence},
                          {"site_field", "site_passage", "pdf_passage"})
-        self.assertEqual([e.page_number for e in snapshot.answer_evidence
-                          if e.evidence_type == "pdf_passage"], [1, 2])
+        self.assertEqual(sorted(e.page_number for e in snapshot.answer_evidence
+                                if e.evidence_type == "pdf_passage"), [1, 2])
         for e in snapshot.answer_evidence:
             self.assertTrue(e.text)
             pointer = next(p for p in snapshot.evidence_pointers
@@ -245,7 +248,19 @@ class SaturnKnowledgeSnapshotTests(unittest.TestCase):
         site, catalog, ext = make_inputs({
             PRODUCT: source(fields="documents:\n - " + doc() + "\n")
         })
+        owner = site.entities[0]
+        forged = SiteRelation(
+            relation_id=stable_id("saturn-site-relation-v1",
+                owner.entity_id, "compatible_with", owner.entity_id,
+                owner.source_revision_id, "title"),
+            subject_entity_id=owner.entity_id,
+            predicate="compatible_with", object_entity_id=owner.entity_id,
+            source_revision_id=owner.source_revision_id,
+            source_field_path="title",
+        )
         cases = [
+            (replace(site, relations=(forged,)), catalog, ext,
+             "relation_source_mismatch"),
             (replace(site, facts=site.facts + site.facts[:1]), catalog, ext,
              "duplicate_fact"),
             (replace(site, source_revisions=(

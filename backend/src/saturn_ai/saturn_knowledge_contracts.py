@@ -12,7 +12,7 @@ from .ingestion.saturn_contracts import (
     SiteSourceRevision, SiteSyncManifest, SupportDocument, stable_id,
     canonical_json,
 )
-from .ingestion.saturn_site_adapter import SiteDictionary
+from .ingestion.saturn_site_adapter import RawSiteRecord, SiteDictionary
 from .ingestion.support_catalog_adapter import CatalogOccurrence
 from .ingestion.external_document_adapter import (
     DocumentAssociation, DocumentDiagnostic, DocumentStatus,
@@ -69,6 +69,7 @@ class SaturnSnapshotManifest:
 @dataclass(frozen=True)
 class SaturnKnowledgeSnapshot:
     source_revisions: tuple[SiteSourceRevision, ...]
+    source_records: tuple[RawSiteRecord, ...]
     entities: tuple[SiteEntity, ...]
     facts: tuple[SiteFact, ...]
     relations: tuple[SiteRelation, ...]
@@ -122,6 +123,16 @@ def dictionary_payload(dictionary: SiteDictionary):
     }
 
 
+def source_record_payload(record: RawSiteRecord):
+    return {
+        "path": record.path, "source_revision_id": record.source_revision_id,
+        "collection": record.collection, "slug": record.slug,
+        "content_sha256": sha256(record.content).hexdigest(),
+        "raw_frontmatter_text": record.raw_frontmatter_text,
+        "body": record.body, "draft": record.draft,
+    }
+
+
 def snapshot_content(snapshot: SaturnKnowledgeSnapshot):
     groups = (
         "source_revisions", "entities", "facts", "relations",
@@ -132,6 +143,7 @@ def snapshot_content(snapshot: SaturnKnowledgeSnapshot):
     )
     data = {name: [asdict(item) for item in getattr(snapshot, name)]
             for name in groups}
+    data["source_records"] = [source_record_payload(x) for x in snapshot.source_records]
     data["dictionaries"] = [dictionary_payload(x) for x in snapshot.dictionaries]
     data["readiness_gates"] = list(snapshot.readiness_gates)
     return data
