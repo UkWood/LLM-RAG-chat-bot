@@ -7,6 +7,7 @@ from dataclasses import replace
 from hashlib import sha256
 from pathlib import Path
 from unittest.mock import patch
+from qdrant_client import models
 import unittest
 
 from saturn_ai.ingestion.saturn_site_adapter import (
