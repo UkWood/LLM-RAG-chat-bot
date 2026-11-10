@@ -36,8 +36,8 @@ MAX_VECTOR_VALUES = 2_000_000
 # U+2212 (mathematical minus) is normalized to ASCII hyphen-minus ONLY
 # when it participates in a numeric token. Comma/dot decimals are preserved
 # as written; range punctuation is retained, never interpreted.
-_NUMERIC = r"[+\\-\\u2212]?\\d+(?:[.,]\\d+)*(?:(?:\\.\\.|…|–|—|-)\\s*[+\\-\\u2212]?\\d+(?:[.,]\\d+)*)?"
-_TOKEN = re.compile(r"(?<![\\w])" + _NUMERIC + r"(?![\\w])|[^\\W_]+(?:[-./][^\\W_]+)*", re.UNICODE)
+_NUMERIC = r"[+\-\u2212]?\d+(?:[.,]\d+)*(?:(?:\.\.|…|–|—|-)\s*[+\-\u2212]?\d+(?:[.,]\d+)*)?"
+_TOKEN = re.compile(r"(?<![\w])" + _NUMERIC + r"(?![\w])|[^\W_]+(?:[-./][^\W_]+)*", re.UNICODE)
 
 
 def tokenize(text: str) -> tuple[str, ...]:
