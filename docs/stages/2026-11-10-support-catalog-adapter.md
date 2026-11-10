@@ -1,7 +1,7 @@
 # Этап 3A — Support Catalog Adapter v0.1
 
 Дата: 2026-11-10  
-Статус: **IMPLEMENTED — CI / независимый Acceptance Review ещё проверяются**  
+Статус: **IMPLEMENTED, PR #23 OPEN — exact-head CI и независимый Acceptance Review обязательны до merge**  
 Проект: `UkWood/LLM-RAG-chat-bot`  
 Ветка: `feat/support-catalog-adapter-v0.1`  
 Base `main`: `ff9baa8819714d5cb4ba9c61827dbf4666acd0b6` (merge PR #22, main CI #42777814511 SUCCESS).
@@ -38,7 +38,7 @@ HTTPS URL разрешаются консервативно; исходный а
 
 ## 4. Offline тесты
 
-Добавлено `backend/tests/unit/test_support_catalog_adapter.py` с отдельными case methods для documents/products/systems, certificates/image, Markdown links, drafts, unknown collections, shared owners, duplicate provenance, conflicting metadata, URL resolution/query/fragment, PDF-kind mismatch, malformed entries, unsafe schemes, missing base, code fences, content changes, add/remove owner, stable IDs, exact revisions, immutable contract и контрольных source-derived fixtures.
+Добавлено `backend/tests/unit/test_support_catalog_adapter.py` с 27 отдельными test methods для documents/products/systems, certificates/image, Markdown links, drafts, unknown collections, shared owners, duplicate provenance, conflicting metadata, URL resolution/query/fragment, PDF-kind mismatch, malformed entries, unsafe schemes, missing base, code fences, content changes, add/remove owner, stable IDs, exact revisions, immutable contract и контрольных source-derived fixtures.
 
 Запуск проверок: `python scripts/verify_offline.py` (project checks, project and backend unittest suites, synthetic baseline) и GitHub Actions `offline-checks` + `onnx-contracts`. Для каждого exact head итоговый CI подтверждается отдельно, а не переносится с предыдущего commit.
 
@@ -46,6 +46,14 @@ HTTPS URL разрешаются консервативно; исходный а
 
 Нет PDF fetch/parsing/OCR, `PdfRevision`, MIME sniffing, full-text indexing, Unified Snapshot, retrieval integration, Gitea Provider, API, UI, LLM/provider, deployment/scheduling. Нет изменений в `UkWood/Saturn-Main-Site`. Не использован legacy `SourceRecord/Registry`. Изложенные результаты и тесты не означают приёмки качества консультаций по инженерным вопросам.
 
-## 6. Acceptance workflow
+## 6. Проверка реализации и саморевью
+
+- [PR #23](https://github.com/UkWood/LLM-RAG-chat-bot/pull/23) открыт. Слияние в main не разрешено.
+- Предыдущий полностью проверенный head `ee083ad52380d60e1e5e755c6ca7462c3f61aced`: [push CI #42785236436](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42785236436) SUCCESS — 279 backend tests, 11 existing optional skips, ONNX contracts SUCCESS.
+- Дополнительное саморевью выявило и исправило ссылки со скобками в URL (реальная схема Saturn), false positives в HTML comments и escaped Markdown links. Два новых регрессионных теста включены. Финальные изменения требует подтвердить CI **последнего PR head**, а не предыдущего commit.
+- Синтетическая lexical evaluation source-hit@5 = 0.85 — историческая метрика другого компонента, не качество Support Catalog.
+- Независимый Acceptance Review ещё не выполнен; полный реальный каталог на всех 438 записях сайта не строился. Обработка сложных форм Markdown за пределами bounded grammar остаётся ограничением.
+
+## 7. Acceptance workflow
 
 Соблюдать **один полный Acceptance Review → консолидированный список замечаний → одна корректирующая итерация**. Проверить архитектуру, code diff, независимость от сети, fail-closed, URLs/provenance, positive/negative tests, документацию и exact PR-head CI. **Не сливать PR** до отдельного явного разрешения владельца.
