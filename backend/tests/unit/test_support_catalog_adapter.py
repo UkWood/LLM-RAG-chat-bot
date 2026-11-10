@@ -277,6 +277,25 @@ class SupportCatalogTests(unittest.TestCase):
         self.assertEqual(len(result.pdf_candidates), 2)
         self.assertEqual(sum(len(x.owner_entity_ids) for x in result.documents), 3)
 
+    def test_parenthesized_pdf_url_and_escaped_links(self):
+        body = ("[Real](/ftp/bdk-3(4)m/manual.PDF)\n"
+                r"\[Escaped](/ftp/ignored.pdf)" + "\n"
+                "![Image](/ftp/image.pdf)\n")
+        result = catalog({PRODUCT: source(body=body)})
+        self.assertTrue(result.ready_for_promotion)
+        self.assertEqual(len(result.pdf_candidates), 1)
+        self.assertIn("/ftp/bdk-3(4)m/manual.PDF",
+                      result.pdf_candidates[0].resolved_url)
+
+    def test_html_comments_do_not_emit_pdf_links(self):
+        body = ("Visible [yes](/ftp/yes.pdf) <!-- [no](/ftp/no.pdf) -->\n"
+                "<!--\n<a href='/ftp/no2.pdf'>Hidden</a>\n-->\n"
+                "[yes2](/ftp/yes2.pdf)\n")
+        result = catalog({PRODUCT: source(body=body)})
+        self.assertTrue(result.ready_for_promotion)
+        self.assertEqual(len(result.pdf_candidates), 2)
+        self.assertEqual(len(result.occurrences), 2)
+
     def test_upstream_fail_closed(self):
         result = catalog({PRODUCT: source(fields="documents: broken\n")})
         self.assertFalse(result.ready_for_promotion)
