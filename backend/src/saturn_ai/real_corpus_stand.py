@@ -18,6 +18,7 @@ from urllib.parse import urlsplit
 from ..evaluation.saturn_grounding import SaturnEvaluationProfile, _run_question
 from ..grounding.saturn_answer_assembly import SaturnAnswerAssemblyService
 from ..grounding.saturn_claim_provider import SaturnFakeClaimProvider
+from ..grounding.saturn_local_provider import SaturnLocalClaimProvider, SaturnLocalModelConfig
 from ..grounding.saturn_generation import SaturnClaimVerificationService
 from ..grounding.saturn_sufficiency_gate import SaturnQuestionGate
 from ..ingestion.external_document_adapter import adapt_external_documents
@@ -207,21 +208,40 @@ def prepare_real_stand(*, provider: GitHubSnapshotProvider,
     return RealStand(snapshot, bundle, manifest)
 
 
-def run_question(stand: RealStand, question: str) -> dict:
-    """Run Stage 4B-5D with the exact fake baseline and a pinned stage trace."""
+def run_question(stand: RealStand, question: str, *,
+                 draft_provider=None) -> dict:
+    """Run the existing Stage 4B-5D path, never passing gold to the provider."""
     if not isinstance(question, str) or not question.strip() or len(question) > 4000:
         raise ValueError("invalid_question")
     service = SaturnRetrievalService()
     service.publish(stand.bundle)
-    verifier = SaturnClaimVerificationService(provider=SaturnFakeClaimProvider())
+    provider = draft_provider if draft_provider is not None else SaturnFakeClaimProvider()
+    if type(provider) not in (SaturnFakeClaimProvider, SaturnLocalClaimProvider):
+        raise ValueError("unapproved_draft_provider")
+    verifier = SaturnClaimVerificationService(provider=provider)
     assembly = SaturnAnswerAssemblyService(verifier=verifier)
     answer, trace = _run_question(
         service, assembly, SaturnQuestionGate(), verifier,
         question, SaturnEvaluationProfile("real_sample"),
     )
+    if type(provider) is SaturnLocalClaimProvider:
+        profile = "real_source_local_llm"
+        local = {
+            "model_id": provider.config.model_id,
+            "declared_model_sha256": provider.config.declared_model_sha256,
+            "model_digest_server_verified": False,
+            "successful_inference_requests": provider.successful_requests,
+            "latencies_ms": list(provider.latencies_ms),
+            "token_usage": provider.last_usage,
+            "actual_inference_status": (
+                "INVOKED" if provider.successful_requests else "NOT_CONFIRMED"),
+        }
+    else:
+        profile, local = "real_source_fake_baseline", None
     return {
-        "profile": "real_source_fake_baseline",
-        "provider": "SaturnFakeClaimProvider",
+        "profile": profile,
+        "provider": type(provider).__name__,
+        "local_inference": local,
         "answer": asdict(answer),
         "stage_trace": asdict(trace),
         "independent_blind_evaluation": "NOT_RUN",
@@ -232,20 +252,37 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description="Opt-in real Saturn integration experiment")
     parser.add_argument("--allow-real-network", action="store_true")
     parser.add_argument("--allow-development-pdf-worker", action="store_true")
-    parser.add_argument("--provider", choices=("fake",), default="fake")
+    parser.add_argument("--provider", choices=("fake", "local_llm"), default="fake")
+    parser.add_argument("--allow-local-inference", action="store_true")
+    parser.add_argument("--local-endpoint")
+    parser.add_argument("--local-model-id")
+    parser.add_argument("--local-model-sha256")
     parser.add_argument("--question", help="One question (no gold or expected answer)")
     parser.add_argument("--report", type=Path, help="Exclusive local JSON report")
     args = parser.parse_args(argv)
     if not (args.allow_real_network and args.allow_development_pdf_worker):
         parser.error("Real source fetch and development PDF worker both require explicit opt-in")
+    if args.provider == "local_llm" and (
+            not args.allow_local_inference or not args.question
+            or not args.local_endpoint or not args.local_model_id
+            or not args.local_model_sha256):
+        parser.error("Local inference requires opt-in, a question, exact loopback endpoint, model ID and declared weight SHA-256")
     try:
+        if args.provider == "local_llm":
+            draft_provider = SaturnLocalClaimProvider(SaturnLocalModelConfig(
+                endpoint=args.local_endpoint, model_id=args.local_model_id,
+                declared_model_sha256=args.local_model_sha256,
+            ))
+        else:
+            draft_provider = SaturnFakeClaimProvider()
         stand = prepare_real_stand(
             provider=GitHubSnapshotProvider.from_env(),
             enable_development_pdf_worker=True,
         )
         result = {"manifest": stand.manifest}
         if args.question is not None:
-            result["question_run"] = run_question(stand, args.question)
+            result["question_run"] = run_question(
+                stand, args.question, draft_provider=draft_provider)
         serialized = json.dumps(result, ensure_ascii=False, sort_keys=True,
                                 separators=(",", ":")) + "\n"
         if args.report is not None:
