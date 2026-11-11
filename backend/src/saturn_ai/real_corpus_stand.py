@@ -15,21 +15,21 @@ import sys
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from ..evaluation.saturn_grounding import SaturnEvaluationProfile, _run_question
-from ..grounding.saturn_answer_assembly import SaturnAnswerAssemblyService
-from ..grounding.saturn_claim_provider import SaturnFakeClaimProvider
-from ..grounding.saturn_local_provider import SaturnLocalClaimProvider, SaturnLocalModelConfig
-from ..grounding.saturn_generation import SaturnClaimVerificationService
-from ..grounding.saturn_sufficiency_gate import SaturnQuestionGate
-from ..ingestion.external_document_adapter import adapt_external_documents
-from ..ingestion.external_document_extractor import SubprocessPdfExtractor
-from ..ingestion.external_document_transport import DocumentFetchPolicy
-from ..ingestion.github_snapshot_provider import GitHubSnapshotProvider
-from ..ingestion.saturn_site_adapter import PinnedSiteSnapshot, adapt_snapshot
-from ..ingestion.schema_evolution import is_route_source_path
-from ..ingestion.support_catalog_adapter import SupportCatalogResult, adapt_support_catalog
-from ..retrieval.saturn_channel import SaturnRetrievalService, build_saturn_retrieval_bundle
-from ..saturn_knowledge_snapshot import build_saturn_knowledge_snapshot
+from .evaluation.saturn_grounding import SaturnEvaluationProfile, _run_question
+from .grounding.saturn_answer_assembly import SaturnAnswerAssemblyService
+from .grounding.saturn_claim_provider import SaturnFakeClaimProvider
+from .grounding.saturn_local_provider import SaturnLocalClaimProvider, SaturnLocalModelConfig
+from .grounding.saturn_generation import SaturnClaimVerificationService
+from .grounding.saturn_sufficiency_gate import SaturnQuestionGate
+from .ingestion.external_document_adapter import adapt_external_documents
+from .ingestion.external_document_extractor import SubprocessPdfExtractor
+from .ingestion.external_document_transport import DocumentFetchPolicy
+from .ingestion.github_snapshot_provider import GitHubSnapshotProvider
+from .ingestion.saturn_site_adapter import PinnedSiteSnapshot, adapt_snapshot
+from .ingestion.schema_evolution import is_route_source_path
+from .ingestion.support_catalog_adapter import SupportCatalogResult, adapt_support_catalog
+from .retrieval.saturn_channel import SaturnRetrievalService, build_saturn_retrieval_bundle
+from .saturn_knowledge_snapshot import build_saturn_knowledge_snapshot
 
 
 STAND_VERSION = "saturn-real-integration-stand/0.1.0"
