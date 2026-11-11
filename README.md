@@ -2,9 +2,11 @@
 
 Отдельный технический консультант: ответы только по доверенным материалам сайта и PDF с источниками и отказом при недостатке доказательств. Статический интерфейс Astro, отдельный FastAPI backend, локальная KB и сменный LLM provider.
 
-**Стадия (2026-11-10):** PR #25 — Unified Knowledge Snapshot v0.1 **MERGED** в `main` (merge commit `2da357db4543c9ca173db7663bbd18396d221cc3`). Этап **4B — Saturn Channel-Aware Retrieval v0.1** реализуется в ветке `feat/saturn-channel-aware-retrieval-v0.1`: offline BM25, optional local Qdrant, RRF, независимый document metadata search, versioned index manifest, process-local atomic publication и runtime operational policy. Требуются exact-head GitHub CI и независимый Acceptance Review; **NO MERGE / NO STAGE 5**. Production embedding model и measured Saturn semantic quality отсутствуют; исходный Saturn-Main-Site строго READ-ONLY.
+**Стадия (2026-11-11):** Stage 4B — Saturn Channel-Aware Retrieval v0.1 (PR #26) **MERGED**, baseline `main=340e7d63e6899d855a01547003d1d983e9078eda`. Ветка Stage 5A `feat/saturn-evidence-context-v0.1`: pinned request-scoped `SaturnAnswerSession`, canonical typed evidence, отдельный document metadata context, operational-policy recheck и bounded fail-closed behavior. В существующем [PR #27](https://github.com/UkWood/LLM-RAG-chat-bot/pull/27) внесены консолидированные исправления CR-01/CR-02: sealed session factory/ownership, immutable issued registry, безопасная классификация Unicode/policy/retrieval ошибок; добавлены T-01–T-15. Требуются полный offline suite и exact-final-head push/PR CI, затем независимый Acceptance Review сессии A; **NO MERGE / NO STAGE 5B**. Нет LLM generation, answer completeness, final citations или measured Saturn semantic quality. `UkWood/Saturn-Main-Site` строго READ-ONLY.
 
 ## Память проекта
+
+- [Stage 5A: Saturn Evidence Context](docs/stages/2026-11-11-saturn-evidence-context.md)
 
 - [Правила двух ChatGPT-сессий и стартовый prompt](docs/CHATGPT_SESSION_GUIDE.md)
 - [Продолжение реализации](docs/HANDOFF.md)

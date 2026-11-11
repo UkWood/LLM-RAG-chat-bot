@@ -1,3 +1,18 @@
+## PR #27 — Stage 5A Consolidated Review Corrections (2026-11-11)
+
+- **Текущий PR:** [#27](https://github.com/UkWood/LLM-RAG-chat-bot/pull/27), ветка `feat/saturn-evidence-context-v0.1`, baseline `main=340e7d63e6899d855a01547003d1d983e9078eda`, initial reviewed head `c95cef4aebfbdef512e4cb54d0b14585d089deb1`. Статус: **CHANGES REQUESTED**, исправления CR-01/02 внесены, exact-head CI и повторный независимый review обязательны.
+- **CR-01 BLOCKER:** прямой конструктор `SaturnAnswerSession` запрещён; factory under service publication lock делает bundle capture + Qdrant `_retain()`, при construction failure освобождает lease. `_service/_bundle/_lock` и lifecycle/ownership immutable для обычного assignment; `_issued` immutable tuple, только controlled update; close idempotent, Qdrant deferred release.
+- **CR-02 IMPORTANT:** invalid UTF-8 surrogate → `invalid_request`; corrupted context fingerprint → `context_identity_mismatch`. Operational-policy capture обёрнут в typed `SaturnPolicyCaptureError` на границе 4B; любые прочие обычные backend errors → `retrieval_unavailable` без анализа текста исключения и без утечки provider diagnostics.
+- **Тесты:** добавлены T-01–T-15 в `test_saturn_evidence_context.py`, в том числе настоящие Thread/Event concurrency, multiple reader leases, failure cleanup, provider/index faults, Unicode, immutable ownership. Полный `python scripts/verify_offline.py` и оба jobs на финальном SHA — обязательная проверка, результаты публикуются в [PR #27](https://github.com/UkWood/LLM-RAG-chat-bot/pull/27), не предполагать PASS заранее.
+- [Stage report](stages/2026-11-11-saturn-evidence-context.md). Никаких изменений `UkWood/Saturn-Main-Site`; сохранены 4A/4B semantics и граница Stage 5A; **NO MERGE / NO 5B**.
+
+## Stage 5A — Saturn Evidence Context & Snapshot Binding v0.1 (2026-11-11)
+
+- **LIVE verified main:** `340e7d63e6899d855a01547003d1d983e9078eda`; PR #26 **MERGED**, baseline Actions [#42914744740](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42914744740) offline-checks/onnx-contracts SUCCESS. Исторические строки ниже о #26 OPEN относятся к прошлому checkpoint.
+- **Активная разработка:** `feat/saturn-evidence-context-v0.1`; один PR Stage 5A в `main`. Новый `SaturnAnswerSession` atomically pins один 4B bundle с Qdrant reader lease; `build_context()` выдаёт source-exact typed evidence и отдельно document metadata. `recheck_policy()` fail-closed проверяет актуальные source/evidence/document/PDF/entity блокировки. Strict immutable bounds 10/10/20k.
+- **Тесты:** `backend/tests/unit/test_saturn_evidence_context.py` и полный `python scripts/verify_offline.py`; exact final head и push/PR CI — в описании PR. Не утверждать PASS до получения результатов.
+- **Отчёт:** [Stage 5A](stages/2026-11-11-saturn-evidence-context.md). Вне scope sufficiency, generation, claim verification, citations, UI и deployment. **READY FOR INDEPENDENT REVIEW только после full CI на exact final head; NO MERGE / NO STAGE 5B**. `UkWood/Saturn-Main-Site` строго READ-ONLY.
+
 ## PR #26 — Consolidated Acceptance Review Corrections CR-01–CR-03 (2026-11-10)
 
 - **Существующий PR:** [#26 — Channel-Aware Retrieval v0.1](https://github.com/UkWood/LLM-RAG-chat-bot/pull/26), та же ветка `feat/saturn-channel-aware-retrieval-v0.1`; первоначальный review head `2ef92e3e69acbd9999ad3bb15b43e610e95e7106`; **NO MERGE / NO STAGE 5**.
