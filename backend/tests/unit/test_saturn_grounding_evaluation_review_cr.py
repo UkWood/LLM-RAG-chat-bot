@@ -63,7 +63,7 @@ class ReviewCorrections(unittest.TestCase):
         return next(x for x in cls.dataset.cases if x.case_id == name)
 
     @classmethod
-    def run(cls, name, *, service=None):
+    def ask(cls, name, *, service=None):
         case = cls.case(name)
         return _run_question(service or cls.service, cls.assembly,
                              cls.gate, cls.verifier, case.question, cls.profile)
@@ -79,7 +79,7 @@ class ReviewCorrections(unittest.TestCase):
 
     # CR01: need source identity, unresolved invariants, explicit owner scopes
     def test_cr01_t01_one_need_cannot_satisfy_two_distinct_claims(self):
-        a, trace = self.run("C11")
+        a, trace = self.ask("C11")
         self.assertEqual(len(a.statements), 2)
         second = a.statements[1]
         bad = replace(second, need_id=a.statements[0].need_id,
@@ -93,21 +93,21 @@ class ReviewCorrections(unittest.TestCase):
         self.assertIn("need_binding_failure", outcome.failure_codes)
 
     def test_cr01_t02_answered_with_unresolved_is_not_complete(self):
-        a, trace = self.run("C01")
+        a, trace = self.ask("C01")
         out = self.score("C01", replace(a, unresolved_need_ids=(trace.needs[0].need_id,)), trace)
         self.assertFalse(out.fully_correct)
         self.assertIn("unresolved_need_mismatch", out.failure_codes)
 
     def test_cr01_t03_partial_fake_unresolved_id(self):
-        a, trace = self.run("C20")
+        a, trace = self.ask("C20")
         self.assertEqual(a.status, "partial")
         out = self.score("C20", replace(a, unresolved_need_ids=("fake-need-id",)), trace)
         self.assertFalse(out.fully_correct)
         self.assertIn("unresolved_need_mismatch", out.failure_codes)
 
     def test_cr01_t04_general_document_not_owner_qualified_after_rebinding(self):
-        general, _ = self.run("C15")
-        _, qualified_trace = self.run("C16")
+        general, _ = self.ask("C15")
+        _, qualified_trace = self.ask("C16")
         forged = replace(general, question_sha256=sha256(
             self.case("C16").question.encode("utf-8")).hexdigest())
         out = self.score("C16", forged, qualified_trace)
@@ -116,7 +116,7 @@ class ReviewCorrections(unittest.TestCase):
                         set(out.failure_codes))
 
     def test_cr01_t05_owner_qualified_document_accepts_only_correct_owner(self):
-        a, trace = self.run("C16")
+        a, trace = self.ask("C16")
         case = self.case("C16")
         self.assertIsNotNone(case.required[0].owner_entity_id)
         self.assertEqual(a.citations[0].owner_entity_ids,
@@ -124,7 +124,7 @@ class ReviewCorrections(unittest.TestCase):
         self.assertTrue(self.score("C16", a, trace).fully_correct)
 
     def test_cr01_t06_unknown_need_cannot_be_claimed(self):
-        a, trace = self.run("C01")
+        a, trace = self.ask("C01")
         s = a.statements[0]
         bad = replace(s, need_id="unknown-need",
                       statement_id=stable_id("saturn-answer-statement-v1",
@@ -136,7 +136,7 @@ class ReviewCorrections(unittest.TestCase):
         self.assertIn("need_binding_failure", out.failure_codes)
 
     def test_cr01_t07_wrong_bundle_identity(self):
-        a, trace = self.run("C01")
+        a, trace = self.ask("C01")
         out = self.score("C01", replace(a, bundle_id="f"*64), trace)
         self.assertFalse(out.fully_correct)
         self.assertIn("technical_failure", out.failure_codes)
@@ -144,7 +144,7 @@ class ReviewCorrections(unittest.TestCase):
     def test_cr01_t08_existing_multi_relation_document_positive(self):
         for name in ("C01", "C11", "C12", "C13", "C14", "C15", "C16", "C20"):
             with self.subTest(case=name):
-                a, trace = self.run(name)
+                a, trace = self.ask(name)
                 self.assertTrue(self.score(name, a, trace).fully_correct)
 
     # CR03: quotation is exact substring, NOT engineering entailment
@@ -181,7 +181,7 @@ class ReviewCorrections(unittest.TestCase):
             statement, {citation.citation_id: citation}, _indexes(self.snapshot)))
 
     def test_cr03_t02_middle_pdf_passage(self):
-        a, trace = self.run("C26")
+        a, trace = self.ask("C26")
         unit = next(x for x in self.snapshot.answer_evidence
                     if x.evidence_id == a.statements[0].evidence_id)
         mid = unit.text[5:18]
@@ -194,7 +194,7 @@ class ReviewCorrections(unittest.TestCase):
         self.assertEqual(outcome.supported_fact_count, 0)
 
     def test_cr03_t03_modified_quote_rejected(self):
-        a, trace = self.run("C26")
+        a, trace = self.ask("C26")
         changed = replace(a.statements[0],
                           text="Цитата источника (не подтверждает характеристику): nonexistent altered quote")
         out = self.score("C26", replace(a, statements=(changed,)), trace)
@@ -202,7 +202,7 @@ class ReviewCorrections(unittest.TestCase):
         self.assertIn("unsafe_claim", out.failure_codes)
 
     def test_cr03_t04_pdf_page_or_revision_substitution(self):
-        a, trace = self.run("C26")
+        a, trace = self.ask("C26")
         for change in ({"physical_page": 999},
                        {"pdf_revision_id": "f"*64},
                        {"pdf_parser_version": "forged"}):
@@ -213,7 +213,7 @@ class ReviewCorrections(unittest.TestCase):
                 self.assertFalse(out.fully_correct)
 
     def test_cr03_t05_quotes_never_satisfy_technical_gold(self):
-        quote, trace = self.run("C26")
+        quote, trace = self.ask("C26")
         fake, fake_trace = self._for_question(
             quote, trace, self.case("C01").question)
         out = self.score("C01", fake, fake_trace)
@@ -234,7 +234,7 @@ class ReviewCorrections(unittest.TestCase):
                 published.append(True)
             return original(self_service, bundle, question, mode, top_k)
         with patch.object(SaturnRetrievalService, "_search_captured", concurrent):
-            a, trace = self.run("C01", service=local)
+            a, trace = self.ask("C01", service=local)
         self.assertTrue(published)
         self.assertEqual(local.capture().snapshot.snapshot_id,
                          second.snapshot.snapshot_id)
@@ -244,20 +244,20 @@ class ReviewCorrections(unittest.TestCase):
         self.assertTrue(self.score("C01", a, trace).fully_correct)
 
     def test_cr04_t02_stage_trace_same_snapshot_and_bundle(self):
-        a, trace = self.run("C11")
+        a, trace = self.ask("C11")
         self.assertEqual((trace.snapshot_id, trace.bundle_id, trace.question_sha256),
                          (a.snapshot_id, a.bundle_id, a.question_sha256))
 
     def test_cr04_t03_missing_doc_retrieval_attribution(self):
-        a, t = self.run("C23")
+        a, t = self.ask("C23")
         a, t = self._for_question(a, t, self.case("C15").question)
         t = replace(t, retrieval_diagnostics_complete=True)
         out = self.score("C15", a, t)
         self.assertIn("retrieval_miss", out.failure_codes)
 
     def test_cr04_t04_selected_document_omitted_at_assembly(self):
-        a, _ = self.run("C23")
-        _, found_trace = self.run("C15")
+        a, _ = self.ask("C23")
+        _, found_trace = self.ask("C15")
         a = replace(a, question_sha256=sha256(
             self.case("C15").question.encode("utf-8")).hexdigest())
         out = self.score("C15", a, found_trace)
@@ -265,15 +265,15 @@ class ReviewCorrections(unittest.TestCase):
         self.assertNotIn("retrieval_miss", out.failure_codes)
 
     def test_cr04_t05_missing_observation_is_undetermined(self):
-        a, trace = self.run("C23")
+        a, trace = self.ask("C23")
         a, trace = self._for_question(a, trace, self.case("C15").question)
         trace = replace(trace, retrieval_diagnostics_complete=False)
         out = self.score("C15", a, trace)
         self.assertIn("undetermined", out.failure_codes)
 
     def test_cr04_t06_retrieval_denominators_unchanged(self):
-        a, t = self.run("C01")
-        b, u = self.run("C15")
+        a, t = self.ask("C01")
+        b, u = self.ask("C15")
         metrics = calculate_metrics((
             self.score("C01", a, t), self.score("C15", b, u)))
         self.assertEqual(metrics["source_hit_at_5"]["denominator"], 1)
@@ -281,8 +281,8 @@ class ReviewCorrections(unittest.TestCase):
 
     # CR05: no semantic conflation of source-unsupported, off-topic and text
     def test_cr05_t01_valid_but_unrequested_fact_counted(self):
-        a, t = self.run("C01")
-        extra, _ = self.run("C02")
+        a, t = self.ask("C01")
+        extra, _ = self.ask("C02")
         forged = replace(a, statements=a.statements+extra.statements,
                          citations=a.citations+extra.citations,
                          answer_text=a.answer_text+"\n"+extra.answer_text)
@@ -294,7 +294,7 @@ class ReviewCorrections(unittest.TestCase):
         self.assertEqual(m["off_question_source_backed_claims"]["count"], 1)
 
     def test_cr05_t02_added_unproven_text_not_claim_denominator(self):
-        a, t = self.run("C01")
+        a, t = self.ask("C01")
         out = self.score("C01", replace(a, answer_text=a.answer_text +
                          "\nInvented capability."), t)
         metrics = calculate_metrics((out,))
@@ -304,7 +304,7 @@ class ReviewCorrections(unittest.TestCase):
         self.assertEqual(metrics["source_unsupported_claims"]["ratio"]["denominator"], 1)
 
     def test_cr05_t03_source_unsupported_separate_from_off_question(self):
-        a, t = self.run("C01")
+        a, t = self.ask("C01")
         s = replace(a.statements[0], text="Device X — interface: fabricated.")
         forged = replace(a, statements=(s,), answer_text=s.text)
         out = self.score("C01", forged, t)
@@ -312,7 +312,7 @@ class ReviewCorrections(unittest.TestCase):
         self.assertEqual(out.off_question_claim_count, 0)
 
     def test_cr05_t04_partial_not_grouped_with_negative(self):
-        results = [self.score(x, *self.run(x))
+        results = [self.score(x, *self.ask(x))
                    for x in ("C01", "C18", "C21", "C20")]
         groups = breakdown(results)["status_group"]
         for group in ("positive", "negative", "clarification", "partial"):
@@ -326,13 +326,13 @@ class ReviewCorrections(unittest.TestCase):
                 (required.evidence_id,))))
         local = SaturnRetrievalService(policy_provider=provider)
         local.publish(self.bundle)
-        a, trace = self.run("C01", service=local)
+        a, trace = self.ask("C01", service=local)
         out = self.score("C01", a, trace)
         self.assertTrue(out.policy_restriction)
         self.assertEqual(calculate_metrics((out,))["policy_restriction"]["numerator"], 1)
 
     def test_cr05_t06_technical_error_not_correct_refusal(self):
-        a, t = self.run("C18")
+        a, t = self.ask("C18")
         bad = replace(a, status="error",
                       answer_text="Не удалось выполнить проверку.")
         out = self.score("C18", bad, replace(t, technical_failure=True))
@@ -341,7 +341,7 @@ class ReviewCorrections(unittest.TestCase):
         self.assertEqual(calculate_metrics((out,))["technical_error"]["numerator"], 1)
 
     def test_cr05_t07_conflict_not_ordinary_missing(self):
-        a, t = self.run("C18")
+        a, t = self.ask("C18")
         a, t = self._for_question(a, t, self.case("C01").question)
         observed = replace(t, ranked_evidence_ids=(
             self.case("C01").required[0].evidence_id,),
