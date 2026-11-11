@@ -26,6 +26,8 @@ class SaturnAnswerStatement:
     citation_ids: tuple[str, ...]
     evidence_id: str | None = None
     document_id: str | None = None
+    # Exact relation object for the final output-policy check.
+    object_entity_id: str | None = None
 
 
 @dataclass(frozen=True)

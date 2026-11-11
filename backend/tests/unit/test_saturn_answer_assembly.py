@@ -243,7 +243,8 @@ class SaturnAnswerAssemblyTests(unittest.TestCase):
             PRODUCT: source("Instrument",
                             fields="documents:\n - " + doc() + "\n",
                             body="## Guide\nUnrelated text.\n"),
-        }, pages=((7, "pdf_parameter Alpha"), (8, "Beta"))))
+        }, pages=tuple((i, "pdf_parameter Alpha" if i == 7 else "Other page")
+                       for i in range(1, 8))))
         # Extractor pages may be renumbered by the canonical document adapter.
         svc = self._service(snap)
         result = self.ask("Instrument: pdf_parameter?", svc)
@@ -283,15 +284,33 @@ class SaturnAnswerAssemblyTests(unittest.TestCase):
         self.assertEqual(len(result.citations[0].owner_entity_ids), 1)
         self.assertEqual(len(result.citations[0].occurrences), 1)
 
-    def test_t40_failed_extraction_metadata_still_found(self):
-        snap = build_saturn_knowledge_snapshot(*make_inputs({
+    def test_t40_failed_extraction_metadata_still_retains_status(self):
+        # Stage 4A deliberately blocks activation of extraction failures.
+        # Test the independent metadata citation contract on its non-promotable
+        # staged candidate; never fake a successful public retrieval session.
+        from types import SimpleNamespace
+        from saturn_ai.grounding.saturn_contracts import SaturnDocumentReference
+        from saturn_ai.grounding.saturn_citations import document_citation
+        from saturn_ai.saturn_knowledge_snapshot import stage_saturn_knowledge_snapshot
+        staged = stage_saturn_knowledge_snapshot(*make_inputs({
             PRODUCT: source("Instrument",
-                            fields="documents:\n - " + doc() + "\n"),
-        }, failure=RuntimeError("SECRET PDF fetch failed")))
-        result = self.ask("Документ: A guide", self._service(snap))
-        self.assertEqual(result.status, "answered")
-        self.assertNotEqual(result.citations[0].extraction_status, "extracted")
-        self.assertIn("extraction", result.answer_text)
+                            fields="documents:\\n - " + doc() + "\\n"),
+        }, failure="network_error"))
+        self.assertFalse(staged.ready_for_promotion)
+        snapshot = staged.candidate
+        self.assertIsNotNone(snapshot)
+        match = snapshot.document_matches[0]
+        document = match.document
+        reference = SaturnDocumentReference(
+            document.document_id, document.title, document.kind,
+            document.version, document.date, document.url,
+            document.owner_entity_ids, document.source_locators,
+            match.occurrences, match.extraction_status, match.pdf_revision_id)
+        citation = document_citation(snapshot, reference, SimpleNamespace(
+            entity_id=None, document_title=document.title))
+        self.assertEqual(citation.source_type, "document_metadata")
+        self.assertNotEqual(citation.extraction_status, "extracted")
+        self.assertEqual(citation.canonical_url, document.url)
 
     # E: policy/lease/pinning and no verifier object injection.
     def test_t41_policy_block_after_c_before_assembly(self):

@@ -155,37 +155,28 @@ def _published_policy(snapshot, result, policy):
                     policy.blocked_source_revision_ids
                     for owner in citation.owner_entity_ids)):
             _reject("policy_blocked")
-    # Check the object of each directed relation too. It is not necessarily
-    # the same entity as the source of its selected evidence.
+    # A relation's *object* may be blocked even if the subject evidence is
+    # allowed. Its ID was independently checked against the canonical payload
+    # while building the statement, so no score-based relation lookup occurs.
     for statement in result.statements:
         if statement.statement_kind != "structured_relation":
             continue
-        evidence = next((e for e in snapshot.answer_evidence
-                         if e.evidence_id == statement.evidence_id), None)
-        if evidence is None:
+        obj = entities.get(statement.object_entity_id)
+        if obj is None:
             _reject("citation_identity_mismatch")
-        relation = next((r for r in snapshot.relations
-                         if r.source_revision_id == evidence.source_revision_id
-                         and r.subject_entity_id == evidence.entity_id
-                         and any(c.evidence_id == evidence.evidence_id and
-                                 c.relation_source_field_path == r.source_field_path
-                                 for c in result.citations)), None)
-        if relation is None:
-            _reject("citation_identity_mismatch")
-        obj = entities.get(relation.object_entity_id)
-        if (obj is None or obj.entity_id in policy.blocked_entity_ids or
+        if (obj.entity_id in policy.blocked_entity_ids or
                 obj.source_revision_id in policy.blocked_source_revision_ids):
             _reject("policy_blocked")
 
 
 def _make_statement(need, citation, kind, text, *, evidence_id=None,
-                    document_id=None):
+                    document_id=None, object_entity_id=None):
     return SaturnAnswerStatement(
         statement_id=stable_id("saturn-answer-statement-v1", need.need_id,
                                evidence_id, document_id, kind, citation.citation_id),
         need_id=need.need_id, statement_kind=kind, text=text,
         citation_ids=(citation.citation_id,), evidence_id=evidence_id,
-        document_id=document_id,
+        document_id=document_id, object_entity_id=object_entity_id,
     )
 
 
@@ -270,7 +261,8 @@ def _build(snapshot, context, assessment, verification):
                 statement = _make_statement(
                     need, citation, "structured_relation", structured_relation(
                         subject.title, payload["predicate"], obj.title),
-                    evidence_id=evidence.evidence_id)
+                    evidence_id=evidence.evidence_id,
+                    object_entity_id=obj.entity_id)
                 supported += 1
             else:
                 _reject("answer_integrity_failure")
@@ -320,7 +312,8 @@ def _result(context, revision, status, statements, citations, unresolved, reason
     if len(text) > MAX_ANSWER_TEXT_CHARS:
         status, statements, citations = "error", (), ()
         reason = "output_budget_exceeded"
-        unresolved = tuple(unresolved)
+        unresolved = tuple(dict.fromkeys(
+            [s.need_id for s in statements] + list(unresolved)))
         text = render_answer(status, ())
     diagnostics = tuple(sorted((
         ("citation_count", len(citations)),
