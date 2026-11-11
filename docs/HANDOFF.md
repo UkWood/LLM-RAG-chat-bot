@@ -1,3 +1,11 @@
+## Stage 5D PR #30 — Consolidated CR-01 / CR-02 Corrections (2026-11-11)
+
+- Session A's independent review of head `6b00e4b08a55098a73d8f1e6ded6c3108c5da811`: **1 BLOCKER + 1 IMPORTANT**. Both corrected together in existing PR #30 and branch `feat/saturn-answer-assembly-v0.1`.
+- CR-01: answer and statement strings are **literal plain text**. No `html.escape`, `html.unescape` or HTML/Markdown interpretation in backend. Safe UI text rendering remains a future responsibility.
+- CR-02: output text overflow collects **every affected need ID before discarding statements/citations**; returns safe `error` and accurate final counters without leaking partial technical output.
+- New targeted CR01-T01–T07 and CR02-T01–T06, plus Stage 4A–5C and existing Stage 5D regressions. Exact final SHA / GitHub CI results are recorded in PR #30 and Stage 5D report.
+- **NO MERGE / NO Stage 5E.** `UkWood/Saturn-Main-Site` remains READ-ONLY.
+
 ## Stage 5D — Answer Assembly, Citations & Final Policy Gate v0.1 (2026-11-11)
 
 - **Baseline main:** `9d6c6fa1da180e62feb22134efa92724d8173f17`; Stage 5C **PR #29 MERGED**, merge CI [#43052161495](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/43052161495).

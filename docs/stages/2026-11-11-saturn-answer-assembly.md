@@ -63,8 +63,10 @@ deduplicated only by stable exact identity, retaining need→statement bindings.
   failures preserve safe `SaturnContextError.reason_code` exception boundaries.
 
 No user-controlled text is executed as HTML or Markdown. Exact source strings
-are escaped for plain text; original units, decimal spellings, field paths,
-qualifiers, relation direction and predicates are preserved. There is no
+are preserved literally in plain text without HTML entity encoding or decoding;
+original units, decimal spellings, field paths, qualifiers, relation direction
+and predicates are preserved. A future UI must display these strings as text
+rather than as trusted HTML/Markdown. There is no
 retrieval or external provider call inside final assembly.
 
 ## Final policy gate / lifecycle
@@ -99,3 +101,32 @@ no inferred compatibility/numeric conversion, no user testing, no production
 LLM/HTTP/chat UI. A verified PDF/site extract only proves source integrity.
 Stage 4A currently rejects promotion of a candidate with failed PDF extraction. Stage 5D nevertheless preserves a failed extraction status in a standalone metadata citation unit test; the full public document-lookup flow can only use promotable snapshots. Also, Stage 5B currently refuses conditional structured fields when its query grammar cannot express qualifiers; the Stage 5D renderer preserves qualifiers but cannot override that conservative gate. Stage 5E independent grounding quality evaluation is the *next* planned stage;
 not started here.
+
+## PR #30 — Consolidated Acceptance Review Corrections (CR-01/CR-02)
+
+- Independently reviewed head: `6b00e4b08a55098a73d8f1e6ded6c3108c5da811`.
+- **CR-01 BLOCKER (literal plain text):** `plain()` returns source characters
+  unaltered instead of HTML entity encoding. Exact `<`, `&`, double quotes
+  in canonical field paths, original URL query separators, and already-literal
+  `&lt;` remain data. Neither `SaturnAnswerResult.answer_text` nor
+  `SaturnAnswerStatement.text` is trusted HTML/Markdown. No HTML renderer,
+  decoder or frontend changes were introduced.
+- **CR-02 IMPORTANT (output overflow accounting):** `_result()` now collects
+  ordered distinct need IDs from statements and existing unresolved needs
+  **before** clearing all statements/citations when `answer_text` exceeds
+  12,000 characters. The result contains only a safe `error` message and
+  recomputed final diagnostics; it never silently truncates facts/conditions.
+- New focused CR01-T01–T07 and CR02-T01–T06 tests cover literal source-backed
+  values, nested quoted keys, document URLs, markup-shaped data, existing
+  entities, status/provenance regression, single/multi/partial overflow,
+  error privacy and upstream budget precedence. CR02 over-budget statement
+  tests are negative boundary checks. Stage 5C limits currently prevent
+  the analogous source-string overload on the ordinary positive public
+  generation path; the actual public large-input case fails at Stage 5C.
+- Existing Stage 5D tests updated only to match plain-text semantics; all
+  other Stage 5D behavior, pinned snapshot, final policy gate and citation
+  contracts unchanged. Source site strictly read-only.
+
+The PR description carries the **exact final correction SHA**, both
+push/pull_request CI URLs and actual suite totals after GitHub checks finish.
+Independent Session A review remains required. **NO MERGE / NO Stage 5E.**

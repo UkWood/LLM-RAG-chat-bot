@@ -1,18 +1,18 @@
 """Deterministic plain-text rendering only: no LLM, Markdown or HTML execution."""
-import html
 import json
 
 from .saturn_contracts import SaturnContextError
 
 
 def plain(value):
-    """Escape source-supplied text for safe downstream HTML/Markdown display.
+    """Return literal source-controlled plain text, not HTML or Markdown.
 
-    Callers must still display answer_text as text, never as trusted HTML.
+    No markup interpretation or entity conversion occurs here. A future UI
+    must display answer_text and statement.text as text, never trusted markup.
     """
     if type(value) is not str:
         raise SaturnContextError("answer_integrity_failure")
-    return html.escape(value, quote=True).replace("\r", "\\r").replace("\n", "\\n")
+    return value
 
 
 def structured_field(entity, field_path, raw_value_json, unit, qualifiers_json):

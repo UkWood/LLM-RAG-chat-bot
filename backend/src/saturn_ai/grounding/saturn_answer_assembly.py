@@ -321,10 +321,12 @@ def _result(context, revision, status, statements, citations, unresolved, reason
         _reject("answer_integrity_failure")
     text = render_answer(status, statements)
     if len(text) > MAX_ANSWER_TEXT_CHARS:
+        # Preserve ALL affected needs before fail-closed clearing of output.
+        affected_need_ids = tuple(dict.fromkeys(
+            [statement.need_id for statement in statements] + list(unresolved)))
         status, statements, citations = "error", (), ()
         reason = "output_budget_exceeded"
-        unresolved = tuple(dict.fromkeys(
-            [s.need_id for s in statements] + list(unresolved)))
+        unresolved = affected_need_ids
         text = render_answer(status, ())
     diagnostics = tuple(sorted((
         ("citation_count", len(citations)),
