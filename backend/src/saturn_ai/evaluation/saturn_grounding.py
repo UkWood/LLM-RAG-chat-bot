@@ -112,6 +112,8 @@ def _run_question(service, assembly, gate, verifier, question, profile):
                     need_findings=assessment.findings,
                     verified_evidence_ids=tuple(c.evidence_id for c in verified.verified_claims
                                                 if c.verification_status == "verified_structured"),
+                    verified_need_ids=tuple(c.need_id for c in verified.verified_claims
+                                             if c.verification_status == "verified_structured"),
                     policy_blocked_evidence_ids=tuple(sorted(policy.blocked_evidence_ids)),
                     policy_blocked_document_ids=tuple(sorted(policy.blocked_document_ids)),
                     policy_blocked_source_revision_ids=tuple(sorted(policy.blocked_source_revision_ids)),
