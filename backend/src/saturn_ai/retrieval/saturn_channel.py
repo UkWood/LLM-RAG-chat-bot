@@ -211,6 +211,21 @@ class SaturnPolicyProvider:
             return self._active
 
 
+class SaturnPolicyCaptureError(RuntimeError):
+    """Only a failed operational-policy CAPTURE, not backend/retrieval errors."""
+
+
+def _capture_retrieval_policy(provider):
+    try:
+        policy = provider.capture()
+        if not isinstance(policy, SaturnOperationalPolicy):
+            raise ValueError("Policy provider returned an invalid state")
+        policy.__post_init__()  # validate even after reflective corruption
+        return policy
+    except Exception:
+        raise SaturnPolicyCaptureError("Operational policy unavailable") from None
+
+
 def _valid_snapshot(snapshot):
     # Reuse 4A's *strict structural replay*, not merely its content seal.
     if not isinstance(snapshot, SaturnKnowledgeSnapshot) or not snapshot.ready_for_promotion:
@@ -610,31 +625,13 @@ class SaturnRetrievalService:
             return self._active
 
     def open_answer_session(self):
-        """Pin the exact active bundle and Qdrant reader lease atomically.
+        """Open one pinned session using the internal retain-under-lock factory.
 
-        A session may outlive later publication, but every lookup remains
-        bound to its original snapshot/index until explicit/with-block close.
-        Existing search_saturn() retains its independent per-search lease.
+        The session factory performs capture AND Qdrant retain atomically under
+        this service's publication lock. No unlocked bundle/lease handoff.
         """
-        with self._lock:
-            bundle = self._active
-            if bundle is None:
-                from ..grounding.saturn_contracts import SaturnContextError
-                raise SaturnContextError("no_active_bundle")
-            dense = bundle.dense
-            if dense is not None:
-                try:
-                    dense._retain()
-                except Exception:
-                    from ..grounding.saturn_contracts import SaturnContextError
-                    raise SaturnContextError("retrieval_unavailable") from None
-        try:
-            from ..grounding.saturn_context import SaturnAnswerSession
-            return SaturnAnswerSession(self, bundle)
-        except BaseException:
-            if dense is not None:
-                dense._release()
-            raise
+        from ..grounding.saturn_context import SaturnAnswerSession
+        return SaturnAnswerSession._from_service(self)
 
     def publish(self, bundle: SaturnRetrievalBundle):
         if not isinstance(bundle, SaturnRetrievalBundle):
@@ -699,9 +696,7 @@ class SaturnRetrievalService:
             raise RuntimeError("Dense index/encoder unavailable; no hidden lexical fallback")
 
         # Provider must support atomic, immutable snapshots; failure is fail-closed.
-        before = self.policy_provider.capture()
-        if not isinstance(before, SaturnOperationalPolicy):
-            raise RuntimeError("Operational policy unavailable")
+        before = _capture_retrieval_policy(self.policy_provider)
         records = {r.evidence_id: r for r in bundle.records}
         documents = {r.match.document.document_id: r for r in bundle.documents}
         entities = {e.entity_id: e for e in bundle.snapshot.entities}
@@ -718,9 +713,7 @@ class SaturnRetrievalService:
             _check_channel(candidates, records, bundle.snapshot.snapshot_id, name)
         # At a minimum the final eligibility decision sees the latest available
         # policy snapshot. This intentionally may trim a result while a query runs.
-        after = self.policy_provider.capture()
-        if not isinstance(after, SaturnOperationalPolicy):
-            raise RuntimeError("Operational policy unavailable")
+        after = _capture_retrieval_policy(self.policy_provider)
         current_e = {k for k, v in records.items() if _allowed_record(v, after)}
         current_d = {k for k, v in documents.items() if _allowed_doc(v, after, entities)}
         lexical = _rerank_after_policy(lexical, current_e)
