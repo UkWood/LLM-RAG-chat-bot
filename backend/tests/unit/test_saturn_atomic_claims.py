@@ -447,5 +447,76 @@ class SaturnAtomicClaimsTests(unittest.TestCase):
         self.assertFalse(too_large.verified_claims)
 
 
+    def test_t04_nested_source_declared_field_path(self):
+        snap = build_saturn_knowledge_snapshot(*make_inputs({
+            PRODUCT: source("Instrument", fields="future_nested: {x: [11, 22]}\n"),
+        }))
+        svc = SaturnRetrievalService()
+        svc.publish(build_saturn_retrieval_bundle(snap))
+        result = self.run_query("Instrument: future_nested.x[1]?", service=svc)
+        self.assertEqual(result.verification_state, "complete")
+        fact = next(f for f in snap.facts if f.field_path == "future_nested.x[1]")
+        payload = json.loads(result.verified_claims[0].canonical_payload)
+        self.assertEqual(payload["fact_id"], fact.fact_id)
+        self.assertEqual(payload["field_path"], "future_nested.x[1]")
+        self.assertEqual(payload["raw_value_json"], "22")
+
+    def test_t06_deterministic_choice_only_from_finding_evidence_ids(self):
+        # Controlled multiple-evidence finding: one valid source may expose
+        # multiple alternatives in future snapshots. A wrong alternative
+        # still cannot be accepted by canonical verification.
+        from saturn_ai.grounding.saturn_generation import _select
+        with self.service.open_answer_session() as session:
+            context = session.build_context(PRODUCT_NAME + ": interface, protocol?",
+                                            top_k=10)
+            assessment = SaturnQuestionGate().assess(session=session, context=context)
+            base = assessment.findings[0]
+            other = assessment.findings[1]
+            candidates = tuple(sorted(set(base.evidence_ids + other.evidence_ids)))
+            fake = replace(assessment, findings=(
+                replace(base, evidence_ids=candidates), other))
+            _, _, selected1 = _select(fake, context)
+            _, _, selected2 = _select(fake, context)
+            self.assertEqual(selected1, selected2)
+            self.assertIn(selected1[0][1].evidence_id, candidates)
+            self.assertEqual(selected1[0][1].evidence_id, min(candidates))
+
+    def test_t19_foreign_snapshot_evidence_never_authorized(self):
+        service = SaturnRetrievalService()
+        different = fixture_snapshot(commit="b"*40)
+        service.publish(build_saturn_retrieval_bundle(different))
+        with service.open_answer_session() as session:
+            foreign = session.build_context(FIELD, top_k=10)
+            foreign_assessment = SaturnQuestionGate().assess(
+                session=session, context=foreign)
+            foreign_id = foreign_assessment.findings[0].evidence_ids[0]
+        result = self.run_query(FIELD, mutation=lambda drafts, request: (
+            replace(drafts[0], evidence_id=foreign_id),))
+        self.assertEqual(result.verification_state, "incomplete")
+        self.assertEqual(result.rejected_claims[0].reason_code,
+                         "unknown_evidence_id")
+
+    def test_t32_potential_conflict_is_not_positive_generation(self):
+        # A contradictory multi-fact gate result is difficult to stage in one
+        # valid single-revision fixture, so exercise the real public entrypoint
+        # with a controlled Stage 5B decision override (never fake provider).
+        from saturn_ai.grounding import saturn_sufficiency_gate as gate_module
+        original = gate_module._assess_pinned
+        def conflict(context, snapshot):
+            needs, findings, _, diagnostics = original(context, snapshot)
+            return (needs,
+                    (replace(findings[0], status="potential_conflict"),),
+                    "potential_conflict", diagnostics)
+        with self.service.open_answer_session() as session:
+            context = session.build_context(FIELD, top_k=10)
+            with patch.object(gate_module, "_assess_pinned", conflict), \
+                 patch.object(SaturnFakeClaimProvider, "generate",
+                              side_effect=AssertionError("no generation allowed")):
+                result = self.verifier.verify(session=session, context=context)
+        self.assertEqual(result.verification_state, "incomplete")
+        self.assertFalse(result.verified_claims)
+        self.assertEqual(len(result.unresolved_need_ids), 1)
+
+
 if __name__ == "__main__":
     unittest.main()
