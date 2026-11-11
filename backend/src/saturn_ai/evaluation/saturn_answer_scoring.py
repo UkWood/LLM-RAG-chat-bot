@@ -312,7 +312,9 @@ def score_answer(case: SaturnEvaluationCase, result: SaturnAnswerResult,
     indexes = _indexes(snapshot)
     codes = set()
     expected = case.expected_status
-    if type(result) is not SaturnAnswerResult or result.snapshot_id != snapshot.snapshot_id:
+    if (type(result) is not SaturnAnswerResult or
+            result.snapshot_id != snapshot.snapshot_id or
+            result.question_sha256 != sha256(case.question.encode("utf-8")).hexdigest()):
         codes.add("technical_failure")
         actual = "error"
         return SaturnEvaluationOutcome(
@@ -396,7 +398,8 @@ def score_answer(case: SaturnEvaluationCase, result: SaturnAnswerResult,
     else:
         full = (status_correct and assertions == 0 and unsupported == 0 and
                 not any(x in codes for x in
-                        ("technical_failure", "unsafe_claim", "citation_error")))
+                        ("technical_failure", "unsafe_claim", "citation_error",
+                         "unexpected_claim")))
     expected_evidence = {r.evidence_id for r in case.required if r.evidence_id}
     expected_documents = {r.canonical_id for r in case.required if r.kind == "document"}
     selected = set(trace.selected_evidence_ids) if trace else set()
