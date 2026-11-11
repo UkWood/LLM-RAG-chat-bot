@@ -223,7 +223,7 @@ def _capture_retrieval_policy(provider):
         policy.__post_init__()  # validate even after reflective corruption
         return policy
     except Exception:
-        raise SaturnPolicyCaptureError("Operational policy unavailable") from None
+        raise SaturnPolicyCaptureError("Policy capture unavailable") from None
 
 
 def _valid_snapshot(snapshot):
