@@ -333,7 +333,7 @@ def _need_matches_requirement(need, req, indexes):
 # Stage 5B parsing, look up source values, or use model-produced gold. Field
 # tokens are taken literally from the authored question; punctuation, nested
 # paths, indexed paths and JSON-quoted keys remain opaque exact substrings.
-_FIELD_QUESTION_HEAD = re.compile(r"^\s*[^:\r\n?]{1,160}?\s*:\s*")
+_FIELD_QUESTION_HEAD = re.compile(r"^\s*(?P<entity>[^:\r\n?]{1,160}?)\s*:\s*")
 _RELATION_QUESTION = re.compile(
     r"^\s*relation\(\s*([^,()?]+?)\s*,\s*([^,()?]+?)\s*,"
     r"\s*([^,()?]+?)\s*\)\s*\?\s*$")
@@ -344,7 +344,33 @@ _DOCUMENT_QUESTION = re.compile(
 )
 
 
-def _semantic_need_binding(question, needs):
+def _source_entity_slot(label, indexes):
+    """Resolve only explicit source-declared names, independent of Stage 5B."""
+    candidates = set()
+    label = label.strip()
+    for entity in indexes["entities"].values():
+        names = {entity.entity_id, entity.title, entity.slug}
+        try:
+            frontmatter = json.loads(entity.raw_frontmatter_json)
+            if isinstance(frontmatter, dict):
+                for key in ("designation", "model", "alias", "aliases"):
+                    value = frontmatter.get(key)
+                    if isinstance(value, str):
+                        names.add(value)
+                    elif isinstance(value, list) and len(value) <= 64:
+                        names.update(x for x in value if isinstance(x, str))
+        except (TypeError, ValueError):
+            pass
+        if label in names:
+            candidates.add(entity.entity_id)
+    if len(candidates) == 1:
+        return next(iter(candidates)), "resolved"
+    if candidates:
+        return None, "ambiguous"
+    return None, "missing_entity"
+
+
+def _semantic_need_binding(question, needs, indexes=None):
     """Independently validate observed semantic slots and ordered field list.
 
     Only checks source-question wording, not which source facts exist. Commas
@@ -355,6 +381,12 @@ def _semantic_need_binding(question, needs):
         if header is None:
             return False
         ordered = sorted(needs, key=lambda n: n.question_span[0])
+        if indexes is not None:
+            resolved_entity, resolution = _source_entity_slot(
+                header.group("entity"), indexes)
+            if any(n.entity_id != resolved_entity or
+                   n.resolution_status != resolution for n in ordered):
+                return False
         cursor = header.end()
         for i, need in enumerate(ordered):
             left, right = need.question_span
@@ -376,15 +408,26 @@ def _semantic_need_binding(question, needs):
         match = _RELATION_QUESTION.fullmatch(question)
         return (match is not None and
                 need.predicate == match.group(2).strip() and
-                need.question_span == (0, len(question)))
+                need.question_span == (0, len(question)) and
+                (indexes is None or (
+                    (need.entity_id, need.resolution_status) ==
+                    _source_entity_slot(match.group(1), indexes)
+                    if _source_entity_slot(match.group(1), indexes)[1]
+                    != "resolved" else need.entity_id ==
+                    _source_entity_slot(match.group(1), indexes)[0]) and
+                    need.object_entity_id ==
+                    _source_entity_slot(match.group(3), indexes)[0]))
     if need.kind == "document_lookup":
         match = _DOCUMENT_QUESTION.fullmatch(question)
-        return (match is not None and
-                need.document_title == match.group(1).strip() and
-                ((need.entity_id is None) if match.group(2) is None
-                 else need.entity_id is not None or
-                 need.resolution_status in ("missing_entity", "ambiguous")) and
-                need.question_span == (0, len(question)))
+        if match is None or need.document_title != match.group(1).strip():
+            return False
+        if indexes is not None and match.group(2) is not None:
+            eid, status = _source_entity_slot(match.group(2), indexes)
+            if need.entity_id != eid or need.resolution_status != status:
+                return False
+        if match.group(2) is None and need.entity_id is not None:
+            return False
+        return need.question_span == (0, len(question))
     if need.kind == "unresolved":
         return (need.field_path is None and need.predicate is None and
                 need.document_title is None)
@@ -417,7 +460,7 @@ def _need_bindings(case, snapshot, trace, indexes):
                 need.need_id in needs or finding.need_id != need.need_id):
             return {}, True
         needs[need.need_id] = (need, finding)
-    if not _semantic_need_binding(case.question, tuple(n for n, _ in needs.values())):
+    if not _semantic_need_binding(case.question, tuple(n for n, _ in needs.values()), indexes):
         return needs, True
     # Every positive source requirement must map to exactly ONE observed need.
     for req in case.required:
