@@ -1,3 +1,10 @@
+## Текущий этап — Stage 5A Saturn Evidence Context v0.1 (2026-11-11)
+
+- `main=340e7d63e6899d855a01547003d1d983e9078eda`: PR #26 **MERGED**, точный baseline CI [#42914744740](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42914744740) оба jobs SUCCESS. Нижние разделы о PR #26 OPEN — сохранённая история.
+- **В реализации:** `feat/saturn-evidence-context-v0.1`, отдельный PR. Pinned request-scoped `SaturnAnswerSession`, Qdrant lease, `SaturnTypedEvidence` с канонической identity и отдельный `SaturnDocumentReference`, `SaturnEvidenceContext`, operational-policy recheck, fail-closed limits/errors.
+- Новый `backend/tests/unit/test_saturn_evidence_context.py` покрывает positive/negative, concurrency, policy, metadata и проверку source fidelity. Проверки полного offline suite и CI exact final PR head фиксировать в PR, не заявлять PASS без исполнения.
+- [Stage report](stages/2026-11-11-saturn-evidence-context.md). Нет sufficiency/generation/claim/citation/UI. Сессия A отвечает за независимое Acceptance Review; **NO MERGE / NO 5B**. Сайт `UkWood/Saturn-Main-Site` read-only без изменений.
+
 ## PR #26 — Consolidated Acceptance Review Corrections CR-01–CR-03 (2026-11-10)
 
 - **Тот же PR и ветка:** [#26](https://github.com/UkWood/LLM-RAG-chat-bot/pull/26), `feat/saturn-channel-aware-retrieval-v0.1`. Review baseline `2ef92e3e69acbd9999ad3bb15b43e610e95e7106`. **CHANGES IMPLEMENTED; независимый re-review ещё не выполнен; NO MERGE / NO STAGE 5.**
