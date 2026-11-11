@@ -151,11 +151,13 @@ class SaturnGroundingAdversarialTests(unittest.TestCase):
         out = self.score("C01", replace(a, answer_text=a.answer_text+
                          "\nInvented Ethernet capability."), trace)
         self.assertFalse(out.fully_correct)
-        self.assertEqual(out.unsupported_claim_count, 1)
+        self.assertEqual(out.extra_answer_text_count, 1)
+        self.assertEqual(out.source_unsupported_claim_count, 0)
 
     def test_t70_observed_retrieval_miss_attribution(self):
         a, _ = self.ask("C18")
-        out = self.score("C01", a, SaturnStageTrace(), rebind_question=True)
+        out = self.score("C01", a, SaturnStageTrace(
+            retrieval_diagnostics_complete=True), rebind_question=True)
         self.assertIn("retrieval_miss", out.failure_codes)
 
     def test_t71_parser_failure_after_source_hit(self):
@@ -220,13 +222,17 @@ class SaturnGroundingAdversarialTests(unittest.TestCase):
             freeze = freeze_manifest(
                 experiment_id="completion-proof", code_revision="a"*40,
                 dataset_sha256=sha256(self.raw).hexdigest(),
-                snapshot=self.snapshot, case_count=28)
+                snapshot=self.snapshot, case_count=28,
+                case_ids=tuple(x.case_id for x in self.dataset.cases))
             b = BlindRun(freeze=freeze, receipts_dir=Path(tmp)/"receipts",
                          report_path=Path(tmp)/"result.json")
             b.start()
-            b.complete(b'{"x":1}\n')
-            self.assertTrue(b.complete_path.exists())
-            self.assertTrue(b.report_path.exists())
+            # Former implementation accepted an arbitrary JSON object; this
+            # is now explicitly rejected and cannot create COMPLETE.
+            with self.assertRaises(BlindIntegrityError):
+                b.complete(b'{"x":1}\n')
+            self.assertFalse(b.complete_path.exists())
+            self.assertFalse(b.report_path.exists())
             with self.assertRaises(BlindIntegrityError):
                 BlindRun(freeze=freeze, receipts_dir=Path(tmp)/"receipts",
                          report_path=Path(tmp)/"result.json").start()
