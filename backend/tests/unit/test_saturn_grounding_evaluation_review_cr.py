@@ -374,7 +374,8 @@ class BlindReportContractTests(unittest.TestCase):
         raw["dataset_id"] = "test-only-CR02-public-source-cases"
         raw["author"] = "independent-test-author"
         raw["reviewer"] = "independent-test-reviewer"
-        dataset = validate_gold(serialize_gold(raw), self.snapshot,
+        dataset_bytes = serialize_gold(raw)
+        dataset = validate_gold(dataset_bytes, self.snapshot,
                                 split="synthetic_blind")
         bundle = build_saturn_retrieval_bundle(self.snapshot)
         svc = SaturnRetrievalService()
@@ -397,10 +398,10 @@ class BlindReportContractTests(unittest.TestCase):
             dataset, outcomes, code_revision="a"*40,
             config_hash=config_hash(mode="lexical", top_k=10), bundle=bundle,
             blind_status="RUN", experiment_id=freeze["experiment_id"])
-        return freeze, dataset, report
+        return freeze, dataset, report, dataset_bytes
 
     def attempt(self, mutation=None, *, ids=("C01",), valid=False):
-        freeze, dataset, report = self.sample(ids)
+        freeze, dataset, report, dataset_bytes = self.sample(ids)
         if mutation:
             mutation(report)
         with TemporaryDirectory() as tmp:
@@ -408,23 +409,23 @@ class BlindReportContractTests(unittest.TestCase):
                          report_path=Path(tmp)/"report.json")
             b.start()
             if valid:
-                b.complete(report_bytes(report), dataset=dataset)
+                b.complete(report_bytes(report), dataset_bytes=dataset_bytes, snapshot=self.snapshot)
                 self.assertTrue(b.complete_path.is_file())
                 self.assertTrue(b.start_path.is_file())
             else:
                 with self.assertRaises(BlindIntegrityError):
-                    b.complete(report_bytes(report), dataset=dataset)
+                    b.complete(report_bytes(report), dataset_bytes=dataset_bytes, snapshot=self.snapshot)
                 self.assertFalse(b.complete_path.exists())
                 self.assertFalse(b.report_path.exists())
 
     def test_cr02_t01_arbitrary_json_rejected(self):
-        freeze, dataset, _ = self.sample()
+        freeze, dataset, _, dataset_bytes = self.sample()
         with TemporaryDirectory() as tmp:
             b = BlindRun(freeze=freeze, receipts_dir=Path(tmp),
                          report_path=Path(tmp)/"report.json")
             b.start()
             with self.assertRaises(BlindIntegrityError):
-                b.complete(b'{"x":1}', dataset=dataset)
+                b.complete(b'{"x":1}', dataset_bytes=dataset_bytes, snapshot=self.snapshot)
 
     def test_cr02_t02_wrong_dataset_hash(self):
         self.attempt(lambda r: r["dataset"].update(sha256="f"*64))
@@ -455,7 +456,7 @@ class BlindReportContractTests(unittest.TestCase):
                 case_count=1, case_ids=("C01",))
 
     def test_cr02_t07_cannot_validate_freeze_without_git_sha(self):
-        freeze, dataset, _ = self.sample()
+        freeze, dataset, _, dataset_bytes = self.sample()
         with self.assertRaises(BlindIntegrityError):
             validate_freeze(freeze, code_revision="unavailable",
                             dataset_bytes=b"test", snapshot=self.snapshot,
@@ -484,20 +485,20 @@ class BlindReportContractTests(unittest.TestCase):
         self.attempt(valid=True)
 
     def test_cr02_t09_reuse_and_failure_remain_blocked(self):
-        freeze, dataset, report = self.sample()
+        freeze, dataset, report, dataset_bytes = self.sample()
         with TemporaryDirectory() as tmp:
             b = BlindRun(freeze=freeze, receipts_dir=Path(tmp),
                          report_path=Path(tmp)/"r.json")
             b.start()
             b.fail("test_failure")
             with self.assertRaises(BlindIntegrityError):
-                b.complete(report_bytes(report), dataset=dataset)
+                b.complete(report_bytes(report), dataset_bytes=dataset_bytes, snapshot=self.snapshot)
             with self.assertRaises(BlindIntegrityError):
                 BlindRun(freeze=freeze, receipts_dir=Path(tmp),
                          report_path=Path(tmp)/"r.json").start()
 
     def test_cr02_t10_no_real_blind_dataset_run(self):
-        freeze, dataset, report = self.sample()
+        freeze, dataset, report, dataset_bytes = self.sample()
         self.assertEqual(dataset.dataset_id, "test-only-CR02-public-source-cases")
         self.assertEqual(report["independent_blind_evaluation"], "RUN")
         # 'RUN' is a TEST FIXTURE schema exercise only; it was never recorded
