@@ -3,14 +3,14 @@
 Offline controlled Saturn source/PDF fixtures only. No cloud keys or live site.
 """
 from dataclasses import FrozenInstanceError, replace
-from threading import Event, Thread
+from threading import Event, RLock, Thread
 from unittest.mock import patch
 import unittest
 
 from saturn_ai.grounding.saturn_contracts import (
-    SaturnContextError, MAX_CONTEXT_EVIDENCE, MAX_CONTEXT_TEXT_CHARS,
+    SaturnContextError, MAX_CONTEXT_EVIDENCE, MAX_CONTEXT_TEXT_CHARS,\n    MAX_SESSION_CONTEXTS,
 )
-from saturn_ai.retrieval.saturn_channel import (
+from saturn_ai.grounding.saturn_context import SaturnAnswerSession\nfrom saturn_ai.retrieval.saturn_channel import (
     SaturnOperationalPolicy, SaturnRetrievalService,
     SaturnRetrievalResult, build_saturn_retrieval_bundle,
 )
@@ -462,6 +462,284 @@ class SaturnEvidenceContextTests(unittest.TestCase):
             self.assertEqual([e.evidence_id for e in context.answer_evidence],
                              [e.evidence_id for e in original.answer_evidence])
             self.assertEqual(original, self.service.search_saturn("RS-485"))
+
+
+class Stage5AAcceptanceCorrectionTests(unittest.TestCase):
+    """One consolidated CR-01 / CR-02 contract and adversarial regression set."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.snapshot = fixture_snapshot()
+
+    def setUp(self):
+        self.old = build_saturn_retrieval_bundle(self.snapshot)
+        self.service = SaturnRetrievalService()
+        self.service.publish(self.old)
+
+    def test_t01_immutable_pinned_bindings_preserve_original_bundle(self):
+        alternate = build_saturn_retrieval_bundle(fixture_snapshot(commit="b"*40))
+        other_service = SaturnRetrievalService()
+        other_service.publish(alternate)
+        with self.service.open_answer_session() as session:
+            old = session.build_context("RS-485")
+            for name, replacement in (
+                ("_bundle", alternate),
+                ("_service", other_service),
+                ("_lock", RLock()),
+                ("_issued", ()),
+                ("_closed", True),
+            ):
+                with self.subTest(attribute=name):
+                    with self.assertRaises(AttributeError):
+                        setattr(session, name, replacement)
+                    self.assertIs(session._bundle, self.old)
+                    self.assertIs(session._service, self.service)
+                    self.assertEqual(session.build_context("RS-485").answer_evidence,
+                                     old.answer_evidence)
+            self.service.publish(alternate)
+            self.assertEqual(session.build_context("RS-485").snapshot_id,
+                             self.old.snapshot.snapshot_id)
+            self.assertNotEqual(self.service.search_saturn("RS-485").snapshot_id,
+                                old.snapshot_id)
+
+    def test_t02_direct_constructor_rejected_without_reader_release(self):
+        dense_bundle = build_saturn_retrieval_bundle(
+            self.snapshot, encoder=ControlledEncoder())
+        service = SaturnRetrievalService()
+        service.publish(dense_bundle)
+        refs_before = dense_bundle.dense._lifetime._refs
+        with self.assertRaises(TypeError):
+            SaturnAnswerSession(service, dense_bundle)
+        self.assertEqual(dense_bundle.dense._lifetime._refs, refs_before)
+        with service.open_answer_session() as session:
+            self.assertEqual(dense_bundle.dense._lifetime._refs, refs_before + 1)
+            self.assertIs(session._bundle, dense_bundle)
+        self.assertEqual(dense_bundle.dense._lifetime._refs, refs_before)
+        service.publish(self.old)
+        self.assertTrue(dense_bundle.dense._lifetime.closed)
+
+    def test_t03_issued_registry_cannot_be_mutated_or_bypass_bound(self):
+        with self.service.open_answer_session() as session:
+            first = session.build_context("RS-485")
+            self.assertEqual(len(session._issued), 1)
+            self.assertIsInstance(session._issued, tuple)
+            for operation in (
+                lambda: session._issued.append((first, "fake")),
+                lambda: session._issued.clear(),
+                lambda: setattr(session, "_issued", ()),
+                lambda: setattr(session, "_issued", ((first, "fake"),)),
+                lambda: setattr(session, "_issued", session._issued[:-1]),
+                lambda: session._issued.__setitem__(0, (first, "fake")),
+            ):
+                with self.assertRaises((AttributeError, TypeError)):
+                    operation()
+            self.assertEqual(session.recheck_policy(first), "initial")
+            self.assertEqual(len(session._issued), 1)
+            for _ in range(MAX_SESSION_CONTEXTS - 1):
+                session.build_context("xyz-no-result-1234")
+            with self.assertRaises(SaturnContextError) as ex:
+                session.build_context("xyz-no-result-1234")
+            expect_code(ex, "resource_budget_exceeded")
+            self.assertEqual(len(session._issued), MAX_SESSION_CONTEXTS)
+        self.assertEqual(session._issued, ())
+
+    def test_t04_true_threaded_publication_gives_whole_bundle_only(self):
+        later = build_saturn_retrieval_bundle(fixture_snapshot(commit="b"*40))
+        entered = Event()
+        finished = Event()
+        results = []
+        errors = []
+
+        def open_in_thread():
+            entered.set()
+            try:
+                with self.service.open_answer_session() as session:
+                    a = session.build_context("RS-485")
+                    b = session.build_context("RS-485")
+                    results.append((session._bundle, a.snapshot_id, b.snapshot_id))
+            except Exception as exc:
+                errors.append(type(exc).__name__)
+            finally:
+                finished.set()
+
+        # The worker cannot capture a half-swapped pointer while the
+        # publisher owns exactly the same publication lock.
+        with self.service._lock:
+            worker = Thread(target=open_in_thread)
+            worker.start()
+            self.assertTrue(entered.wait(5))
+            self.service.publish(later)
+        self.assertTrue(finished.wait(15))
+        worker.join(15)
+        self.assertFalse(worker.is_alive())
+        self.assertFalse(errors)
+        self.assertEqual(len(results), 1)
+        bundle, first_id, second_id = results[0]
+        self.assertIs(bundle, later)
+        self.assertEqual((first_id, second_id),
+                         (later.snapshot.snapshot_id, later.snapshot.snapshot_id))
+
+    def test_t05_deferred_dense_close_until_last_session_release(self):
+        dense = build_saturn_retrieval_bundle(
+            self.snapshot, encoder=ControlledEncoder())
+        service = SaturnRetrievalService()
+        service.publish(dense)
+        a = service.open_answer_session()
+        b = service.open_answer_session()
+        service.publish(build_saturn_retrieval_bundle(fixture_snapshot(commit="b"*40)))
+        self.assertFalse(dense.dense._lifetime.closed)
+        a.close()
+        self.assertFalse(dense.dense._lifetime.closed)
+        self.assertEqual(b.build_context("RS-485", mode="dense").snapshot_id,
+                         self.snapshot.snapshot_id)
+        b.close()
+        self.assertTrue(dense.dense._lifetime.closed)
+
+    def test_t06_idempotent_close_releases_exactly_once(self):
+        dense = build_saturn_retrieval_bundle(
+            self.snapshot, encoder=ControlledEncoder())
+        service = SaturnRetrievalService()
+        service.publish(dense)
+        session = service.open_answer_session()
+        self.assertEqual(dense.dense._lifetime._refs, 2)
+        session.close()
+        self.assertEqual(dense.dense._lifetime._refs, 1)
+        session.close()
+        self.assertEqual(dense.dense._lifetime._refs, 1)
+        service.publish(self.old)
+        self.assertTrue(dense.dense._lifetime.closed)
+
+    def test_t07_with_exception_releases_once(self):
+        dense = build_saturn_retrieval_bundle(
+            self.snapshot, encoder=ControlledEncoder())
+        service = SaturnRetrievalService()
+        service.publish(dense)
+        session = None
+        with self.assertRaisesRegex(OSError, "test exception"):
+            with service.open_answer_session() as session:
+                self.assertEqual(dense.dense._lifetime._refs, 2)
+                raise OSError("test exception")
+        self.assertEqual(dense.dense._lifetime._refs, 1)
+        session.close()
+        self.assertEqual(dense.dense._lifetime._refs, 1)
+        service.publish(self.old)
+        self.assertTrue(dense.dense._lifetime.closed)
+
+    def test_t08_invalid_unicode_surrogate_is_invalid_request(self):
+        with self.service.open_answer_session() as session:
+            with self.assertRaises(SaturnContextError) as ex:
+                session.build_context("\ud800")
+            expect_code(ex, "invalid_request")
+            self.assertNotIn("surrogate", str(ex.exception))
+
+    def test_t09_valid_russian_unicode_minus_and_decimal_query(self):
+        query = "Обмен −0,5 МПа и RS-485"
+        with self.service.open_answer_session() as session:
+            context = session.build_context(query)
+            self.assertEqual(context.question, query)
+            self.assertEqual(context.question_sha256,
+                             __import__("hashlib").sha256(query.encode("utf-8")).hexdigest())
+            self.assertEqual(session.recheck_policy(context), "initial")
+
+    def test_t10_corrupt_nested_context_fingerprint_fails_closed(self):
+        with self.service.open_answer_session() as session:
+            ctx = session.build_context("RS-485")
+            object.__setattr__(ctx, "answer_evidence", (object(),))
+            with self.assertRaises(SaturnContextError) as ex:
+                session.recheck_policy(ctx)
+            expect_code(ex, "context_identity_mismatch")
+            ctx2 = session.build_context("RS-485")
+            object.__setattr__(ctx2, "question", "\ud800")
+            with self.assertRaises(SaturnContextError) as ex:
+                session.recheck_policy(ctx2)
+            expect_code(ex, "context_identity_mismatch")
+
+    def test_t11_unexpected_retrieval_oserror_is_sanitized(self):
+        with patch.object(SaturnRetrievalService, "_search_captured",
+                          side_effect=OSError("/private/backend/path?token=secret")):
+            with self.service.open_answer_session() as session:
+                with self.assertRaises(SaturnContextError) as ex:
+                    session.build_context("RS-485")
+                expect_code(ex, "retrieval_unavailable")
+                self.assertNotIn("/private/", str(ex.exception))
+                self.assertNotIn("secret", str(ex.exception))
+
+    def test_t12_policy_failure_before_and_inside_search_is_typed(self):
+        class BrokenPolicy:
+            def capture(self):
+                raise OSError("internal policy credentials")
+        service = SaturnRetrievalService(policy_provider=BrokenPolicy())
+        service.publish(self.old)
+        with service.open_answer_session() as session:
+            with self.assertRaises(SaturnContextError) as ex:
+                session.build_context("RS-485")
+            expect_code(ex, "policy_unavailable")
+            self.assertNotIn("credentials", str(ex.exception))
+
+        class FailsDuringRetrievalPolicy:
+            def __init__(self):
+                self.calls = 0
+            def capture(self):
+                self.calls += 1
+                if self.calls == 3:  # Stage5A pre, 4B before, 4B after
+                    raise OSError("sensitive provider details")
+                return SaturnOperationalPolicy("initial")
+        provider = FailsDuringRetrievalPolicy()
+        service = SaturnRetrievalService(policy_provider=provider)
+        service.publish(self.old)
+        with service.open_answer_session() as session:
+            with self.assertRaises(SaturnContextError) as ex:
+                session.build_context("RS-485")
+            expect_code(ex, "policy_unavailable")
+            self.assertNotIn("sensitive", str(ex.exception))
+            self.assertEqual(provider.calls, 3)
+
+    def test_t13_backend_runtimeerror_containing_policy_is_not_policy_error(self):
+        with patch.object(SaturnRetrievalService, "_search_captured",
+                          side_effect=RuntimeError("policy unrelated backend crash")):
+            with self.service.open_answer_session() as session:
+                with self.assertRaises(SaturnContextError) as ex:
+                    session.build_context("RS-485")
+                expect_code(ex, "retrieval_unavailable")
+
+    def test_t14_legitimate_empty_result_is_not_infrastructure_error(self):
+        with self.service.open_answer_session() as session:
+            ctx = session.build_context("zzz-no-such-source-987654")
+            self.assertEqual(ctx.answer_evidence, ())
+            self.assertEqual(ctx.document_references, ())
+            self.assertEqual(session.recheck_policy(ctx), "initial")
+
+    def test_t15_existing_reason_codes_preserved(self):
+        with self.service.open_answer_session() as session:
+            ctx = session.build_context("RS-485")
+            with self.assertRaises(SaturnContextError) as ex:
+                session.build_context("RS-485", top_k=MAX_CONTEXT_EVIDENCE + 1)
+            expect_code(ex, "resource_budget_exceeded")
+
+            self.service.policy_provider.activate(SaturnOperationalPolicy(
+                "block", blocked_evidence_ids=frozenset({
+                    ctx.answer_evidence[0].evidence_id})))
+            with self.assertRaises(SaturnContextError) as ex:
+                session.recheck_policy(ctx)
+            expect_code(ex, "policy_blocked")
+            self.service.policy_provider.activate(SaturnOperationalPolicy("unblock"))
+            self.assertEqual(session.recheck_policy(ctx), "unblock")
+        with self.assertRaises(SaturnContextError) as ex:
+            session.build_context("RS-485")
+        expect_code(ex, "session_closed")
+
+        from saturn_ai.retrieval.saturn_channel import SaturnCandidate
+        original = SaturnRetrievalService._search_captured
+        def forged(service, bundle, query, mode, top_k):
+            answer = original(service, bundle, query, mode, top_k)
+            counterfeit = replace(answer.answer_evidence[0],
+                                  evidence_id="forged-id")
+            return replace(answer, answer_evidence=(counterfeit,))
+        with patch.object(SaturnRetrievalService, "_search_captured", forged):
+            with self.service.open_answer_session() as session:
+                with self.assertRaises(SaturnContextError) as ex:
+                    session.build_context("RS-485")
+                expect_code(ex, "evidence_integrity_failure")
 
 
 if __name__ == "__main__":
