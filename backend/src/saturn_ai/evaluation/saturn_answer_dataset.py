@@ -53,6 +53,7 @@ class SaturnGoldRequirement:
     evidence_id: str | None = None
     physical_page: int | None = None
     exact_quote: str | None = None
+    owner_entity_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -94,9 +95,29 @@ def _index(snapshot):
     }
 
 
+# Authored source scope for ORIGINAL immutable open-calibration v0.1.
+# Exact case/question binding; never learned from Stage 5B's parser.
+_ORIGINAL_CALIBRATION_OWNER = {
+    ("saturn-grounding-calibration-v0.1", "C16",
+     "Document: A guide | owner=Device X"): ("products", "device-x"),
+}
+
+
+def _legacy_owner(raw, item, snapshot):
+    identity = _ORIGINAL_CALIBRATION_OWNER.get(
+        (raw["dataset_id"], item["case_id"], item["question"]))
+    if identity is None:
+        return None
+    owners = [e for e in snapshot.entities
+              if (e.collection, e.slug) == identity and not e.draft]
+    if len(owners) != 1:
+        _fail("owner_scope_reference_missing")
+    return owners[0].entity_id
+
+
 def _requirement(raw, idx):
     keys = {"requirement_id", "kind", "canonical_id", "source_revision_id",
-            "evidence_id", "physical_page", "exact_quote"}
+            "evidence_id", "physical_page", "exact_quote", "owner_entity_id"}
     _keys(raw, keys, {"requirement_id", "kind", "canonical_id", "source_revision_id"})
     if any(not _text(raw.get(k), 256) for k in ("requirement_id", "canonical_id",
                                                  "source_revision_id")):
@@ -110,6 +131,8 @@ def _requirement(raw, idx):
         _fail("physical_page")
     if raw.get("exact_quote") is not None and not _text(raw["exact_quote"], 2000):
         _fail("exact_quote")
+    if raw.get('owner_entity_id') is not None and not _text(raw['owner_entity_id']):
+        _fail('owner_entity_id')
     return SaturnGoldRequirement(**raw)
 
 
@@ -125,7 +148,8 @@ def _check_reference(req, index):
                 unit.evidence_type != "site_field" or
                 unit.source_revision_id != req.source_revision_id or
                 unit.entity_id != f.entity_id or
-                req.physical_page is not None or req.exact_quote is not None):
+                req.physical_page is not None or req.exact_quote is not None or
+                req.owner_entity_id is not None):
             _fail("field_gold_mismatch")
     elif req.kind == "relation":
         r = index["relations"].get(req.canonical_id)
@@ -136,14 +160,18 @@ def _check_reference(req, index):
                 pointer.canonical_id != r.relation_id or
                 unit.evidence_type != "relation" or
                 unit.source_revision_id != req.source_revision_id or
-                req.physical_page is not None or req.exact_quote is not None):
+                req.physical_page is not None or req.exact_quote is not None or
+                req.owner_entity_id is not None):
             _fail("relation_gold_mismatch")
     elif req.kind == "document":
         m = index["documents"].get(req.canonical_id)
         if (m is None or req.source_revision_id !=
                 (m.pdf_revision_id or "metadata-only") or
                 req.evidence_id is not None or req.physical_page is not None or
-                req.exact_quote is not None or not m.occurrences):
+                req.exact_quote is not None or not m.occurrences or
+                (req.owner_entity_id is not None and (
+                    req.owner_entity_id not in m.document.owner_entity_ids or
+                    not any(o.owner_entity_id == req.owner_entity_id for o in m.occurrences)))):
             _fail("document_gold_mismatch")
     else:
         pdf = index["pdf"].get(req.source_revision_id)
@@ -157,7 +185,8 @@ def _check_reference(req, index):
                 unit.page_number != req.physical_page or
                 pointer.canonical_kind != "PdfRevision" or
                 pointer.canonical_id != req.source_revision_id or
-                not req.exact_quote or req.exact_quote not in unit.text):
+                not req.exact_quote or req.exact_quote not in unit.text or
+                req.owner_entity_id is not None):
             _fail("pdf_gold_mismatch")
 
 
@@ -231,6 +260,21 @@ def validate_gold(raw_bytes: bytes, snapshot, *, split=None):
         seen_ids.add(item["case_id"])
         seen_questions.add(item["question"])
         requirements = tuple(_requirement(x, index) for x in item["required"])
+        authored_owner = _legacy_owner(raw, item, snapshot)
+        scoped = "| owner=" in item["question"].lower()
+        if scoped:
+            if len(requirements) != 1 or requirements[0].kind != "document":
+                _fail("owner_scope_gold")
+            if authored_owner is not None:
+                from dataclasses import replace
+                if requirements[0].owner_entity_id not in (None, authored_owner):
+                    _fail("owner_scope_gold")
+                requirements = (replace(requirements[0],
+                                        owner_entity_id=authored_owner),)
+            elif requirements[0].owner_entity_id is None:
+                _fail("owner_scope_gold")
+        elif any(r.owner_entity_id is not None for r in requirements):
+            _fail("owner_scope_gold")
         ids = [r.requirement_id for r in requirements]
         refs = [(r.kind, r.canonical_id, r.source_revision_id) for r in requirements]
         if len(set(ids)) != len(ids) or len(set(refs)) != len(refs):
