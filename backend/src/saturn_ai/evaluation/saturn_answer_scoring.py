@@ -7,6 +7,7 @@ verification flags, reason codes, evidence IDs or statuses as proof.
 from dataclasses import asdict, dataclass
 from hashlib import sha256
 import json
+import re
 
 from ..grounding.saturn_answer_contracts import (
     ANSWER_STATUSES, SaturnAnswerResult, SaturnAnswerStatement, SaturnCitation,
@@ -70,6 +71,8 @@ class SaturnEvaluationOutcome:
     policy_restriction: bool = False
     evidence_conflict: bool = False
     answer_assertion_count: int = 0
+    quote_requirement_count: int = 0
+    verified_quote_count: int = 0
 
 
 def _expected_field(fact, entities):
@@ -265,12 +268,22 @@ def _evaluate_statement(s, citations, indexes):
         return ("document", m.document.document_id,
                 m.pdf_revision_id or "metadata-only", None)
     if s.statement_kind == "source_quote":
+        prefix = "Цитата источника (не подтверждает характеристику): "
         unit = indexes["evidence"].get(citation.evidence_id)
         if (unit is None or unit.evidence_type not in ("site_passage", "pdf_passage") or
                 s.evidence_id != unit.evidence_id or
-                not s.text.startswith("Цитата источника (не подтверждает характеристику): ") or
-                not s.text.split(": ", 1)[1] in unit.text or
-                len(s.text) > 1200):
+                s.document_id is not None or
+                not s.text.startswith(prefix)):
+            return None
+        quote = s.text[len(prefix):]
+        # Python considers the empty string a substring of EVERY passage.
+        # A quote is exact *and substantive*, never a whitespace-only token.
+        if (not quote.strip() or len(quote) > 1000 or
+                quote not in unit.text or
+                (unit.evidence_type == "pdf_passage" and
+                 citation.source_type != "pdf") or
+                (unit.evidence_type == "site_passage" and
+                 citation.source_type != "site")):
             return None
         return ("quote", unit.evidence_id, unit.source_revision_id, unit.evidence_id)
     return None
@@ -316,6 +329,68 @@ def _need_matches_requirement(need, req, indexes):
     return False  # PDF extractive quotes do not entail a technical fact.
 
 
+# Independent lexical constraints for *observed* needs. These do not invoke
+# Stage 5B parsing, look up source values, or use model-produced gold. Field
+# tokens are taken literally from the authored question; punctuation, nested
+# paths, indexed paths and JSON-quoted keys remain opaque exact substrings.
+_FIELD_QUESTION_HEAD = re.compile(r"^\\s*[^:\\r\\n?]{1,160}?\\s*:\\s*")
+_RELATION_QUESTION = re.compile(
+    r"^\\s*relation\\(\\s*([^,()?]+?)\\s*,\\s*([^,()?]+?)\\s*,"
+    r"\\s*([^,()?]+?)\\s*\\)\\s*\\?\\s*$")
+_DOCUMENT_QUESTION = re.compile(
+    r"^\\s*(?:Документ|Document)\\s*:\\s*([^|\\r\\n?]+?)"
+    r"(?:\\s*\\|\\s*owner=([^|\\r\\n?]+?))?\\s*\\?\\s*$",
+    re.IGNORECASE,
+)
+
+
+def _semantic_need_binding(question, needs):
+    """Independently validate observed semantic slots and ordered field list.
+
+    Only checks source-question wording, not which source facts exist. Commas
+    inside source-declared field names are preserved within the literal span.
+    """
+    if all(n.kind == "field_value" for n in needs):
+        header = _FIELD_QUESTION_HEAD.match(question)
+        if header is None:
+            return False
+        ordered = sorted(needs, key=lambda n: n.question_span[0])
+        cursor = header.end()
+        for i, need in enumerate(ordered):
+            left, right = need.question_span
+            if left < cursor or need.field_path != question[left:right] or not need.field_path.strip():
+                return False
+            gap = question[cursor:left]
+            if i == 0:
+                if gap.strip():
+                    return False
+            elif not (re.fullmatch(r"\\s*,\\s*", gap) or
+                      re.fullmatch(r"\\s+(?:and|и)\\s+", gap, re.IGNORECASE)):
+                return False
+            cursor = right
+        return re.fullmatch(r"\\s*\\?\\s*", question[cursor:]) is not None
+    if len(needs) != 1:
+        return False
+    need = needs[0]
+    if need.kind == "relation":
+        match = _RELATION_QUESTION.fullmatch(question)
+        return (match is not None and
+                need.predicate == match.group(2).strip() and
+                need.question_span == (0, len(question)))
+    if need.kind == "document_lookup":
+        match = _DOCUMENT_QUESTION.fullmatch(question)
+        return (match is not None and
+                need.document_title == match.group(1).strip() and
+                ((need.entity_id is None) if match.group(2) is None
+                 else need.entity_id is not None or
+                 need.resolution_status in ("missing_entity", "ambiguous")) and
+                need.question_span == (0, len(question)))
+    if need.kind == "unresolved":
+        return (need.field_path is None and need.predicate is None and
+                need.document_title is None)
+    return False
+
+
 def _need_bindings(case, snapshot, trace, indexes):
     """Validate need identity, spans, source meaning, and matched gold scopes.
 
@@ -342,6 +417,8 @@ def _need_bindings(case, snapshot, trace, indexes):
                 need.need_id in needs or finding.need_id != need.need_id):
             return {}, True
         needs[need.need_id] = (need, finding)
+    if not _semantic_need_binding(case.question, tuple(n for n, _ in needs.values())):
+        return needs, True
     # Every positive source requirement must map to exactly ONE observed need.
     for req in case.required:
         if req.kind == "pdf_quote":
@@ -527,6 +604,7 @@ def score_answer(case: SaturnEvaluationCase, result: SaturnAnswerResult,
     source_unsupported = 0
     off_question_ids = set()
     answer_assertions = 0
+    verified_quotes = set()
     for s in result.statements:
         technical = s.statement_kind in _TECH
         assertion = s.statement_kind in _SATISFY
@@ -554,6 +632,21 @@ def score_answer(case: SaturnEvaluationCase, result: SaturnAnswerResult,
             # necessarily source-unsupported. Count it as off-question.
             if assertion:
                 off_question_ids.add(s.statement_id)
+        if match[0] == "quote" and _statement_binds(s, match, need_map, indexes):
+            citation = citation_map.get(s.citation_ids[0])
+            unit = indexes["evidence"].get(match[1])
+            quote = s.text[len("Цитата источника (не подтверждает характеристику): "):]
+            for req in case.required:
+                if (req.kind == "pdf_quote" and
+                        citation is not None and citation.source_type == "pdf" and
+                        unit is not None and unit.evidence_type == "pdf_passage" and
+                        req.canonical_id == citation.document_id and
+                        req.source_revision_id == citation.pdf_revision_id and
+                        req.evidence_id == match[1] and
+                        req.physical_page == citation.physical_page and
+                        req.exact_quote == quote):
+                    verified_quotes.add(req.requirement_id)
+                    emitted_requirements.add(req.requirement_id)
         if match[0] in ("field", "relation", "document"):
             if match in emitted_evidence:
                 codes.add("need_binding_failure")
@@ -670,19 +763,23 @@ def score_answer(case: SaturnEvaluationCase, result: SaturnAnswerResult,
 
     expected_evidence = {r.evidence_id for r in case.required if r.evidence_id}
     expected_documents = {r.canonical_id for r in case.required if r.kind == "document"}
-    selected = set(trace.selected_evidence_ids) if trace else set()
-    ranked = set(trace.ranked_evidence_ids[:5]) if trace else set()
-    ranked_docs = set(trace.ranked_document_ids[:5]) if trace else set()
+    retrieval_measured = trace is not None and trace.retrieval_diagnostics_complete
+    selected = set(trace.selected_evidence_ids) if retrieval_measured else set()
+    ranked = set(trace.ranked_evidence_ids[:5]) if retrieval_measured else set()
+    ranked_docs = set(trace.ranked_document_ids[:5]) if retrieval_measured else set()
     return SaturnEvaluationOutcome(
         case.case_id, case.category, case.split, expected, actual,
         status_correct, fully_correct, len(case.required),
         len(emitted_requirements), source_unsupported,
         technical_assertions, len(missing), citation_valid,
         len(result.citations), len(valid_citations),
-        (expected_evidence <= ranked if expected_evidence and trace else None),
-        (expected_documents <= ranked_docs if expected_documents and trace else None),
-        len(expected_evidence & selected), len(expected_evidence),
+        (expected_evidence <= ranked if expected_evidence and retrieval_measured else None),
+        (expected_documents <= ranked_docs if expected_documents and retrieval_measured else None),
+        len(expected_evidence & selected),
+        len(expected_evidence) if retrieval_measured else 0,
         tuple(sorted(codes)), _gold_source_channel(case),
         source_unsupported, off_question, extra_text, policy, bool(conflict),
         answer_assertions,
+        sum(req.kind == "pdf_quote" for req in case.required),
+        len(verified_quotes),
     )
