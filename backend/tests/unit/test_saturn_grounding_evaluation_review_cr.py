@@ -251,7 +251,8 @@ class ReviewCorrections(unittest.TestCase):
     def test_cr04_t03_missing_doc_retrieval_attribution(self):
         a, t = self.ask("C23")
         a, t = self._for_question(a, t, self.case("C15").question)
-        t = replace(t, retrieval_diagnostics_complete=True)
+        t = replace(t, ranked_document_ids=(), selected_document_ids=(),
+                    retrieval_diagnostics_complete=True)
         out = self.score("C15", a, t)
         self.assertIn("retrieval_miss", out.failure_codes)
 
@@ -267,7 +268,8 @@ class ReviewCorrections(unittest.TestCase):
     def test_cr04_t05_missing_observation_is_undetermined(self):
         a, trace = self.ask("C23")
         a, trace = self._for_question(a, trace, self.case("C15").question)
-        trace = replace(trace, retrieval_diagnostics_complete=False)
+        trace = replace(trace, ranked_document_ids=(), selected_document_ids=(),
+                        retrieval_diagnostics_complete=False)
         out = self.score("C15", a, trace)
         self.assertIn("undetermined", out.failure_codes)
 
