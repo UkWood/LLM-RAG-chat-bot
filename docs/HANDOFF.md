@@ -292,3 +292,12 @@ Live provider smoke test не выполнялся: offline tests использ
 6. PR #22 не сливать без отдельной явной команды владельца.
 7. Не начинать Gitea, PDF ingestion, retrieval integration, LLM/API/UI или deployment автоматически после PR #22; для каждого следующего этапа требуется отдельное задание.
 - **Review-scored corrected reports (not blind):** [0.1.1 open calibration](../evaluation/reports/saturn-grounding-calibration-review-v0.1.1.json) (28/28, citations 24/24, 0 source-unsupported/off-question/text extras); [controlled injections](../evaluation/reports/saturn-grounding-controlled-review-v0.1.1.json) (3 expected failing cases: policy/error/simulated conflict). Both measured at code `bad73187f6e3dca187636ae5cea4cbca0c69dded`; new files preserve original report and gold. Targeted 121 tests. Final CI still to be bound to final PR head.
+
+
+## PR #31 — Final consolidated CR06–CR09 handoff (12 November 2026)
+
+- Four additional independent-review findings addressed in existing PR #31, Stage 5E only: (1) substantive exact site/PDF quote and independently authored pdf_quote semantics; (2) independent literal-question field/owner/entity/need binding, including unresolved multi-need fields; (3) COMPLETE receipt SHA equals persisted canonical report bytes; (4) retrieval hit metrics exclude unmeasured technical failures, with per-need error attribution.
+- Scorer and rubric now versioned `0.1.2`; original v0.1 gold/report and prior v0.1.1 reports retained, with new measurement artifacts separately versioned. Existing 121 Stage 5E + 25 CR06–CR09 cases = **146 targeted tests**.
+- Controlled policy / technical / simulated conflict remains **synthetic fault injection**, not independent blind. All gold labels remain out of the retrieval/answer application boundary. `independent_blind_evaluation=NOT_RUN`.
+- Details, new report links and CI proof: [Stage 5E Review Corrections](stages/2026-11-11-saturn-grounding-evaluation.md). PR #31 stays unmerged pending Session A independent review; Stage 4A–5D, Saturn-Main-Site and Stage 6 untouched.
+
