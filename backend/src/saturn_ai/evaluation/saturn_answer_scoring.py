@@ -406,17 +406,20 @@ def _semantic_need_binding(question, needs, indexes=None):
     need = needs[0]
     if need.kind == "relation":
         match = _RELATION_QUESTION.fullmatch(question)
-        return (match is not None and
-                need.predicate == match.group(2).strip() and
-                need.question_span == (0, len(question)) and
-                (indexes is None or (
-                    (need.entity_id, need.resolution_status) ==
-                    _source_entity_slot(match.group(1), indexes)
-                    if _source_entity_slot(match.group(1), indexes)[1]
-                    != "resolved" else need.entity_id ==
-                    _source_entity_slot(match.group(1), indexes)[0]) and
-                    need.object_entity_id ==
-                    _source_entity_slot(match.group(3), indexes)[0]))
+        if (match is None or need.predicate != match.group(2).strip() or
+                need.question_span != (0, len(question))):
+            return False
+        if indexes is None:
+            return True
+        subject_id, subject_status = _source_entity_slot(match.group(1), indexes)
+        object_id, object_status = _source_entity_slot(match.group(3), indexes)
+        expected_status = ("ambiguous" if "ambiguous" in
+                           (subject_status, object_status) else
+                           "missing_entity" if "missing_entity" in
+                           (subject_status, object_status) else "resolved")
+        return (need.entity_id == subject_id and
+                need.object_entity_id == object_id and
+                need.resolution_status == expected_status)
     if need.kind == "document_lookup":
         match = _DOCUMENT_QUESTION.fullmatch(question)
         if match is None or need.document_title != match.group(1).strip():
