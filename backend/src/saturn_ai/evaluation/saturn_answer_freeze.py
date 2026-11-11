@@ -173,7 +173,11 @@ def _validate_result_case(row, gold):
             out.fully_correct and (not out.status_correct or out.failure_codes or
                  out.missing_requirement_count or out.unsupported_claim_count or
                  out.off_question_claim_count or out.extra_answer_text_count or
-                 out.actual_status == "error" or out.citation_valid is False) or
+                 out.actual_status == "error" or out.citation_valid is False or
+                 (out.expected_status in ("answered", "partial") and
+                  out.citation_valid is not True) or
+                 (out.expected_status in ("needs_support", "clarification") and
+                  out.answer_assertion_count != 0)) or
             type(out.answer_assertion_count) is not int or
             not 0 <= out.off_question_claim_count <= out.answer_assertion_count or
             out.answer_assertion_count < out.technical_assertion_count or
