@@ -12,7 +12,7 @@ import json
 import unittest
 
 from saturn_ai.evaluation.saturn_answer_dataset import (
-    validate_gold, serialize_gold,
+    validate_gold, serialize_gold, SaturnGoldRequirement,
 )
 from saturn_ai.evaluation.saturn_answer_freeze import (
     BlindRun, BlindIntegrityError, freeze_manifest, validate_freeze, config_hash,
@@ -22,7 +22,8 @@ from saturn_ai.evaluation.saturn_answer_reporting import (
 )
 from saturn_ai.evaluation.saturn_answer_scoring import (
     SaturnStageTrace, SaturnEvaluationOutcome, score_answer,
-    _indexes, _citation_ok, _evaluate_statement,
+    _indexes, _citation_ok, _evaluate_statement, _need_bindings,
+    _semantic_need_binding,
 )
 from saturn_ai.evaluation.saturn_fixture import (
     fixture_snapshot, calibration_gold_bytes,
@@ -366,6 +367,221 @@ class ReviewCorrections(unittest.TestCase):
         self.assertNotIn("retrieval_miss", out.failure_codes)
         self.assertEqual(calculate_metrics((out,))["evidence_conflict"]["numerator"], 1)
 
+
+    # CR06: exact extractive quote integrity is not engineering truth
+    def test_cr06_t01_empty_quote_is_not_fully_correct(self):
+        answer, trace = self.ask("C26")
+        s = answer.statements[0]
+        invalid = replace(s, text="Цитата источника (не подтверждает характеристику): ")
+        outcome = self.score("C26", replace(answer, statements=(invalid,)), trace)
+        self.assertFalse(outcome.fully_correct)
+        self.assertIn("unsafe_claim", outcome.failure_codes)
+
+    def test_cr06_t02_middle_pdf_exact_quote_passes(self):
+        a, trace = self.ask("C26")
+        unit = next(e for e in self.snapshot.answer_evidence
+                    if e.evidence_id == a.statements[0].evidence_id)
+        snippet = unit.text[8:21]
+        self.assertTrue(snippet.strip())
+        self.assertNotEqual(snippet, unit.text[:len(snippet)])
+        new = replace(a.statements[0],
+                      text="Цитата источника (не подтверждает характеристику): "+snippet)
+        self.assertTrue(self.score("C26", replace(a, statements=(new,)), trace).fully_correct)
+
+    def test_cr06_t03_altered_pdf_quote_rejected(self):
+        a, t = self.ask("C26")
+        changed = replace(a.statements[0],
+                          text="Цитата источника (не подтверждает характеристику): impossible edited data")
+        result = self.score("C26", replace(a, statements=(changed,)), t)
+        self.assertFalse(result.fully_correct)
+        self.assertIn("unsafe_claim", result.failure_codes)
+
+    def test_cr06_t04_wrong_pdf_page_and_revision_rejected(self):
+        a, t = self.ask("C26")
+        for field, value in (("physical_page", 400),
+                             ("pdf_revision_id", "f"*64),
+                             ("pdf_bytes_sha256", "f"*64),
+                             ("pdf_parser_version", "forged")):
+            with self.subTest(field=field):
+                citation = replace(a.citations[0], **{field:value})
+                result = self.score("C26", replace(a, citations=(citation,)), t)
+                self.assertFalse(result.fully_correct)
+                self.assertFalse(result.citation_valid)
+
+    def test_cr06_t05_pdf_quote_gold_exact_substring_matches(self):
+        a, t = self.ask("C26")
+        unit = next(e for e in self.snapshot.answer_evidence
+                    if e.evidence_id == a.statements[0].evidence_id)
+        exact = a.statements[0].text.split(": ", 1)[1]
+        c = a.citations[0]
+        gold = SaturnGoldRequirement(
+            "pdf-only", "pdf_quote", c.document_id, c.pdf_revision_id,
+            unit.evidence_id, c.physical_page, exact)
+        case = replace(self.case("C26"), required=(gold,))
+        positive = score_answer(case, a, self.snapshot, t)
+        self.assertTrue(positive.fully_correct)
+        self.assertEqual(positive.verified_quote_count, 1)
+        self.assertEqual(positive.quote_requirement_count, 1)
+        self.assertEqual(positive.technical_assertion_count, 0)
+        self.assertEqual(calculate_metrics((positive,))["extractive_quote_integrity"]["numerator"], 1)
+        different_exact = replace(gold, exact_quote=unit.text[3:12])
+        negative = score_answer(replace(case, required=(different_exact,)),
+                                a, self.snapshot, t)
+        self.assertFalse(negative.fully_correct)
+        self.assertEqual(negative.verified_quote_count, 0)
+
+    def test_cr06_t06_pdf_quote_does_not_satisfy_field(self):
+        a, t = self.ask("C26")
+        new_case = replace(self.case("C01"), question=self.case("C26").question)
+        scored = score_answer(new_case, a, self.snapshot, t)
+        self.assertEqual(scored.supported_fact_count, 0)
+        self.assertFalse(scored.fully_correct)
+
+    # CR07: semantic binding of *every* observed field, including unresolved
+    def test_cr07_t01_original_unresolved_partial_is_correct(self):
+        a, t = self.ask("C20")
+        self.assertTrue(self.score("C20", a, t).fully_correct)
+
+    def test_cr07_t02_recalculated_need_id_cannot_hide_field_substitution(self):
+        a, t = self.ask("C20")
+        old = t.needs[1]
+        fake_field = replace(old, field_path="fabricated_different_field")
+        new_id = stable_id("saturn-question-need-v1", a.question_sha256,
+                           fake_field.question_span[0], fake_field.question_span[1],
+                           fake_field.kind, fake_field.entity_id,
+                           fake_field.field_path, fake_field.predicate,
+                           fake_field.object_entity_id,
+                           fake_field.resolution_status, fake_field.document_title)
+        fake_need = replace(fake_field, need_id=new_id)
+        fake_trace = replace(t,
+                             needs=(t.needs[0], fake_need),
+                             need_findings=(t.need_findings[0],
+                                            replace(t.need_findings[1], need_id=new_id)))
+        fake_answer = replace(a, unresolved_need_ids=(new_id,))
+        outcome = self.score("C20", fake_answer, fake_trace)
+        self.assertFalse(outcome.fully_correct)
+        self.assertIn("need_binding_failure", outcome.failure_codes)
+
+    def test_cr07_t03_forged_span_and_text_fail(self):
+        a, t = self.ask("C20")
+        for fake in (replace(t.needs[1], original_text="other"),
+                     replace(t.needs[1], question_span=(0, 5))):
+            with self.subTest(fake=fake):
+                forged = replace(t, needs=(t.needs[0], fake))
+                out = self.score("C20", a, forged)
+                self.assertFalse(out.fully_correct)
+                self.assertIn("need_binding_failure", out.failure_codes)
+
+    def test_cr07_t04_nested_indexed_json_key_and_punctuation(self):
+        # Literal lexical source tokens, not a grammar that splits inside
+        # JSON-quoted names or comma/punctuation inside source-defined keys.
+        original, _ = self.ask("C20")
+        sample, _ = self.ask("C01")
+        base = self.ask("C20")[1].needs[0]
+        fields = (
+            'nested.path[0]["key, with punctuation"]',
+            'source-declared, field-name [special]',
+            'list[2]["quoted.and-odd"]',
+        )
+        question = "Device X: " + ", ".join(fields) + "?"
+        needs = []
+        pos = question.index(":") + 2
+        digest = sha256(question.encode("utf-8")).hexdigest()
+        for field in fields:
+            start = question.index(field, pos)
+            end = start + len(field)
+            n = replace(base, field_path=field, original_text=field,
+                        question_span=(start, end))
+            n = replace(n, need_id=stable_id("saturn-question-need-v1",
+                digest, start, end, n.kind, n.entity_id, n.field_path,
+                n.predicate, n.object_entity_id, n.resolution_status,
+                n.document_title))
+            needs.append(n)
+            pos = end
+        self.assertTrue(_semantic_need_binding(question, tuple(needs)))
+
+    def test_cr07_t05_all_multi_needs_regression(self):
+        for ident in ("C11", "C12", "C20", "C25", "C28"):
+            with self.subTest(case=ident):
+                a,t = self.ask(ident)
+                self.assertTrue(self.score(ident, a, t).fully_correct)
+
+    def test_cr07_t06_owner_document_regression(self):
+        a,t = self.ask("C16")
+        self.assertTrue(self.score("C16", a, t).fully_correct)
+
+    # CR09: distinguish measured misses from absent diagnostic data
+    def test_cr09_t01_pre_retrieval_failure_is_unmeasured(self):
+        a,t = self.ask("C01")
+        failed = replace(a, status="error", statements=(), citations=(),
+                         answer_text="Не удалось выполнить проверку.")
+        trace = replace(t, technical_failure=True, retrieval_diagnostics_complete=False,
+                        ranked_evidence_ids=(), selected_evidence_ids=())
+        scored = self.score("C01", failed, trace)
+        self.assertIsNone(scored.source_hit_at_5)
+        self.assertEqual(calculate_metrics((scored,))["source_hit_at_5"]["denominator"], 0)
+        self.assertNotIn("retrieval_miss", scored.failure_codes)
+
+    def test_cr09_t02_measured_source_miss_is_false(self):
+        a,t = self.ask("C01")
+        t = replace(t, ranked_evidence_ids=(), selected_evidence_ids=(),
+                    retrieval_diagnostics_complete=True)
+        scored = self.score("C01", a, t)
+        self.assertIs(scored.source_hit_at_5, False)
+        self.assertEqual(calculate_metrics((scored,))["source_hit_at_5"]["denominator"], 1)
+
+    def test_cr09_t03_document_lookup_without_retrieval_is_na(self):
+        a,t = self.ask("C15")
+        t = replace(t, retrieval_diagnostics_complete=False,
+                    ranked_document_ids=(), selected_document_ids=())
+        scored = self.score("C15", a, t)
+        self.assertIsNone(scored.document_hit_at_5)
+        self.assertEqual(calculate_metrics((scored,))["document_hit_at_5"]["denominator"], 0)
+
+    def test_cr09_t04_per_need_not_other_need_coverage(self):
+        a,t = self.ask("C11")
+        # Make second question need a different observed field, not a
+        # missing provider claim. Keep the first need correctly covered.
+        other = replace(t.needs[1], field_path="wrong_parameter")
+        new_id = stable_id("saturn-question-need-v1", a.question_sha256,
+                           other.question_span[0], other.question_span[1],
+                           other.kind, other.entity_id, other.field_path,
+                           other.predicate, other.object_entity_id,
+                           other.resolution_status, other.document_title)
+        t = replace(t, needs=(t.needs[0], replace(other, need_id=new_id)),
+                    need_findings=(t.need_findings[0],
+                                   replace(t.need_findings[1], need_id=new_id)))
+        s = a.statements[0]
+        fake = replace(a, statements=(s,), citations=(a.citations[0],),
+                       status="partial",
+                       unresolved_need_ids=(new_id,),
+                       answer_text=s.text+"\\nОтвет неполный. Для остальных требований недостаточно подтверждений.")
+        out = self.score("C11", fake, t)
+        self.assertIn("question_parse_failure", out.failure_codes)
+        self.assertNotIn("claim_generation_missing", out.failure_codes)
+
+    def test_cr09_t05_rank_exact_first_five(self):
+        a,t = self.ask("C01")
+        target = self.case("C01").required[0].evidence_id
+        near = ("other1", "other2", "other3", "other4", target, "other6")
+        fifth = self.score("C01", a, replace(t, ranked_evidence_ids=near))
+        sixth = self.score("C01", a, replace(t, ranked_evidence_ids=near[:-2]+("other5",target)))
+        self.assertIs(fifth.source_hit_at_5, True)
+        self.assertIs(sixth.source_hit_at_5, False)
+
+    def test_cr09_t06_normal_calibration_denominators(self):
+        rows = [self.score(i,*self.ask(i)) for i in ("C01","C11","C15","C26")]
+        metrics = calculate_metrics(rows)
+        self.assertEqual(metrics["source_hit_at_5"]["denominator"],2)
+        self.assertEqual(metrics["document_hit_at_5"]["denominator"],1)
+
+    def test_cr09_t07_controlled_report_marks_unmeasured(self):
+        from saturn_ai.evaluation.saturn_controlled import controlled_report
+        report = controlled_report(code_revision="a"*40)
+        affected = next(x for x in report["cases"] if x["case_id"] == "C02")
+        self.assertIsNone(affected["source_hit_at_5"])
+        self.assertGreaterEqual(
+            report["metrics"]["source_hit_at_5_not_measured_cases"], 1)
 
 class BlindReportContractTests(unittest.TestCase):
     @classmethod
