@@ -23,7 +23,8 @@ from .saturn_contracts import (
 
 
 def _reject(code):
-    raise SaturnContextError(code)
+    # Suppress implicit chaining of private backend/provider diagnostics.
+    raise SaturnContextError(code) from None
 
 
 def _context_fingerprint(context):
