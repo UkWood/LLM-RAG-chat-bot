@@ -1,6 +1,7 @@
 ## Stage 5C — Bounded Generation & Atomic Claim Verification v0.1 (2026-11-11)
 
 - **Current main baseline:** `973c3d2f3ae2c5c7a079a3e92072121bf9082edf`; PR #28 **MERGED**. Historical older sections calling PR #28 OPEN or Stage 5C unstarted are superseded, not retroactively rewritten.
+- **Stage 5C PR:** [#29](https://github.com/UkWood/LLM-RAG-chat-bot/pull/29) (single draft under CI; no merge); exact final head and CI documented in PR. 
 - **Active feature branch:** `feat/saturn-atomic-claim-verification-v0.1`; one Stage 5C PR, independent Acceptance Review required; **NO MERGE / NO Stage 5D**.
 - Implements new immutable Saturn-specific bounded provider request, exact-class offline Fake provider, independent per-claim canonical verification of fields/relations/extractive site and PDF quotes, rejection accounting, completeness and pre/post operational policy rechecks. Context/session lifecycle stays pinned to Stage 5A.
 - Limits: 6 needs, 6 provider evidence, 6 claims, 8000 total source characters, 1000 quoted characters. No cloud, new API, frontend, ingestion, source policy or changes in `UkWood/Saturn-Main-Site`.
