@@ -609,6 +609,33 @@ class SaturnRetrievalService:
                 raise LookupError("No active Saturn retrieval bundle")
             return self._active
 
+    def open_answer_session(self):
+        """Pin the exact active bundle and Qdrant reader lease atomically.
+
+        A session may outlive later publication, but every lookup remains
+        bound to its original snapshot/index until explicit/with-block close.
+        Existing search_saturn() retains its independent per-search lease.
+        """
+        with self._lock:
+            bundle = self._active
+            if bundle is None:
+                from ..grounding.saturn_contracts import SaturnContextError
+                raise SaturnContextError("no_active_bundle")
+            dense = bundle.dense
+            if dense is not None:
+                try:
+                    dense._retain()
+                except Exception:
+                    from ..grounding.saturn_contracts import SaturnContextError
+                    raise SaturnContextError("retrieval_unavailable") from None
+        try:
+            from ..grounding.saturn_context import SaturnAnswerSession
+            return SaturnAnswerSession(self, bundle)
+        except BaseException:
+            if dense is not None:
+                dense._release()
+            raise
+
     def publish(self, bundle: SaturnRetrievalBundle):
         if not isinstance(bundle, SaturnRetrievalBundle):
             raise ValueError("Invalid Saturn retrieval bundle")
