@@ -303,8 +303,15 @@ class SaturnAnswerSession:
                 _safe_policy(self._service.policy_provider)
                 _reject("retrieval_unavailable")
             self._validate_result(retrieval, question, mode)
-            evidence = self._typed_evidence(retrieval.answer_evidence)
-            documents = self._document_references(retrieval.document_matches)
+            try:
+                evidence = self._typed_evidence(retrieval.answer_evidence)
+                documents = self._document_references(retrieval.document_matches)
+            except SaturnContextError:
+                raise
+            except (ValueError, TypeError, AttributeError, KeyError, IndexError, OverflowError):
+                # Malformed result objects/canonical references are integrity
+                # failures, never empty retrieval or an opaque exception leak.
+                _reject("evidence_integrity_failure")
             if sum(len(item.source_text) for item in evidence) > MAX_CONTEXT_TEXT_CHARS:
                 _reject("resource_budget_exceeded")
             policy = _safe_policy(self._service.policy_provider)
