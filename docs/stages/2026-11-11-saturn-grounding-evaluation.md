@@ -103,3 +103,54 @@ New targeted regression suite: `backend/tests/unit/test_saturn_grounding_evaluat
 ## Release / review gate
 
 **READY FOR INDEPENDENT ACCEPTANCE REVIEW only after final exact-head push and PR CI are successful and full offline suite passes.** Coding Session B must not merge and must not start Stage 6. Session A issues consolidated substantive corrections and approves merge only under separate owner direction.
+
+## PR #31 — Independent Acceptance Review correction cycle (11 Nov 2026)
+
+**Session A review:** 2 BLOCKER + 3 IMPORTANT, one consolidated correction in the SAME PR #31. All changes here are limited to Stage 5E evaluator code, tests, documentation and CI. No Stage 4A–5D changes. Existing v0.1 open dataset bytes and first measured v0.1 report bytes remain exactly as first committed; they are not retroactively upgraded.
+
+### CR-01 — Need and owner scope
+
+- Independently recompute each observed Stage 5B need ID from its question hash/span/kind/source fields; check exact question spans, unique IDs, finding IDs and canonical source meaning.
+- Explicitly match source-authored gold fact/relation/document requirements against runtime need semantics; parser output **cannot define gold**.
+- Per-statement need ID must exist, be unique and match its typed source evidence; final statement ID binds need, document/evidence, kind and citation.
+- `answered` cannot contain unresolved; `partial` must contain genuinely unresolved needs; `needs_support` and `clarification` account for all unresolved needs.
+- Owner-qualified original C16 retains an *authored source-scope sidecar* mapped to `products/device-x` in `saturn_answer_dataset.py` (exact dataset ID + exact case ID + exact authored question). The original frozen JSON is **not modified**. Newly authored owner-qualified documents must include explicit `owner_entity_id` in gold. Citation must contain only that owner's authenticated occurrences.
+- Snapshot, bundle, question and need evidence identities independently rechecked; a correctly supported statement from another question is not necessarily correct for this question.
+
+### CR-02 — Complete blind provenance
+
+- The frozen manifest now binds a valid 40-hex Git commit SHA (no `unavailable`), exact dataset hash, snapshot/corpus, deterministic bundle ID, config hash, scorer and rubric revisions, count and unique expected case IDs.
+- `BlindRun.complete(report_bytes, dataset=...)` independently validates full report schema, bound experiment ID, code revision, dataset/snapshot/corpus/bundle/config identities, source-backed gold case IDs and authored statuses, per-case counter coherence, recomputed metrics and group breakdowns. Unknown fields, duplicate JSON keys and inconsistent counts are rejected.
+- Durable START evidence is checked again on completion; exclusive `O_EXCL` START/FAILED/COMPLETE behavior is preserved. Git SHA failure aborts CLI before START. Controlled tests use only copies of **open authored cases**, never a real hidden/blind set.
+- The `SaturnFakeClaimProvider` profile remains offline test-only. No actual blind dataset is read or executed. `independent_blind_evaluation=NOT_RUN` for all public measurements.
+
+### CR-03 — Exact substring quotation
+
+- A `source_quote` passes extractive integrity when its exact literal text occurs **anywhere** within the source's verified site/PDF passage, including the middle. Altered text or a mismatched PDF page/revision/parser fails.
+- Quotes still have zero power to prove technical field/relation requirements and are omitted from the primary answer.
+
+### CR-04 — One pinned retrieval bundle
+
+- Diagnostic retrieval runs on `session._bundle` under the same session lock as context construction/assessment/verification/assembly. An independently captured `service.search_saturn` active pointer is no longer used.
+- Retrieval evidence/document IDs must match the actual context; snapshot, bundle, question and derived stage identity must agree. Concurrent publication is regression-tested by replacing the active bundle during retrieval.
+- Document attribution distinguishes not retrieved, retrieved but not selected, selected but not a satisfied document need, and missing only at answer assembly. Explicit policy blocks and potential conflicts have separate reasons; without enough diagnostic evidence the reason is `undetermined`.
+
+### CR-05 — Measurement semantics
+
+- Separate counters and clearly labeled ratios: `source_unsupported_claims` (only technical assertions, denominator technical assertions), `off_question_source_backed_claims` (denominator all issued field/relation/document assertions) and `extra_unsupported_answer_text` (case denominator).
+- Expected `answered`, `needs_support`, `clarification` and `partial` receive separate status-group breakdowns; partial cases are not counted as ordinary negative refusals.
+- Separate `policy_restriction`, `evidence_conflict` and `technical_error` rates. `saturn_controlled.py` deliberately injects known policy restriction, local retrieval error and a **simulated** conflict into three already-public calibration questions; the resulting supplemental report must be labeled `synthetic_controlled_fault_injection`, never blind, real-site or production acceptance.
+- Corrected scorer/rubric identities are `saturn-grounding-evaluator/0.1.1` / `saturn-grounding-rubric/0.1.1`. The original calibration report remains the first measured `0.1.0` artifact, not a rewritten correction result.
+
+### Review reproducibility
+
+```bash
+PYTHONPATH=backend/src python -m unittest discover -s backend/tests/unit -p 'test_saturn_grounding_evaluation*.py' -v
+python scripts/verify_offline.py
+PYTHONPATH=backend/src python -m saturn_ai.evaluation.saturn_grounding --profile calibration --dataset evaluation/datasets/saturn-grounding-calibration-v0.1.json --report /tmp/saturn-calibration-corrected.json
+PYTHONPATH=backend/src python -m saturn_ai.evaluation.saturn_controlled
+```
+
+A dedicated fast `saturn-evaluator-targeted` job was added to the existing CI, alongside the full offline, ONNX and calibration jobs. Independent Acceptance Review and a separate owner-directed merge remain mandatory; no Stage 6.
+
+**Known limits:** deterministic Fake provider and narrow source-declared query grammar; no independently authored blind, external LLM generalization, real-device verification or production readiness. The simulated conflict is a fault-injection test of *measurement classification*, not a real engineering conflict benchmark.
