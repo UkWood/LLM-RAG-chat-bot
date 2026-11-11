@@ -129,7 +129,8 @@ def _run_question(service, assembly, gate, verifier, question, profile):
 
 
 def evaluate(dataset_bytes, snapshot, *, profile: SaturnEvaluationProfile,
-             code_revision=None, blind_status="NOT_RUN"):
+             code_revision=None, blind_status="NOT_RUN",
+             experiment_id=None):
     """Real offline pipeline for every case, then independently score its output."""
     dataset = validate_gold(dataset_bytes, snapshot, split=profile.name)
     bundle = build_saturn_retrieval_bundle(snapshot)
@@ -148,7 +149,7 @@ def evaluate(dataset_bytes, snapshot, *, profile: SaturnEvaluationProfile,
         dataset, outcomes, code_revision=code_revision or _code_revision(),
         config_hash=config_hash(mode=profile.mode, top_k=profile.top_k),
         bundle=bundle, mode=profile.mode, top_k=profile.top_k,
-        blind_status=blind_status)
+        blind_status=blind_status, experiment_id=experiment_id)
     return report
 
 
@@ -211,7 +212,8 @@ def main(argv=None):
     try:
         report = evaluate(
             raw, snapshot, profile=profile, code_revision=code_revision,
-            blind_status="RUN" if blind else "NOT_RUN")
+            blind_status="RUN" if blind else "NOT_RUN",
+            experiment_id=blind.freeze["experiment_id"] if blind else None)
         data = report_bytes(report)
         if blind:
             if len(report["cases"]) != blind.freeze["expected_case_count"]:
