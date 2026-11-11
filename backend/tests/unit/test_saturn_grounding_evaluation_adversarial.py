@@ -57,8 +57,10 @@ class SaturnGroundingAdversarialTests(unittest.TestCase):
         if rebind_question:
             # Hypothetical forged answer for this case; the scorer must check
             # substantive policy/errors independently from question-hash guard.
-            result = replace(result, question_sha256=sha256(
-                cls.gold(case_id).question.encode("utf-8")).hexdigest())
+            digest = sha256(cls.gold(case_id).question.encode("utf-8")).hexdigest()
+            result = replace(result, question_sha256=digest)
+            if trace is not None:
+                trace = replace(trace, question_sha256=digest)
         return score_answer(cls.gold(case_id), result, cls.snapshot, trace)
 
     def test_t58_wrong_field_unit_changes_assertion(self):
@@ -285,7 +287,7 @@ class SaturnGroundingAdversarialTests(unittest.TestCase):
             doc, status="needs_support",
             question_sha256=sha256(self.gold("C18").question.encode("utf-8")).hexdigest(),
             answer_text=render_answer("needs_support", doc.statements))
-        out = self.score("C18", forged, trace)
+        out = self.score("C18", forged, trace, rebind_question=True)
         self.assertFalse(out.fully_correct)
         self.assertIn("unexpected_claim", out.failure_codes)
 
