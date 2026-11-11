@@ -51,7 +51,9 @@ jobs:
           python-version: '3.12'
       - name: Install locked parser dependencies
         run: python -m pip install --require-hashes -r backend/requirements.lock
-      - name: Generate open calibration gold from canonical fixture source
-        run: PYTHONPATH=backend/src python -m saturn_ai.evaluation.saturn_grounding --profile calibration --generate-calibration --dataset /tmp/saturn-gold.json --emit-open-json
-      - name: Measure Stage 5E end-to-end calibration quality
-        run: PYTHONPATH=backend/src python -m saturn_ai.evaluation.saturn_grounding --profile calibration --dataset /tmp/saturn-gold.json --report /tmp/saturn-report.json --emit-open-json
+      - name: Verify committed open calibration dataset against canonical fixture
+        run: |
+          PYTHONPATH=backend/src python -m saturn_ai.evaluation.saturn_grounding --profile calibration --generate-calibration --dataset /tmp/saturn-gold.json
+          cmp /tmp/saturn-gold.json evaluation/datasets/saturn-grounding-calibration-v0.1.json
+      - name: Measure Stage 5E end-to-end using frozen calibration gold
+        run: PYTHONPATH=backend/src python -m saturn_ai.evaluation.saturn_grounding --profile calibration --dataset evaluation/datasets/saturn-grounding-calibration-v0.1.json --report /tmp/saturn-report.json --emit-open-json
