@@ -409,3 +409,29 @@ class SaturnQuestionNeedsTests(unittest.TestCase):
             replace(first, raw_value_json='"0,5"'),
             replace(first, raw_value_json='"0.5"'),
         ))[0], "ambiguous")
+
+    def test_source_declared_slug_identity_is_exact(self):
+        parsed = parse_saturn_question_needs(
+            "catalog-a: interface?", self.snapshot)
+        self.assertEqual(parsed[0].entity_id, self.entity.entity_id)
+
+    def test_ambiguous_lexical_number_formats_and_case_variants(self):
+        first = self._sample_field()
+        for a, b, expected in (
+            ('1', '1.0', "incomparable_numeric_representation"),
+            ('"01"', '"1"', "incomparable_numeric_literals"),
+            ('"Modbus"', '"modbus"', "textual_case_variant"),
+        ):
+            status, reason = _comparison_status((
+                replace(first, raw_value_json=a),
+                replace(first, raw_value_json=b),
+            ))
+            self.assertEqual((status, reason), ("ambiguous", expected))
+
+    def test_text_candidates_alone_do_not_produce_partial_coverage(self):
+        from saturn_ai.grounding.saturn_sufficiency_gate import SaturnNeedFinding
+        one = SaturnNeedFinding("x", "text_candidate", ("a",), (),
+                                "passage_requires_claim_verification")
+        two = SaturnNeedFinding("y", "text_candidate", ("b",), (),
+                                "passage_requires_claim_verification")
+        self.assertEqual(_aggregate((one, two)), "insufficient_evidence")

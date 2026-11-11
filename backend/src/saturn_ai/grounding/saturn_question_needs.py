@@ -59,7 +59,7 @@ def _identity_index(snapshot):
     """Build an exact source-declared identity map once for the pinned corpus."""
     index = {}
     for entity in snapshot.entities:
-        names = {entity.entity_id, entity.title}
+        names = {entity.entity_id, entity.title, entity.slug}
         # Only explicit identity fields from the original trusted source.
         try:
             raw = json.loads(entity.raw_frontmatter_json)

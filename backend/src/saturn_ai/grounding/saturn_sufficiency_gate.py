@@ -12,7 +12,6 @@ from .saturn_contracts import SaturnContextError, SaturnEvidenceContext
 from .saturn_question_needs import SaturnQuestionNeed, parse_saturn_question_needs
 
 _COVERED = frozenset(("covered_structured", "document_found"))
-_POSITIVE = frozenset(("covered_structured", "document_found", "text_candidate"))
 
 
 @dataclass(frozen=True)
@@ -94,14 +93,20 @@ def _comparison_status(evidence):
         return "ambiguous", "non_scalar_values"
     # Distinct numeric primitives in canonical JSON are directly comparable.
     if all(type(value) in (int, float) for value in decoded):
+        # An int and a float can encode the same number (1 vs 1.0).
+        # With no sanctioned normalization, mixed types are ambiguous.
+        if len({type(value) for value in decoded}) != 1:
+            return "ambiguous", "incomparable_numeric_representation"
         return "potential_conflict", "different_numeric_values"
     if all(isinstance(value, str) for value in decoded):
         # Pure unsigned integer literal disagreement is directly observable;
         # no value conversion is needed to flag a *potential* conflict.
-        if all(re.fullmatch(r"[0-9]+", value) for value in decoded):
+        if all(re.fullmatch(r"(?:0|[1-9][0-9]*)", value) for value in decoded):
             return "potential_conflict", "different_integer_literals"
         # Decimal notation, attached units, +/- or ranges have no approved
         # conversion/canonicalization in v0.1.
+        if len({value.casefold() for value in decoded}) == 1:
+            return "ambiguous", "textual_case_variant"
         if any(re.match(r"^[+\-\u2212]?\d", value) for value in decoded):
             return "ambiguous", "incomparable_numeric_literals"
         return "potential_conflict", "different_literal_values"
@@ -187,7 +192,7 @@ def _aggregate(findings):
         return "needs_clarification"
     if findings and all(x.status in _COVERED for x in findings):
         return "provisionally_covered"
-    if any(x.status in _POSITIVE for x in findings) and len(findings) > 1:
+    if any(x.status in _COVERED for x in findings) and len(findings) > 1:
         return "partially_covered"
     return "insufficient_evidence"
 
