@@ -24,6 +24,23 @@ def calculate_metrics(outcomes):
     cited = [x for x in items if x.citation_valid is not None]
     source = [x for x in items if x.source_hit_at_5 is not None]
     document = [x for x in items if x.document_hit_at_5 is not None]
+    source_applicable = [x for x in items
+                         if x.evidence_recall_denominator > 0 or
+                         x.source_hit_at_5 is not None]
+    # Cases with required source evidence but unavailable retrieval have
+    # numerator/denominator 0 at the case level; distinguish them by the
+    # original authored requirements using the source channel and the
+    # already-recorded required_fact_count, never treat them as false hits.
+    source_unmeasured = [x for x in items if
+                         x.source_hit_at_5 is None and
+                         x.source_channel in ("site", "pdf", "mixed") and
+                         x.required_fact_count > 0]
+    doc_unmeasured = [x for x in items if
+                      x.document_hit_at_5 is None and
+                      x.source_channel in ("document_metadata", "mixed") and
+                      x.required_fact_count > 0]
+    quote_eligible = sum(x.quote_requirement_count for x in items)
+    quote_verified = sum(x.verified_quote_count for x in items)
     fail = [x for x in positive if x.actual_status in
             ("needs_support", "clarification", "partial")]
     issued_assertions = sum(x.technical_assertion_count for x in items)
@@ -79,6 +96,14 @@ def calculate_metrics(outcomes):
             sum(x.source_hit_at_5 is True for x in source), len(source)),
         "document_hit_at_5": _metric(
             sum(x.document_hit_at_5 is True for x in document), len(document)),
+        "source_hit_at_5_not_measured_cases": len(source_unmeasured),
+        "document_hit_at_5_not_measured_cases": len(doc_unmeasured),
+        "source_hit_at_5_measured_cases": len(source),
+        "document_hit_at_5_measured_cases": len(document),
+        "extractive_quote_integrity": _metric(quote_verified, quote_eligible),
+        "engineering_requirement_recall": _metric(
+            sum(x.supported_fact_count - x.verified_quote_count for x in items),
+            sum(x.required_fact_count - x.quote_requirement_count for x in items)),
         "evidence_recall": _metric(
             sum(x.evidence_recall_numerator for x in items),
             sum(x.evidence_recall_denominator for x in items)),
