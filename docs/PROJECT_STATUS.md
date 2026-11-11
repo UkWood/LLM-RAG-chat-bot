@@ -1,3 +1,10 @@
+## PR #31 — Stage 5E consolidated correction state (11 November 2026)
+
+- Session A requested 2 BLOCKER + 3 IMPORTANT; Session B corrected in existing `feat/saturn-grounding-evaluation-v0.1` / PR #31, no merge. Need/owner source scope, blind complete-time provenance, extractive substring, session-pinned diagnostics and separate error/claim metrics are addressed. Independent final acceptance review remains pending.
+- Original open 28-case calibration bytes and first report unchanged, with their original source/scorer identity. Revised scorer/rubric `0.1.1` will be measured in a separately versioned report; controlled fault-injection is not an independent blind result.
+- Only Stage 5E implementation/test/docs/CI changed; Stage 4A–5D, source-site repo, historical planner blind and frozen evaluation artifacts not changed.
+- `independent_blind_evaluation=NOT_RUN`; `production_readiness=false`; no real sample, model provider, Stage 6 or merge. [Corrections detail](stages/2026-11-11-saturn-grounding-evaluation.md).
+
 ## CURRENT — Stage 5E Saturn Grounding Evaluation v0.1 (11 November 2026)
 
 **Status:** coding candidate / independent Acceptance Review required, **NOT MERGED**. Verified `main=8dc9d2fbd20854bd54903ff617581ed4ecad6e31` after Stage 5D PR #30. Branch `feat/saturn-grounding-evaluation-v0.1` adds Saturn-specific gold validation, independent scoring, stage attribution, offline runner, deterministic safe reports and frozen one-shot blind protocol. Existing production answer stages, historical datasets/reports and Saturn-Main-Site remain untouched.
