@@ -105,6 +105,16 @@ class ReviewCorrections(unittest.TestCase):
         self.assertFalse(out.fully_correct)
         self.assertIn("unresolved_need_mismatch", out.failure_codes)
 
+    def test_cr01_t03b_partial_cannot_hide_preverified_unresolved_need(self):
+        answer, trace = self.ask("C20")
+        self.assertEqual(answer.status, "partial")
+        unresolved = answer.unresolved_need_ids[0]
+        forged = replace(trace, verified_need_ids=trace.verified_need_ids +
+                         (unresolved,))
+        outcome = self.score("C20", answer, forged)
+        self.assertFalse(outcome.fully_correct)
+        self.assertIn("unresolved_need_mismatch", outcome.failure_codes)
+
     def test_cr01_t04_general_document_not_owner_qualified_after_rebinding(self):
         general, _ = self.ask("C15")
         _, qualified_trace = self.ask("C16")
