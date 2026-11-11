@@ -101,7 +101,7 @@ def _requirement(raw, idx):
     if any(not _text(raw.get(k), 256) for k in ("requirement_id", "canonical_id",
                                                  "source_revision_id")):
         _fail("requirement_identity")
-    if raw.get("kind") not in _KINDS:
+    if type(raw.get("kind")) is not str or raw["kind"] not in _KINDS:
         _fail("requirement_kind")
     if raw.get("evidence_id") is not None and not _text(raw["evidence_id"]):
         _fail("evidence_id")
@@ -165,8 +165,20 @@ def validate_gold(raw_bytes: bytes, snapshot, *, split=None):
     """Validate raw frozen bytes against one pinned canonical Saturn snapshot."""
     if type(raw_bytes) is not bytes or len(raw_bytes) > 1_000_000:
         _fail("dataset_bytes")
+    def unique_object(pairs):
+        out = {}
+        for key, value in pairs:
+            if key in out:
+                _fail("duplicate_json_key")
+            out[key] = value
+        return out
+
     try:
-        raw = json.loads(raw_bytes.decode("utf-8"))
+        raw = json.loads(
+            raw_bytes.decode("utf-8"), object_pairs_hook=unique_object,
+            parse_constant=lambda _: _fail("nonfinite_json"))
+    except GoldValidationError:
+        raise
     except (UnicodeError, ValueError):
         _fail("json")
     _keys(raw, {"schema_version", "dataset_id", "snapshot_id", "corpus_hash",
@@ -175,11 +187,17 @@ def validate_gold(raw_bytes: bytes, snapshot, *, split=None):
         _fail("schema_version")
     if not _text(raw["dataset_id"]) or not _text(raw["author"]) or not _text(raw["reviewer"]):
         _fail("identity")
-    if (raw["split"] not in _SPLITS or (split is not None and split != raw["split"]) or
+    if (type(raw["split"]) is not str or raw["split"] not in _SPLITS or
+            (split is not None and split != raw["split"]) or
             raw["snapshot_id"] != snapshot.snapshot_id or
             raw["corpus_hash"] != snapshot.manifest.corpus_hash or
             not _sha(raw["snapshot_id"]) or not _sha(raw["corpus_hash"])):
         _fail("snapshot_binding")
+    if (raw["split"] == "synthetic_blind" and
+            (raw["author"] == raw["reviewer"] or
+             "Coding Session B" in raw["author"] or
+             "open calibration" in raw["reviewer"].lower())):
+        _fail("blind_author_independence")
     cases = raw["cases"]
     if type(cases) is not list or not 1 <= len(cases) <= MAX_CASES:
         _fail("case_count")
@@ -195,6 +213,7 @@ def validate_gold(raw_bytes: bytes, snapshot, *, split=None):
                 not _text(item["question"], MAX_QUESTION_CHARS) or
                 not _text(item["category"]) or
                 item["split"] != raw["split"] or
+                type(item["expected_status"]) is not str or
                 item["expected_status"] not in ANSWER_STATUSES or
                 type(item["required"]) is not list or
                 len(item["required"]) > MAX_REQUIREMENTS or
@@ -203,6 +222,10 @@ def validate_gold(raw_bytes: bytes, snapshot, *, split=None):
                 any(not _text(t, 80) for t in item["tags"]) or
                 len(set(item["tags"])) != len(item["tags"])):
             _fail("case_schema")
+        try:
+            item["question"].encode("utf-8")
+        except UnicodeError:
+            _fail("invalid_utf8_question")
         if item["case_id"] in seen_ids or item["question"] in seen_questions:
             _fail("duplicate_case")
         seen_ids.add(item["case_id"])
@@ -215,6 +238,8 @@ def validate_gold(raw_bytes: bytes, snapshot, *, split=None):
         for req in requirements:
             _check_reference(req, index)
         negative = item.get("negative_reason")
+        if (item["expected_status"] == "partial" and not requirements):
+            _fail("partial_gold_requires_supported_requirement")
         if (item["expected_status"] == "answered" and
                 (not requirements or negative is not None or
                  any(r.kind == "pdf_quote" for r in requirements))):
