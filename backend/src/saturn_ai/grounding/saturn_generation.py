@@ -97,7 +97,10 @@ def _verification(snapshot, drafts, selected):
         try:
             claim, reason = verify_pinned_draft(snapshot, need, item, draft)
         except Exception:
-            claim, reason = None, "claim_identity_mismatch"
+            # An unexpected verifier failure is not a source mismatch.
+            # Abort the entire operation; never publish preceding claims or
+            # expose internal diagnostics through exception chaining.
+            raise SaturnContextError("claim_verification_unavailable") from None
         if claim is not None:
             verified.append(claim)
         else:
