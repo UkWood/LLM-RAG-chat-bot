@@ -4,6 +4,7 @@ from dataclasses import asdict
 import json
 
 from ..ingestion.saturn_contracts import canonical_json
+from .saturn_answer_freeze import EVALUATOR_REVISION, RUBRIC_REVISION
 
 
 def _rate(num, den):
@@ -26,7 +27,10 @@ def calculate_metrics(outcomes):
     fail = [x for x in positive if x.actual_status in
             ("needs_support", "clarification", "partial")]
     issued_assertions = sum(x.technical_assertion_count for x in items)
-    unsupported = sum(x.unsupported_claim_count for x in items)
+    unsupported = sum(x.source_unsupported_claim_count for x in items)
+    off_question = sum(x.off_question_claim_count for x in items)
+    extra_text = sum(x.extra_answer_text_count for x in items)
+    answer_assertions = sum(x.answer_assertion_count for x in items)
     return {
         "case_count": len(items),
         "positive_complete_answer": _metric(
@@ -42,9 +46,22 @@ def calculate_metrics(outcomes):
             sum(x.supported_fact_count for x in items),
             sum(x.required_fact_count for x in items)),
         "unsupported_claims": {
-            "count": unsupported,
-            "ratio": _metric(unsupported, issued_assertions),
+            "count": unsupported, "ratio": _metric(unsupported, issued_assertions),
         },
+        "source_unsupported_claims": {
+            "count": unsupported, "ratio": _metric(unsupported, issued_assertions),
+        },
+        "off_question_source_backed_claims": {
+            "count": off_question, "ratio": _metric(off_question, answer_assertions),
+        },
+        "extra_unsupported_answer_text": {
+            "count": extra_text, "case_rate": _metric(extra_text, len(items)),
+        },
+        "policy_restriction": _metric(
+            sum(x.policy_restriction for x in items), len(items)),
+        "evidence_conflict": _metric(
+            sum(x.evidence_conflict for x in items), len(items)),
+
         "citation_validity": _metric(
             sum(x.valid_citation_count for x in items),
             sum(x.citation_count for x in items)),
@@ -77,8 +94,12 @@ def breakdown(outcomes):
             ("profile", x.split),
             ("source_channel", x.source_channel),
             ("category", x.category),
-            ("status_group", "positive" if x.expected_status == "answered"
-             else "negative_or_ambiguous"),
+            ("status_group", {"answered": "positive",
+                              "partial": "partial",
+                              "clarification": "clarification",
+                              "needs_support": "negative",
+                              "error": "technical"}.get(
+                                  x.expected_status, "unknown")),
             ("requirement_count", str(x.required_fact_count)),
         )
         for axis, value in keys:
@@ -91,7 +112,8 @@ def breakdown(outcomes):
 
 def build_report(dataset, outcomes, *, code_revision, config_hash, bundle,
                  provider="SaturnFakeClaimProvider", mode="lexical", top_k=10,
-                 blind_status="NOT_RUN", evaluation_profile=None):
+                 blind_status="NOT_RUN", evaluation_profile=None,
+                 experiment_id=None):
     outcomes = tuple(outcomes)
     if len(outcomes) != len(dataset.cases) or len({x.case_id for x in outcomes}) != len(outcomes):
         raise ValueError("Evaluation outcome coverage mismatch")
@@ -101,11 +123,14 @@ def build_report(dataset, outcomes, *, code_revision, config_hash, bundle,
         raise ValueError("Missing evaluation case")
     report = {
         "report_kind": "saturn_grounding_evaluation",
+        "experiment_id": experiment_id,
         "schema_version": 1,
         "profile": evaluation_profile or dataset.split,
         "runtime": {
             "provider": provider, "mode": mode, "top_k": top_k,
             "code_revision": code_revision,
+            "scorer_revision": EVALUATOR_REVISION,
+            "rubric_revision": RUBRIC_REVISION,
         },
         "snapshot": {
             "snapshot_id": dataset.snapshot_id,
