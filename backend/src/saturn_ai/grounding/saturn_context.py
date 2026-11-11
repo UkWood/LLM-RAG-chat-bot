@@ -329,7 +329,8 @@ class SaturnAnswerSession:
         with self._lock:
             self._assert_open()
             if (not isinstance(context, SaturnEvidenceContext) or
-                    not any(context is issued and digest == _context_fingerprint(context)\n                            for issued, digest in self._issued) or
+                    not any(context is issued and digest == _context_fingerprint(context)
+                            for issued, digest in self._issued) or
                     context.snapshot_id != self._bundle.snapshot.snapshot_id or
                     context.bundle_id != self._bundle.manifest.bundle_id or
                     context.question_sha256 != sha256(context.question.encode("utf-8")).hexdigest()):
