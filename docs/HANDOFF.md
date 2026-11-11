@@ -1,3 +1,20 @@
+## PR #28 — CR-01 / CR-02 Consolidated Corrections (2026-11-11)
+
+- Existing PR #28, branch feat/saturn-question-needs-gate-v0.1, reviewed head 79a6a3b27a4be73bac509758a143e8d119d223cf; main baseline 0f0286cf55b72c4793d66f5d648f5b37ab8356f4. Session A requested CR-01 BLOCKER and CR-02 IMPORTANT; these corrections remain in the same PR. NO MERGE / NO Stage 5C.
+- CR-01: non-substantive null/empty strings/lists/objects no longer count as covered_structured; existing evidence IDs retained. Numeric 0, false and nonempty structures keep their source semantics.
+- CR-02: source-compatible canonical field paths, bracketed JSON keys and repeated indexes, safe literal punctuation, no separator split in quoted key, bounded needs and conservative unresolved fallback.
+- CR01-T01–T07 and CR02-T01–T10 tests plus adversarial regressions; actual full offline and exact-head push/PR CI results must be confirmed in [PR #28](https://github.com/UkWood/LLM-RAG-chat-bot/pull/28). Historical green checks are not correction acceptance.
+- Saturn-Main-Site read-only, Stage 5A lifecycle/retrieval/ADR/provider unchanged. [Stage report](stages/2026-11-11-saturn-question-needs-gate.md).
+
+## Stage 5B — Question Needs, Sufficiency & Conflict Gate v0.1 (2026-11-11)
+
+- **Live baseline:** `main=0f0286cf55b72c4793d66f5d648f5b37ab8356f4`; Stage 5A PR #27 MERGED. Older sections about #27 OPEN/NO 5B below are historical checkpoints.
+- **One feature PR:** [#28](https://github.com/UkWood/LLM-RAG-chat-bot/pull/28), `feat/saturn-question-needs-gate-v0.1`, base SHA above; **OPEN / independent Acceptance Review pending; NO MERGE / NO Stage 5C**.
+- Deterministic conservative parser: exact source-declared entity identity, bounded field lists, exact relations, document title/owner lookup, original spans, explicit unresolved remainder, max six requirements. Free-form engineering questions remain unresolved, not guessed.
+- `SaturnQuestionGate.assess(session, context)` executes against the issuing Stage 5A pinned snapshot under session lock, with operational-policy rechecks before and after. Immutable needs/findings/assessment separate structured coverage, metadata lookup, text candidates, selected-context absence, ambiguity and scoped potential conflicts.
+- New offline regression tests in `test_saturn_question_needs.py` cover T-01–T-29; T-30 is complete `scripts/verify_offline.py` plus exact-head push/PR CI. Final test results belong to the PR description; **never infer SUCCESS before actual jobs conclude**.
+- [Stage report](stages/2026-11-11-saturn-question-needs-gate.md). Only RAG repo changed; `UkWood/Saturn-Main-Site` remains strictly READ-ONLY. No generation, claim verification, final citations, provider or retrieval-index changes.
+
 ## PR #27 — Stage 5A Consolidated Review Corrections (2026-11-11)
 
 - **Текущий PR:** [#27](https://github.com/UkWood/LLM-RAG-chat-bot/pull/27), ветка `feat/saturn-evidence-context-v0.1`, baseline `main=340e7d63e6899d855a01547003d1d983e9078eda`, initial reviewed head `c95cef4aebfbdef512e4cb54d0b14585d089deb1`. Статус: **CHANGES REQUESTED**, исправления CR-01/02 внесены, exact-head CI и повторный независимый review обязательны.
