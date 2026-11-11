@@ -7,8 +7,8 @@ from pathlib import Path
 
 from ..ingestion.saturn_contracts import canonical_json
 
-RUBRIC_REVISION = "saturn-grounding-rubric/0.1.1"
-EVALUATOR_REVISION = "saturn-grounding-evaluator/0.1.1"
+RUBRIC_REVISION = "saturn-grounding-rubric/0.1.2"
+EVALUATOR_REVISION = "saturn-grounding-evaluator/0.1.2"
 
 
 class BlindIntegrityError(RuntimeError):
@@ -182,7 +182,14 @@ def _validate_result_case(row, gold):
             not 0 <= out.off_question_claim_count <= out.answer_assertion_count or
             out.answer_assertion_count < out.technical_assertion_count or
             type(out.evidence_recall_denominator) is not int or
-            out.evidence_recall_denominator != len({x.evidence_id for x in gold.required if x.evidence_id}) or
+            out.evidence_recall_denominator != (
+                len({x.evidence_id for x in gold.required if x.evidence_id})
+                if out.source_hit_at_5 is not None else 0) or
+            type(out.quote_requirement_count) is not int or
+            type(out.verified_quote_count) is not int or
+            out.quote_requirement_count != sum(x.kind == "pdf_quote" for x in gold.required) or
+            not 0 <= out.verified_quote_count <= out.quote_requirement_count or
+            out.supported_fact_count < out.verified_quote_count or
             type(out.source_hit_at_5) not in (bool, type(None)) or
             type(out.document_hit_at_5) not in (bool, type(None)) or
             type(out.evidence_recall_numerator) is not int or
@@ -353,9 +360,13 @@ class BlindRun:
             _write_once(self.report_path, report)
         except FileExistsError:
             _refuse("report_already_exists")
+        # _write_once canonicalizes and writes report as UTF-8 JSON + LF.
+        # Hash the *actual committed file bytes*, not the caller's equivalent
+        # but potentially differently formatted JSON input.
+        persisted_sha256 = sha256(self.report_path.read_bytes()).hexdigest()
         _write_once(self.complete_path, {
             "status": "COMPLETE", "experiment_id": self.freeze["experiment_id"],
-            "report_sha256": sha256(report_bytes).hexdigest(),
+            "report_sha256": persisted_sha256,
             "freeze_hash": canonical_digest(self.freeze),
         })
 
