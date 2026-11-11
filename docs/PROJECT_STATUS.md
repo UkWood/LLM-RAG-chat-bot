@@ -1,3 +1,17 @@
+## CURRENT — Consolidated Stage 5F–5I PR #32 (12 November 2026)
+
+**Status:** DRAFT / IMPLEMENTATION IN PROGRESS, **NOT ACCEPTED**. Baseline AI main `84d783331cc755e688a7f8637be13c297c07f43e`; site main `084d759487bfab6e111549c9b5469711ac5fc13e` (READ-ONLY). Single branch `feat/saturn-real-corpus-llm-validation-v0.1`, single [PR #32](https://github.com/UkWood/LLM-RAG-chat-bot/pull/32); no merge.
+
+- Stage 5F: partial engineering implementation — pinned experimental site/PDF sample and existing production-like RAG CLI; **real PDF ingestion/snapshot/query not measured yet**.
+- Stage 5G: real open calibration **runner implemented**, real gold/25–40 cases/metrics **NOT_RUN**.
+- Stage 5H: independent real blind infrastructure and source-backed independently authored dataset **NOT_IMPLEMENTED / NOT_RUN**.
+- Stage 5I: local loopback-only provider and Stage 5C exact-class allowlist implemented with offline/mocked tests. **Real inference NOT_RUN**, model quality **NOT_ESTABLISHED**. Existing Stage 5B free-form limitations remain.
+- Exact-head CI and independent Acceptance Review are required. None of the new unit tests constitute real-site or real-LLM evidence.
+- Stage 5E synthetic historical frozen artifacts unchanged. No Stage 6, production or cloud egress.
+- [Live implementation report and reproduction commands](stages/2026-11-12-saturn-real-corpus-llm-validation.md).
+
+---
+
 ## PR #31 — Stage 5E consolidated correction state (11 November 2026)
 
 - Session A requested 2 BLOCKER + 3 IMPORTANT; Session B corrected in existing `feat/saturn-grounding-evaluation-v0.1` / PR #31, no merge. Need/owner source scope, blind complete-time provenance, extractive substring, session-pinned diagnostics and separate error/claim metrics are addressed. Independent final acceptance review remains pending.
