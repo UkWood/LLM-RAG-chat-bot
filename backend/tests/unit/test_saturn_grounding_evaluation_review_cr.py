@@ -519,6 +519,15 @@ class ReviewCorrections(unittest.TestCase):
         a,t = self.ask("C16")
         self.assertTrue(self.score("C16", a, t).fully_correct)
 
+    def test_cr07_t07_mixed_field_and_unresolved_suffix_is_not_silently_dropped(self):
+        a,t = self.ask("C27")
+        self.assertEqual(a.status, "clarification")
+        self.assertEqual(tuple(n.kind for n in t.needs),
+                         ("field_value", "unresolved"))
+        self.assertEqual(set(a.unresolved_need_ids),
+                         {n.need_id for n in t.needs})
+        self.assertTrue(self.score("C27", a, t).fully_correct)
+
     # CR09: distinguish measured misses from absent diagnostic data
     def test_cr09_t01_pre_retrieval_failure_is_unmeasured(self):
         a,t = self.ask("C01")
