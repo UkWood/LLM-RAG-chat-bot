@@ -7,8 +7,8 @@ from pathlib import Path
 
 from ..ingestion.saturn_contracts import canonical_json
 
-RUBRIC_REVISION = "saturn-grounding-rubric/0.1.0"
-EVALUATOR_REVISION = "saturn-grounding-evaluator/0.1.0"
+RUBRIC_REVISION = "saturn-grounding-rubric/0.1.1"
+EVALUATOR_REVISION = "saturn-grounding-evaluator/0.1.1"
 
 
 class BlindIntegrityError(RuntimeError):
