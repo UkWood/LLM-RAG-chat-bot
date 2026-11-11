@@ -1,7 +1,7 @@
 ## Stage 5B — Question Needs, Sufficiency & Conflict Gate v0.1 (2026-11-11)
 
 - **Live baseline:** `main=0f0286cf55b72c4793d66f5d648f5b37ab8356f4`; Stage 5A PR #27 MERGED. Older sections about #27 OPEN/NO 5B below are historical checkpoints.
-- **One feature PR:** [#28](https://github.com/UkWood/LLM-RAG-chat-bot/pull/28), `feat/saturn-question-needs-gate-v0.1`, base SHA above; **DRAFT / verification and independent Acceptance Review pending; NO MERGE / NO Stage 5C**.
+- **One feature PR:** [#28](https://github.com/UkWood/LLM-RAG-chat-bot/pull/28), `feat/saturn-question-needs-gate-v0.1`, base SHA above; **OPEN / independent Acceptance Review pending; NO MERGE / NO Stage 5C**.
 - Deterministic conservative parser: exact source-declared entity identity, bounded field lists, exact relations, document title/owner lookup, original spans, explicit unresolved remainder, max six requirements. Free-form engineering questions remain unresolved, not guessed.
 - `SaturnQuestionGate.assess(session, context)` executes against the issuing Stage 5A pinned snapshot under session lock, with operational-policy rechecks before and after. Immutable needs/findings/assessment separate structured coverage, metadata lookup, text candidates, selected-context absence, ambiguity and scoped potential conflicts.
 - New offline regression tests in `test_saturn_question_needs.py` cover T-01–T-29; T-30 is complete `scripts/verify_offline.py` plus exact-head push/PR CI. Final test results belong to the PR description; **never infer SUCCESS before actual jobs conclude**.

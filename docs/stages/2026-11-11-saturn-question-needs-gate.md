@@ -6,7 +6,7 @@ Date: 2026-11-11. Project: AI Technical Consultant — МНПП «Сатурн»
 
 Baseline: `UkWood/LLM-RAG-chat-bot@0f0286cf55b72c4793d66f5d648f5b37ab8356f4` (Stage 5A PR #27 merged, previous historical status text is superseded).
 
-Working branch: `feat/saturn-question-needs-gate-v0.1`. One [draft PR #28](https://github.com/UkWood/LLM-RAG-chat-bot/pull/28), not merged. Stage 5C is not started.
+Working branch: `feat/saturn-question-needs-gate-v0.1`. One [PR #28](https://github.com/UkWood/LLM-RAG-chat-bot/pull/28), not merged. Stage 5C is not started.
 
 ```text
 Stage 4B retrieved candidates
@@ -52,7 +52,7 @@ Stage 5A `_evaluate_pinned` holds session RLock throughout, verifies issued cont
 
 Test file: `backend/tests/unit/test_saturn_question_needs.py` (T-01–T-29 positive/negative/adversarial). T-30: `python scripts/verify_offline.py` and both GitHub Actions jobs `offline-checks`/`onnx-contracts` on exact final branch SHA, for BOTH push and PR runs.
 
-**CI and final verified counts:** to be filled in the PR after actual final-head workflow completion. Do not interpret this implementation report as a PASS or independent Acceptance Review.
+**Verified intermediate revision (not the final head):** `96fc4938abcb246a494fae4a7e9a6c49d6b10878` ran 5 project tests PASS and 476 backend tests OK (11 optional skips); [push run #42993215615](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42993215615) and [PR run #42993223406](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42993223406) both completed SUCCESS, including `offline-checks` and `onnx-contracts`. Subsequent code revision `21407352d0f615aca31884d7e7d8809ad813fccd` added grammar/number-comparability hardening and regression tests; these are NOT covered by the earlier intermediate workflow results. Exact final PR head and subsequent push/PR CI results are recorded in [PR #28](https://github.com/UkWood/LLM-RAG-chat-bot/pull/28) after execution. Independent Acceptance Review remains necessary.
 
 Scope changes: `grounding/saturn_question_needs.py`, `grounding/saturn_sufficiency_gate.py`, a minimal Stage 5A locked integration hook, the new test file and documentation. Unchanged: retrieval, canonical knowledge contracts, adapters, ADR, provider config, frozen datasets, UI/API, site source and deployment.
 

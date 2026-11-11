@@ -2,7 +2,7 @@
 
 Отдельный технический консультант: ответы только по доверенным материалам сайта и PDF с источниками и отказом при недостатке доказательств. Статический интерфейс Astro, отдельный FastAPI backend, локальная KB и сменный LLM provider.
 
-**Стадия (2026-11-11):** Stage 5A — Saturn Evidence Context & Snapshot Binding v0.1, PR #27 **MERGED**, live `main=0f0286cf55b72c4793d66f5d648f5b37ab8356f4`. Stage 5B — Question Needs, Sufficiency & Conflict Gate v0.1 находится в [draft PR #28](https://github.com/UkWood/LLM-RAG-chat-bot/pull/28): bounded deterministic extraction, pinned-session policy rechecks, immutable per-need evidence decisions, conservative ambiguity/conflict detection. Тесты и exact-final-head CI обязательны перед независимым Acceptance Review сессии A; **NO MERGE / NO Stage 5C**. Нет LLM generation, final citations или измеренного качества реальных Saturn answers. `UkWood/Saturn-Main-Site` строго READ-ONLY.
+**Стадия (2026-11-11):** Stage 5A — Saturn Evidence Context & Snapshot Binding v0.1, PR #27 **MERGED**, live `main=0f0286cf55b72c4793d66f5d648f5b37ab8356f4`. Stage 5B — Question Needs, Sufficiency & Conflict Gate v0.1 находится в [PR #28](https://github.com/UkWood/LLM-RAG-chat-bot/pull/28): bounded deterministic extraction, pinned-session policy rechecks, immutable per-need evidence decisions, conservative ambiguity/conflict detection. Тесты и exact-final-head CI обязательны перед независимым Acceptance Review сессии A; **NO MERGE / NO Stage 5C**. Нет LLM generation, final citations или измеренного качества реальных Saturn answers. `UkWood/Saturn-Main-Site` строго READ-ONLY.
 
 ## Память проекта
 
