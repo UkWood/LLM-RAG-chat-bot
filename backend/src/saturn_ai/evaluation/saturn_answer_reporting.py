@@ -75,6 +75,7 @@ def breakdown(outcomes):
     for x in outcomes:
         keys = (
             ("profile", x.split),
+            ("source_channel", x.source_channel),
             ("category", x.category),
             ("status_group", "positive" if x.expected_status == "answered"
              else "negative_or_ambiguous"),
@@ -85,7 +86,7 @@ def breakdown(outcomes):
     return {axis: {
         value: calculate_metrics(items)
         for (a, value), items in sorted(groups.items()) if a == axis
-    } for axis in ("profile", "category", "status_group", "requirement_count")}
+    } for axis in ("profile", "source_channel", "category", "status_group", "requirement_count")}
 
 
 def build_report(dataset, outcomes, *, code_revision, config_hash, bundle,
@@ -122,8 +123,9 @@ def build_report(dataset, outcomes, *, code_revision, config_hash, bundle,
         "cases": [asdict(x) for x in outcomes],
         "failed_case_ids": [x.case_id for x in outcomes if not x.fully_correct],
         # Synthetic score cannot be turned into independent product acceptance.
-        "quality_target_met": None if dataset.split != "synthetic_blind"
-                              else all(x.fully_correct for x in outcomes),
+        # Product thresholds and independent authorship require Session A approval.
+        # An unreviewed/short dataset cannot pass merely because every case passes.
+        "quality_target_met": None,
         "independent_blind_evaluation": blind_status,
         "production_readiness": False,
     }
