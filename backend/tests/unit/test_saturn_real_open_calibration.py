@@ -17,7 +17,8 @@ from saturn_ai.evaluation.saturn_answer_dataset import GoldValidationError
 
 def fixture_open_dataset(snapshot):
     obj = json.loads(calibration_gold_bytes(snapshot))
-    obj["dataset_id"] = "synthetic-test-only-real-profile-contract"
+    # Keep original fixture identity so its historical C16 source-scoped
+    # owner sidecar remains valid; this remains synthetic test data only.
     obj["author"] = "Synthetic test fixture"
     obj["reviewer"] = "Synthetic test contract review only"
     obj["split"] = "real_sample"
