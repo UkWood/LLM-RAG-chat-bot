@@ -82,6 +82,8 @@ def _run_question(service, assembly, gate, verifier, question, profile):
                 ranked_evidence_ids=tuple(c.evidence_id for c in retrieval.answer_evidence),
                 selected_evidence_ids=tuple(e.evidence_id for e in context.answer_evidence),
                 selected_document_ids=tuple(d.document_id for d in context.document_references),
+                ranked_document_ids=tuple(d.match.document.document_id
+                                          for d in retrieval.document_matches),
                 parsed_need_kinds=tuple(n.kind for n in assessment.needs),
                 finding_statuses=tuple(f.status for f in assessment.findings),
                 verified_evidence_ids=tuple(c.evidence_id for c in verified.verified_claims
