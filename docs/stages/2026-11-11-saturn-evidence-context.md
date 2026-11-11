@@ -49,11 +49,18 @@ Snapshot, lexical/metadata indexes, optional local Qdrant и manifest наход
 
 ## 4. Изменения и проверка
 
+### Проверенный промежуточный результат
+
+После устранения дефекта test helper и добавления adversarial-проверок кодовый head `8ea58348dfca2ac5b1e4d6e29f71b7f85359263f` проверен GitHub Actions [push #42976766173](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42976766173): `offline-checks` **SUCCESS**, `onnx-contracts` **SUCCESS**. Offline verifier `python scripts/verify_offline.py`: **5 project tests OK; 429 backend tests OK (11 skips)** на CPU, без сети к сайту или реальной LLM. Это промежуточный head, **не** final PR head.
+
+В дальнейшем добавлены полный in-session fingerprint выданного контекста (против reflective post-issuance mutation), классификация malformed retrieval candidates и дополнительные регрессионные тесты. Их результат не следует экстраполировать с предыдущего CI: exact final SHA, финальное количество тестов и два финальных GitHub Actions runs фиксируются в описании PR только после фактического завершения.
+
+
 Код: `backend/src/saturn_ai/grounding/saturn_contracts.py`, `grounding/saturn_context.py`, минимальное расширение `retrieval/saturn_channel.py`. Новый offline test: `backend/tests/unit/test_saturn_evidence_context.py`; существующие 4A/4B contracts, source adapters, Qdrant API, ADR и legacy synthetic grounding не менялись.
 
 Покрытие: fields/numeric literals, relations, site/pdf passages, multi-owner PDF, metadata-only, empty, determinism, lexical-only, policy revocation/recheck, forged candidates/bundle/manifest, context ownership, budgets, concurrent publication, Qdrant reader lease, exception release, Stage 4B compatibility.
 
-**Фактические команды, числа tests/skips, push/PR CI results и exact final PR head должны фиксироваться в описании PR по окончании checks.** CI PASS не заменяет independent Acceptance Review.
+**Полная финальная проверка и exact final PR head фиксируются в описании PR; промежуточный SUCCESS выше не заменяет проверку последнего commit.** CI PASS не заменяет independent Acceptance Review.
 
 ## 5. Известные границы
 
