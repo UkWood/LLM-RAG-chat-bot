@@ -28,6 +28,16 @@ class SaturnStageTrace:
     verified_evidence_ids: tuple[str, ...] = ()
     technical_failure: bool = False
     ranked_document_ids: tuple[str, ...] = ()
+    snapshot_id: str | None = None
+    bundle_id: str | None = None
+    question_sha256: str | None = None
+    needs: tuple = ()
+    need_findings: tuple = ()
+    retrieval_diagnostics_complete: bool = False
+    policy_blocked_evidence_ids: tuple[str, ...] = ()
+    policy_blocked_document_ids: tuple[str, ...] = ()
+    policy_blocked_source_revision_ids: tuple[str, ...] = ()
+    policy_blocked_entity_ids: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -53,6 +63,11 @@ class SaturnEvaluationOutcome:
     evidence_recall_denominator: int
     failure_codes: tuple[str, ...]
     source_channel: str = "none"
+    source_unsupported_claim_count: int = 0
+    off_question_claim_count: int = 0
+    extra_answer_text_count: int = 0
+    policy_restriction: bool = False
+    evidence_conflict: bool = False
 
 
 def _expected_field(fact, entities):
@@ -251,7 +266,7 @@ def _evaluate_statement(s, citations, indexes):
         if (unit is None or unit.evidence_type not in ("site_passage", "pdf_passage") or
                 s.evidence_id != unit.evidence_id or
                 not s.text.startswith("Цитата источника (не подтверждает характеристику): ") or
-                not unit.text.startswith(s.text.split(": ", 1)[1]) or
+                not s.text.split(": ", 1)[1] in unit.text or
                 len(s.text) > 1200):
             return None
         return ("quote", unit.evidence_id, unit.source_revision_id, unit.evidence_id)
