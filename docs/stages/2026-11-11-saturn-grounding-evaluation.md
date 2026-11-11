@@ -163,3 +163,41 @@ A dedicated fast `saturn-evaluator-targeted` job was added to the existing CI, a
 - Dedicated `saturn-evaluator-targeted` suite: **121 tests** (original 83 + 38 review-correction tests); exact-head final push/PR CI to be checked in PR. The historical original calibration JSON and first v0.1 report are protected in CI by their original Git blob SHA (`a4ca1c2567e391319e26b0ca905c38f8739400cb`, `ffd6259552c56cd86c230490f60339e437303f7f`).
 
 **Final CR-02 defense-in-depth:** `BlindRun.complete` replays `validate_gold(raw_bytes, pinned_snapshot)` itself after START, without accepting a caller-created gold dataclass. Separate test verifies that a known verified unresolved need cannot be disguised as an admissible `partial`; malformed report cases fail closed. Total targeted suite **121** tests.
+
+
+## PR #31 — Final Consolidated Acceptance Corrections CR-06–CR-09 (12 Nov 2026)
+
+**Scope:** Stage 5E evaluator-only changes in existing PR #31. The original v0.1 calibration gold and first report are unchanged. All v0.1.1 measured reports are likewise retained; these corrections introduce distinct scorer/rubric identities `saturn-grounding-evaluator/0.1.2` and `saturn-grounding-rubric/0.1.2`. No production Stage 4A–5D, ranking, policy, Fake provider, external site or hidden blind changes.
+
+### CR-06 — Extractive quote integrity (BLOCKER)
+
+- The independent Stage 5E quote scorer rejects empty or whitespace-only strings and modified strings; accepts substantive exact substrings from anywhere within site/PDF passage (including the middle).
+- All canonical citation metadata remains bound, including PDF physical page, document/bytes revision and parser. The trace must bind the quote to the original question need and selected candidate.
+- The `pdf_quote` gold requirement now has explicit semantics: only a matching `source_quote` from the exact gold document ID, PDF revision, evidence ID, physical page and **exact independently authored quote** satisfies *extractive integrity*. An unrelated exact quote from the same PDF cannot satisfy it.
+- Dedicated `extractive_quote_integrity` counts and `engineering_requirement_recall` make clear that quote integrity is **not** a verified field/relation or engineering claim. This is a contextual evidence test; quote-only questions remain `needs_support`.
+
+### CR-07 — Independent semantic need binding (BLOCKER)
+
+- Independent lexical check requires `field_path` to equal the actual exact source-declared field token within its original question span; hashing an altered field path and need ID is insufficient. Every field in a multi-need list is checked, including unresolved ones.
+- The source-question entity is independently matched against pinned snapshot entity ID/title/slug and explicit source-declared aliases. Relation subject, object and predicate; owner-qualified document title/owner are likewise checked without invoking Stage 5B parser.
+- Nested/indexed/JSON-quoted paths and source-declared punctuation are treated as **opaque literal spans**, not split on punctuation within a field; only separators **between** recorded spans are syntax-checked. Baseline C11/C12/C20/C25/C28 and C16 remain regression fixtures.
+
+### CR-08 — COMPLETE receipt SHA integrity (IMPORTANT)
+
+- `BlindRun.complete` validates raw source-backed gold and final report, writes canonical UTF-8 JSON through the existing `O_EXCL` durable writer, then hashes the **actual bytes at the persisted report path** to construct `COMPLETE.report_sha256`.
+- An equivalent non-canonical input may be normalized, but the receipt MUST hash exactly the saved file, not the caller's original bytes. START/FAILED/COMPLETE one-shot semantics and no-overwrite protections are unchanged. This does not execute a hidden/blind experiment.
+
+### CR-09 — Retrieval applicability and per-need attribution (IMPORTANT)
+
+- `source_hit_at_5` and `document_hit_at_5` are `null` / NOT_APPLICABLE unless a complete pinned retrieval diagnostic trace is available; a known measured miss is `false`. Unavailable measurement is excluded from the hit-rate denominator, and explicitly reported as `source_hit_at_5_not_measured_cases` / `document_hit_at_5_not_measured_cases`.
+- Evidence recall likewise has no denominator for a pre-retrieval failure. Technical errors cannot masquerade as ordinary retrieval misses.
+- Attribution follows **each specific missing requirement's** observed need/finding/evidence, not an unrelated need's `covered_structured` status: parser/need, sufficiency, generation and final assembly causes are distinguished only where observed.
+- Legacy adversarial tests T71–T74 use fully observed pinned traces before deliberate mutation, rather than treating partial synthetic traces as proof of retrieval completion.
+
+### Tests and measurement constraints
+
+- Added **25 CR06–CR09 targeted tests** to the existing 121 Stage 5E tests (146 targeted cases total). Tests exercise nonempty/mid-passage/PDF provenance, source-authored `exact_quote`, field/entity tampering, unusual field tokens, multi-need parser attribution, retrieval NOT_APPLICABLE, and persisted canonical/noncanonical JSON SHA receipts.
+- The new open calibration and controlled-fault measurements are versioned **0.1.2** separately from historical 0.1 and 0.1.1 reports. Calibration uses the same frozen, open 28-case gold (`eff320bc664fdb23dc7ee69ddb479c796a5c5aeee341a043f3d782119ab733e8`).
+- Controlled examples include intentionally policy-blocked evidence, an injected retrieval error and a *simulated* conflict; they are **not real-site failures or independent blind**. `independent_blind_evaluation=NOT_RUN`, `production_readiness=false` throughout.
+- Final independent Acceptance Review and explicit owner-directed merge are separate decisions; no Stage 6.
+
