@@ -555,7 +555,7 @@ class ReviewCorrections(unittest.TestCase):
         fake = replace(a, statements=(s,), citations=(a.citations[0],),
                        status="partial",
                        unresolved_need_ids=(new_id,),
-                       answer_text=s.text+"\\nОтвет неполный. Для остальных требований недостаточно подтверждений.")
+                       answer_text=s.text+"\nОтвет неполный. Для остальных требований недостаточно подтверждений.")
         out = self.score("C11", fake, t)
         self.assertIn("question_parse_failure", out.failure_codes)
         self.assertNotIn("claim_generation_missing", out.failure_codes)
@@ -747,7 +747,7 @@ class BlindReportContractTests(unittest.TestCase):
 
     def test_cr08_t02_noncanonical_equivalent_json_has_actual_hash(self):
         freeze, dataset, report, raw = self.sample()
-        pretty = (json.dumps(report, indent=2, ensure_ascii=False)+"\\n").encode("utf-8")
+        pretty = (json.dumps(report, indent=2, ensure_ascii=False)+"\n").encode("utf-8")
         self.assertNotEqual(pretty, report_bytes(report))
         with TemporaryDirectory() as tmp:
             b = BlindRun(freeze=freeze, receipts_dir=Path(tmp)/"receipts",
