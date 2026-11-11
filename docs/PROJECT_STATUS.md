@@ -1,3 +1,18 @@
+## PR #31 — Stage 5E consolidated correction state (11 November 2026)
+
+- Session A requested 2 BLOCKER + 3 IMPORTANT; Session B corrected in existing `feat/saturn-grounding-evaluation-v0.1` / PR #31, no merge. Need/owner source scope, blind complete-time provenance, extractive substring, session-pinned diagnostics and separate error/claim metrics are addressed. Independent final acceptance review remains pending.
+- Original open 28-case calibration bytes and first report unchanged, with their original source/scorer identity. Revised scorer/rubric `0.1.1` will be measured in a separately versioned report; controlled fault-injection is not an independent blind result.
+- Only Stage 5E implementation/test/docs/CI changed; Stage 4A–5D, source-site repo, historical planner blind and frozen evaluation artifacts not changed.
+- `independent_blind_evaluation=NOT_RUN`; `production_readiness=false`; no real sample, model provider, Stage 6 or merge. [Corrections detail](stages/2026-11-11-saturn-grounding-evaluation.md).
+
+## CURRENT — Stage 5E Saturn Grounding Evaluation v0.1 (11 November 2026)
+
+**Status:** coding candidate / independent Acceptance Review required, **NOT MERGED**. Verified `main=8dc9d2fbd20854bd54903ff617581ed4ecad6e31` after Stage 5D PR #30. Branch `feat/saturn-grounding-evaluation-v0.1` adds Saturn-specific gold validation, independent scoring, stage attribution, offline runner, deterministic safe reports and frozen one-shot blind protocol. Existing production answer stages, historical datasets/reports and Saturn-Main-Site remain untouched.
+
+**Measured calibration baseline:** 28 authored open synthetic Saturn cases; 17/17 complete positives, 5/5 correct needs_support, 3/3 clarification, 3/3 partial, 24/24 valid citations, 0 unsupported technical claims, 0 false refusals. Fixture snapshot `23363c78bdec37ffeb74fd5cc985e0bb781764049e4178f070f452651967d0cf`; dataset SHA-256 `eff320bc664fdb23dc7ee69ddb479c796a5c5aeee341a043f3d782119ab733e8`. First observed CI run [#43082293017](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/43082293017), evaluation code commit `4fde232947e6989a242fd3308e0c7cf4eedb29d1`. Actual report committed under `evaluation/reports/saturn-grounding-calibration-v0.1.json`.
+
+**Not completed:** new independent blind = `NOT_RUN`, real sample evaluation = `NOT_RUN`, product acceptance / production readiness = `false`; full exact-head push+PR CI and independent Session A review pending. No Stage 6. See [Stage 5E report](stages/2026-11-11-saturn-grounding-evaluation.md).
+
 ## Stage 5D PR #30 — Consolidated CR-01 / CR-02 Corrections (2026-11-11)
 
 - Session A's independent review of head `6b00e4b08a55098a73d8f1e6ded6c3108c5da811`: **1 BLOCKER + 1 IMPORTANT**. Both corrected together in existing PR #30 and branch `feat/saturn-answer-assembly-v0.1`.
@@ -283,3 +298,5 @@ Verified remote CI: [push42168613444](https://github.com/UkWood/LLM-RAG-chat-bot
 ## Publication
 
 [Implementation PR #10](https://github.com/UkWood/LLM-RAG-chat-bot/pull/10), branch feat/typed-planner-v2. PR open/unmerged; implementation freeze7bc6f11, first-result/report commitc0f0f3f. Docs-only PR9 superseded by this implementation including its owner-accepted design. Actual remote checks are available on the current head in PR10; local PASS is not a remote-CI claim or quality acceptance. The24/24+16/16 quality target remains FAILED. No runtime/config/grader change after freeze.
+
+- **Corrected scorer 0.1.1 actual OPEN measurement** saved [here](../evaluation/reports/saturn-grounding-calibration-review-v0.1.1.json): 28/28, citations 24/24, positive 17/17, zero source-unsupported/off-question/extra text. Separately [controlled fault-injection report](../evaluation/reports/saturn-grounding-controlled-review-v0.1.1.json) shows expected policy/technical/simulated-conflict detections. Both executed at `bad73187f6e3dca187636ae5cea4cbca0c69dded`; 121 targeted tests. No independent blind.

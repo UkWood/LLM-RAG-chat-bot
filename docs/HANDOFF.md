@@ -1,3 +1,18 @@
+## PR #31 Stage 5E — consolidated Acceptance Review corrections (2026-11-11)
+
+- Architectural Session A: 2 BLOCKER (need/owner binding; blind freeze/report integrity) + 3 IMPORTANT (exact quote substring, pinned diagnostics, measurement coverage). Corrected within original PR #31; no merge. See [Stage 5E report](stages/2026-11-11-saturn-grounding-evaluation.md).
+- Independent scorer now binds emitted statements/need IDs, source-authored owner scope for C16 and unresolved lifecycle, supports literal middle-of-passage quotes without engineering entailment, preserves pinned bundle/session diagnostics, and differentiates source-unsupported vs off-question vs extra answer text.
+- Blind freeze verifies exact code SHA and bundle, fixed case IDs, START receipt and fully consistent final report including metrics; no real blind run. First open calibration v0.1 JSON/report unchanged, scorer/rubric now 0.1.1.
+- New `test_saturn_grounding_evaluation_review_cr.py` and targeted CI; controlled policy/technical/simulated-conflict profile is explicitly **NOT BLIND**.
+- Exact final head and green push+PR CI to be recorded in PR #31. Stage 4A–5D and Saturn-Main-Site untouched, Stage 6 not started.
+
+## Stage 5E — Saturn Grounding Evaluation v0.1 (2026-11-11; coding implementation, review pending)
+
+- Live checked `main=8dc9d2fbd20854bd54903ff617581ed4ecad6e31`, Stage 5D PR #30 **MERGED**; one new branch `feat/saturn-grounding-evaluation-v0.1`. **DO NOT MERGE**, wait for independent Session A Acceptance Review.
+- Independent strict Saturn gold/source/citation scorer, offline full Stage 4A–5D runner, privacy-safe metrics/reporting, immutable blind freeze/first-run receipts. Production Stage 4A–5D algorithms/contracts, old datasets, historical reports and Saturn-Main-Site untouched.
+- First actual open synthetic calibration (`SaturnFakeClaimProvider`, lexical/top_k=10) 28/28 correct total: positive complete 17/17, correct needs_support 5/5, clarification 3/3, partial 3/3, citation 24/24, false refusals 0/17, unsupported 0. Raw first measured JSON at `evaluation/reports/saturn-grounding-calibration-v0.1.json`, gold at `evaluation/datasets/saturn-grounding-calibration-v0.1.json`; source execution CI run #43082293017 on `4fde232947e6989a242fd3308e0c7cf4eedb29d1`.
+- **independent_blind_evaluation=NOT_RUN**, no independently authored/frozen 40-case set or real-sample gold; product acceptance and production readiness not established. Full implementation / final exact-head push+PR CI remains the independent review prerequisite. [Stage report](stages/2026-11-11-saturn-grounding-evaluation.md).
+
 ## Stage 5D PR #30 — Consolidated CR-01 / CR-02 Corrections (2026-11-11)
 
 - Session A's independent review of head `6b00e4b08a55098a73d8f1e6ded6c3108c5da811`: **1 BLOCKER + 1 IMPORTANT**. Both corrected together in existing PR #30 and branch `feat/saturn-answer-assembly-v0.1`.
@@ -276,3 +291,19 @@ Live provider smoke test не выполнялся: offline tests использ
 5. Не менять canonical contracts, Saturn Site Content Adapter, ADR-0012/0013/0014 или исходный Saturn site без отдельного архитектурного решения.
 6. PR #22 не сливать без отдельной явной команды владельца.
 7. Не начинать Gitea, PDF ingestion, retrieval integration, LLM/API/UI или deployment автоматически после PR #22; для каждого следующего этапа требуется отдельное задание.
+- **Review-scored corrected reports (not blind):** [0.1.1 open calibration](../evaluation/reports/saturn-grounding-calibration-review-v0.1.1.json) (28/28, citations 24/24, 0 source-unsupported/off-question/text extras); [controlled injections](../evaluation/reports/saturn-grounding-controlled-review-v0.1.1.json) (3 expected failing cases: policy/error/simulated conflict). Both measured at code `bad73187f6e3dca187636ae5cea4cbca0c69dded`; new files preserve original report and gold. Targeted 121 tests. Final CI still to be bound to final PR head.
+
+
+## PR #31 — Final consolidated CR06–CR09 handoff (12 November 2026)
+
+- Four additional independent-review findings addressed in existing PR #31, Stage 5E only: (1) substantive exact site/PDF quote and independently authored pdf_quote semantics; (2) independent literal-question field/owner/entity/need binding, including unresolved multi-need fields; (3) COMPLETE receipt SHA equals persisted canonical report bytes; (4) retrieval hit metrics exclude unmeasured technical failures, with per-need error attribution.
+- Scorer and rubric now versioned `0.1.2`; original v0.1 gold/report and prior v0.1.1 reports retained, with new measurement artifacts separately versioned. Existing 121 Stage 5E + 26 CR06–CR09 cases = **147 targeted tests**.
+- Controlled policy / technical / simulated conflict remains **synthetic fault injection**, not independent blind. All gold labels remain out of the retrieval/answer application boundary. `independent_blind_evaluation=NOT_RUN`.
+- Details, new report links and CI proof: [Stage 5E Review Corrections](stages/2026-11-11-saturn-grounding-evaluation.md). PR #31 stays unmerged pending Session A independent review; Stage 4A–5D, Saturn-Main-Site and Stage 6 untouched.
+
+
+
+- **Final corrected 0.1.2 evidence:** [open calibration](../evaluation/reports/saturn-grounding-calibration-final-review-v0.1.2.json) is 28/28 (positive 17/17, 24/24 citations, 23/23 engineering requirements); [controlled injected faults](../evaluation/reports/saturn-grounding-controlled-final-review-v0.1.2.json) separate policy 1/3, technical 1/3, simulated conflict 1/3, with source-hit@5 **1/2 measured** and **one NOT_APPLICABLE** case. Both measured at `ab5b946d9f14edca89af66e644a2325ed57695b8`, open/non-blind. Intermediate 0.1.2 report 27/28 (C27 evaluator false negative) is retained and superseded, never overwritten. **147 targeted tests** including explicit C27 suffix coverage. Pending final exact-head push/PR CI.
+
+
+- **CR-09F (PR #31 final):** blind COMPLETE per-case validation now accepts source/document `null` hit-rate measurements only for coherent `actual_status=error`, `technical_failure`, `fully_correct=false` outcomes with no observed retrieval-miss code. Measured misses remain `false`, not a hidden denominator reduction. Six synthetic-open-source test-only cases CR09F-T01–T06 validate COMPLETE, forged `null`, document lookup and mixed-case rates. All 153 Stage 5E targeted tests pass; details in [Stage 5E report](stages/2026-11-11-saturn-grounding-evaluation.md). No actual blind, no Stage 4A–5D change or merge.

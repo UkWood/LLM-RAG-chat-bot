@@ -1,3 +1,29 @@
+## PR #31 — Stage 5E 0.1.1 corrected evaluator (independent-review cycle)
+
+The first `saturn-grounding-calibration-v0.1.json` gold **and first v0.1 report** are immutable. The corrected scorer uses its own versioned `0.1.1` rubric/report: need/owner-qualified source binding, exact passage substrings, pinned bundle diagnostics and separate source-unsupported/off-question/extra-text metrics with explicit denominators. These changes may alter metrics while retaining the original gold; never relabel the first measurement.
+
+Additional `saturn_controlled.py` cases deliberately inject policy restriction, technical error and a **simulated** conflict into three openly authored synthetic questions. Those outputs must be labeled `synthetic_controlled_fault_injection` and remain separate from actual calibration and any real/independent blind results.
+
+```sh
+PYTHONPATH=backend/src python -m saturn_ai.evaluation.saturn_grounding --profile calibration --dataset evaluation/datasets/saturn-grounding-calibration-v0.1.json --report /tmp/calibration-corrected.json
+PYTHONPATH=backend/src python -m saturn_ai.evaluation.saturn_controlled
+```
+
+Blind completion now requires bound experiment/code/bundle/dataset/case IDs, report status/citation metrics consistency, and durable exclusive START/COMPLETE receipts. The test suite exercises only synthetic **open-case copies**; no actual blind dataset has run (`NOT_RUN`).
+
+---
+## Saturn Grounding Evaluation v0.1 (Stage 5E, 2026-11-11)
+
+**Distinct from legacy evaluation.** The new source-backed Saturn pipeline uses `SaturnAnswerResult` and an independent scorer, not legacy synthetic `GroundedResult` or planner-v2 datasets. Frozen open 28-case source-backed synthetic corpus: `datasets/saturn-grounding-calibration-v0.1.json`, original measured output: `reports/saturn-grounding-calibration-v0.1.json`. Original source code SHA, snapshot/corpus/dataset/config identities and exact denominators are recorded in the report and [Stage 5E engineering report](../docs/stages/2026-11-11-saturn-grounding-evaluation.md).
+
+```bash
+PYTHONPATH=backend/src python -m saturn_ai.evaluation.saturn_grounding --profile calibration --dataset evaluation/datasets/saturn-grounding-calibration-v0.1.json --report /tmp/saturn-grounding-calibration.json
+```
+
+First actual open calibration: 28/28 correct, positive 17/17, citations 24/24; open fixture and deterministic Fake provider only, not blind/real sample. A future independent blind requires separately authored gold, approved 40-case distribution/thresholds, freeze and a *single* first-run receipt. Until then `independent_blind_evaluation=NOT_RUN`; never treat green CI or open calibration as product acceptance. Historical frozen datasets and reports below are unchanged.
+
+---
+
 # Evaluation baseline
 
 `datasets/synthetic-v1.json` is a versioned, authored gold-label dataset for the synthetic offline profile. It contains 30 cases in the accepted category distribution: 20 calibration and 10 held_out, one held_out per category. Each expected fact points to an approved source and matching field/physical PDF page. Negative/clarification labels intentionally have no evidence.
@@ -83,3 +109,16 @@ work/venv/bin/python scripts/verify_offline.py --model-dir work/multilingual-e5-
 The final command runs all code checks + unchanged lexical evaluation + actual grounded quality, after explicit locked optional install and local artifact preparation. It returns1 when the grounded target is unmet; this is a measured quality failure even if code tests pass. Default verifier still needs no pretrained models/network after install. Stage CLI `--require-grounding-target` provides the same explicit quality gate; do not combine it with lexical `--require-source-hit-target` to hide differing criteria.
 
 [Actual report](reports/2026-11-06-grounding.json):8/20 positives answered, proper refusal8/8, clarification2/2, overall status accuracy.6, expected-evidence recall.3. Held_out positive answer0/6; false-refusal/false-clarification rates.5/.1 overall. Emitted claims have exact canonical quote support and citations valid1.0 (separate denominators, absent claims are not scored as perfect). No grammar/labels/corpus changes after this result. Report stores IDs/reasons/metrics/pages, no raw question/context/answer logs. Free-language entailment/engineering consultation/real sample NOT_RUN. [Stage report](../docs/stages/2026-11-06-evidence-gate.md) and [ADR0008](../docs/decisions/0008-evidence-gate.md) state remaining limits.
+
+New distinct 0.1.1 measured artifacts: [corrected open calibration](reports/saturn-grounding-calibration-review-v0.1.1.json) and [3-case controlled injected-fault report](reports/saturn-grounding-controlled-review-v0.1.1.json). Code SHA in both is `bad73187f6e3dca187636ae5cea4cbca0c69dded`, while the original first report remains on its earlier code SHA. Corrected report: positive 17/17, total 28/28, 24/24 citations, no source-unsupported/off-question/extra text; controlled case results are intentionally all failures. CI enforces original Gold/report Git blob identities.
+
+
+### Final PR #31 independent review — evaluator 0.1.2
+
+Stage 5E now checks literal source-question field/entity/owner binding and independently authored exact PDF quote gold; quote integrity never proves an engineering field. Only **measured** pinned retrieval traces contribute to source-hit@5, document-hit@5 or evidence-recall denominators; explicit unmeasured-case counts distinguish missing diagnostics from genuine misses. A blind COMPLETE receipt uses SHA-256 of the **persisted canonical report bytes**, and the original exclusive START/FAILED protection remains.
+
+The initial v0.1 calibration gold and first report, and separately measured v0.1.1 correction reports, are immutable. The corrected v0.1.2 calibration and controlled-fault outputs are separate files. Controlled results are synthetic policy/error/simulated-conflict injections; **no independently authored blind has run**. Read [Stage 5E corrections](../docs/stages/2026-11-11-saturn-grounding-evaluation.md).
+
+
+
+The **authoritative final 0.1.2** source-backed synthetic measurements are [28/28 corrected open calibration](reports/saturn-grounding-calibration-final-review-v0.1.2.json) and [3-case controlled policy/error/simulated-conflict run](reports/saturn-grounding-controlled-final-review-v0.1.2.json), both measured on `ab5b946d9f14edca89af66e644a2325ed57695b8`. The earlier `saturn-grounding-calibration-review-v0.1.2.json` is retained as a transparent 27/28 intermediate run: C27 was incorrectly rejected by the evaluator for a recognized field followed by an unresolved question suffix. The final measurement fixes that evaluation error, without changing production Stage 5B or original frozen artifacts. No hidden/independent blind was ever run. **147 targeted tests** now cover this boundary.
