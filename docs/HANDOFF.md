@@ -1,3 +1,11 @@
+## PR #31 Stage 5E — consolidated Acceptance Review corrections (2026-11-11)
+
+- Architectural Session A: 2 BLOCKER (need/owner binding; blind freeze/report integrity) + 3 IMPORTANT (exact quote substring, pinned diagnostics, measurement coverage). Corrected within original PR #31; no merge. See [Stage 5E report](stages/2026-11-11-saturn-grounding-evaluation.md).
+- Independent scorer now binds emitted statements/need IDs, source-authored owner scope for C16 and unresolved lifecycle, supports literal middle-of-passage quotes without engineering entailment, preserves pinned bundle/session diagnostics, and differentiates source-unsupported vs off-question vs extra answer text.
+- Blind freeze verifies exact code SHA and bundle, fixed case IDs, START receipt and fully consistent final report including metrics; no real blind run. First open calibration v0.1 JSON/report unchanged, scorer/rubric now 0.1.1.
+- New `test_saturn_grounding_evaluation_review_cr.py` and targeted CI; controlled policy/technical/simulated-conflict profile is explicitly **NOT BLIND**.
+- Exact final head and green push+PR CI to be recorded in PR #31. Stage 4A–5D and Saturn-Main-Site untouched, Stage 6 not started.
+
 ## Stage 5E — Saturn Grounding Evaluation v0.1 (2026-11-11; coding implementation, review pending)
 
 - Live checked `main=8dc9d2fbd20854bd54903ff617581ed4ecad6e31`, Stage 5D PR #30 **MERGED**; one new branch `feat/saturn-grounding-evaluation-v0.1`. **DO NOT MERGE**, wait for independent Session A Acceptance Review.
