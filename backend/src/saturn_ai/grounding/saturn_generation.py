@@ -9,7 +9,8 @@ from .saturn_claim_contracts import (
     SaturnGenerationEvidence, SaturnGenerationNeed, SaturnGenerationRequest,
     SaturnRejectedClaim,
 )
-from .saturn_claim_provider import SaturnFakeClaimProvider
+from .saturn_claim_provider import SaturnClaimDraftProvider, SaturnFakeClaimProvider
+from .saturn_local_provider import SaturnLocalClaimProvider
 from .saturn_claim_verifier import verify_pinned_draft
 from .saturn_context import SaturnAnswerSession
 from .saturn_contracts import SaturnContextError, SaturnEvidenceContext
@@ -110,9 +111,12 @@ def _verification(snapshot, drafts, selected):
 
 
 class SaturnClaimVerificationService:
-    """Only the exact offline Fake provider class is authorized for v0.1."""
+    """Only two exact, audited draft-provider classes are allowed in the pilot.
 
-    def __init__(self, *, provider: SaturnFakeClaimProvider):
+    The Stage 5C verifier remains independent of either provider's claims.
+    """
+
+    def __init__(self, *, provider: SaturnClaimDraftProvider):
         self._provider = provider
         self._gate = SaturnQuestionGate()
 
@@ -139,7 +143,7 @@ class SaturnClaimVerificationService:
             return _result(context, session.recheck_policy(context), assessment,
                            state="resource_budget_exceeded",
                            error="claim_budget_exceeded")
-        if type(self._provider) is not SaturnFakeClaimProvider:
+        if type(self._provider) not in (SaturnFakeClaimProvider, SaturnLocalClaimProvider):
             return _result(context, session.recheck_policy(context), assessment,
                            state="failed", error="provider_not_allowed")
         revision = session.recheck_policy(context)
