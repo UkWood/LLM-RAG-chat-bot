@@ -273,6 +273,15 @@ class SaturnEvidenceContextTests(unittest.TestCase):
                 second.recheck_policy(context)
             expect_code(ex, "context_identity_mismatch")
 
+    def test_issued_context_reflective_payload_corruption_is_rejected(self):
+        with self.service.open_answer_session() as session:
+            context = session.build_context("RS-485")
+            self.assertTrue(context.answer_evidence)
+            object.__setattr__(context, "answer_evidence", ())
+            with self.assertRaises(SaturnContextError) as ex:
+                session.recheck_policy(context)
+            expect_code(ex, "context_identity_mismatch")
+
     def test_invalid_query_modes_and_missing_active_bundle(self):
         empty = SaturnRetrievalService()
         with self.assertRaises(SaturnContextError) as ex:
