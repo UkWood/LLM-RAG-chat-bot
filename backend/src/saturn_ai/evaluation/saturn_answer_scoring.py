@@ -27,6 +27,7 @@ class SaturnStageTrace:
     finding_statuses: tuple[str, ...] = ()
     verified_evidence_ids: tuple[str, ...] = ()
     technical_failure: bool = False
+    ranked_document_ids: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -51,6 +52,7 @@ class SaturnEvaluationOutcome:
     evidence_recall_numerator: int
     evidence_recall_denominator: int
     failure_codes: tuple[str, ...]
+    source_channel: str = "none"
 
 
 def _expected_field(fact, entities):
@@ -297,6 +299,13 @@ def _attribution(case, trace, missing, result):
     return tuple(sorted(set(codes))) or (("undetermined",) if missing else ())
 
 
+def _gold_source_channel(case):
+    channels = {"site" if r.kind in ("field", "relation") else
+                "document_metadata" if r.kind == "document" else "pdf"
+                for r in case.required}
+    return next(iter(channels)) if len(channels) == 1 else ("mixed" if channels else "none")
+
+
 def score_answer(case: SaturnEvaluationCase, result: SaturnAnswerResult,
                  snapshot, trace: SaturnStageTrace | None = None) -> SaturnEvaluationOutcome:
     """Score AFTER the sealed runtime returned; gold not passed to application."""
@@ -310,7 +319,7 @@ def score_answer(case: SaturnEvaluationCase, result: SaturnAnswerResult,
             case.case_id, case.category, case.split, expected, actual,
             expected == actual, False, len(case.required), 0, 0, 0,
             len(case.required), None, 0, 0, None, None, 0,
-            len(case.required), tuple(sorted(codes)))
+            len(case.required), tuple(sorted(codes)), _gold_source_channel(case))
     actual = result.status
     status_correct = actual == expected and actual in ANSWER_STATUSES
     if not status_correct:
@@ -327,19 +336,21 @@ def score_answer(case: SaturnEvaluationCase, result: SaturnAnswerResult,
                       if result.citations else None)
     if citation_valid is False:
         codes.add("citation_error")
-    if result.answer_text != _expected_answer_text(actual, result.statements):
+    text_integrity_failure = result.answer_text != _expected_answer_text(actual, result.statements)
+    if text_integrity_failure:
         codes.add("unsafe_claim")
     supported = set()
     assertions = 0
-    unsupported = 0
+    unsupported = int(text_integrity_failure)
     emitted_evidence = set()
     for s in result.statements:
-        is_technical = s.statement_kind in _SATISFY
+        is_technical = s.statement_kind in _TECH
+        is_assertion = s.statement_kind in _SATISFY
         assertions += int(is_technical)
         referenced_valid = all(cid in valid_citations for cid in s.citation_ids)
         match = _evaluate_statement(s, citation_map, indexes) if referenced_valid else None
         if match is None:
-            unsupported += int(is_technical)
+            unsupported += int(is_assertion)
             codes.add("citation_error" if not referenced_valid else "unsafe_claim")
         elif match[0] in _SATISFY or match[0] in ("field", "relation", "document"):
             if match in emitted_evidence:
@@ -353,6 +364,14 @@ def score_answer(case: SaturnEvaluationCase, result: SaturnAnswerResult,
         if candidate in emitted_evidence and req.kind != "pdf_quote":
             supported.add(req.requirement_id)
     missing = tuple(r for r in case.required if r.requirement_id not in supported)
+    permitted = {(r.kind, r.canonical_id, r.source_revision_id, r.evidence_id)
+                 for r in case.required}
+    unexpected = {m for m in emitted_evidence if m not in permitted}
+    if unexpected:
+        codes.add("unexpected_claim")
+    cited_ids = {ref for statement in result.statements for ref in statement.citation_ids}
+    if any(c.citation_id not in cited_ids for c in result.citations):
+        codes.add("citation_error")
     if missing:
         codes.update(_attribution(case, trace, missing, result))
     if unsupported:
@@ -370,8 +389,9 @@ def score_answer(case: SaturnEvaluationCase, result: SaturnAnswerResult,
         full = (status_correct and not missing and unsupported == 0 and
                 citation_valid is True and not codes)
     elif expected == "partial":
-        # A partial gold case must have at least one positive evidence unit.
-        full = (status_correct and unsupported == 0 and not missing and
+        # A legitimate partial answer must retain at least one unresolved need.
+        full = (status_correct and bool(result.unresolved_need_ids) and
+                bool(case.required) and unsupported == 0 and not missing and
                 citation_valid is True and not codes)
     else:
         full = (status_correct and assertions == 0 and unsupported == 0 and
@@ -381,13 +401,13 @@ def score_answer(case: SaturnEvaluationCase, result: SaturnAnswerResult,
     expected_documents = {r.canonical_id for r in case.required if r.kind == "document"}
     selected = set(trace.selected_evidence_ids) if trace else set()
     ranked = set(trace.ranked_evidence_ids[:5]) if trace else set()
-    selected_docs = set(trace.selected_document_ids) if trace else set()
+    ranked_docs = set(trace.ranked_document_ids[:5]) if trace else set()
     return SaturnEvaluationOutcome(
         case.case_id, case.category, case.split, expected, actual,
         status_correct, full, len(case.required), len(supported),
         unsupported, assertions, len(missing), citation_valid, len(result.citations),
         len(valid_citations), (expected_evidence <= ranked if expected_evidence and trace else None),
-        (expected_documents <= selected_docs if expected_documents and trace else None),
+        (expected_documents <= ranked_docs if expected_documents and trace else None),
         len(expected_evidence & selected), len(expected_evidence),
-        tuple(sorted(codes)),
+        tuple(sorted(codes)), _gold_source_channel(case),
     )
