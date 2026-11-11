@@ -12,7 +12,7 @@ from ..saturn_knowledge_snapshot import (
     _field_projection, _relation_projection, site_passages,
 )
 from ..retrieval.saturn_channel import (
-    SaturnOperationalPolicy, SaturnRetrievalResult, _allowed_doc,
+    SaturnOperationalPolicy, SaturnPolicyCaptureError, SaturnRetrievalResult, _allowed_doc,
     _allowed_record, _candidate, _valid_query,
 )
 from .saturn_contracts import (
@@ -54,12 +54,46 @@ class SaturnAnswerSession:
     """
     __slots__ = ("_service", "_bundle", "_lock", "_closed", "_issued")
 
-    def __init__(self, service, bundle):
-        self._service = service
-        self._bundle = bundle
-        self._lock = RLock()
-        self._closed = False
-        self._issued = []
+    def __init__(self, *args, **kwargs):
+        # Direct construction has no publication-lock/lease witness.
+        raise TypeError("Use SaturnRetrievalService.open_answer_session()")
+
+    def __setattr__(self, name, value):
+        # Binding, ownership, lifecycle and issued-context registry are
+        # changed only by controlled methods, never ordinary assignment.
+        if name in self.__slots__:
+            raise AttributeError("Saturn answer-session state is controlled: " + name)
+        object.__setattr__(self, name, value)
+
+    @classmethod
+    def _from_service(cls, service):
+        """Internal factory: capture + retain under the SAME publication lock.
+
+        Even direct invocation of this private helper cannot bypass the lease.
+        The ordinary public constructor is deliberately unusable.
+        """
+        with service._lock:
+            bundle = service._active
+            if bundle is None:
+                _reject("no_active_bundle")
+            dense = bundle.dense
+            if dense is not None:
+                try:
+                    dense._retain()
+                except Exception:
+                    _reject("retrieval_unavailable")
+            try:
+                session = object.__new__(cls)
+                object.__setattr__(session, "_service", service)
+                object.__setattr__(session, "_bundle", bundle)
+                object.__setattr__(session, "_lock", RLock())
+                object.__setattr__(session, "_closed", False)
+                object.__setattr__(session, "_issued", ())
+                return session
+            except Exception:
+                if dense is not None:
+                    dense._release()
+                raise
 
     def __enter__(self):
         with self._lock:
@@ -78,8 +112,8 @@ class SaturnAnswerSession:
         with self._lock:
             if self._closed:
                 return
-            self._closed = True
-            self._issued.clear()
+            object.__setattr__(self, "_closed", True)
+            object.__setattr__(self, "_issued", ())
             dense = self._bundle.dense
             if dense is not None:
                 dense._release()
@@ -285,7 +319,10 @@ class SaturnAnswerSession:
             self._assert_open()
             try:
                 _valid_query(question, top_k, mode)
-            except (TypeError, ValueError):
+                # Python strings can contain lone surrogates which are not
+                # valid UTF-8. Reject before hashing or lexical retrieval.
+                question_utf8 = question.encode("utf-8")
+            except Exception:
                 _reject("invalid_request")
             if top_k > MAX_CONTEXT_EVIDENCE:
                 _reject("resource_budget_exceeded")
@@ -295,29 +332,28 @@ class SaturnAnswerSession:
             try:
                 retrieval = self._service._search_captured(
                     self._bundle, question, mode, top_k)
-            except (RuntimeError, ValueError, LookupError, AttributeError, TypeError) as exc:
-                # A provider may fail at the second, post-search policy
-                # capture. Never mislabel that as "no evidence".
-                if isinstance(exc, RuntimeError) and "policy" in str(exc).casefold():
-                    _reject("policy_unavailable")
-                _safe_policy(self._service.policy_provider)
+            except SaturnPolicyCaptureError:
+                _reject("policy_unavailable")
+            except Exception:
+                # Never inspect backend exception text: arbitrary backend
+                # RuntimeError/OSError belongs to retrieval/index boundary.
                 _reject("retrieval_unavailable")
-            self._validate_result(retrieval, question, mode)
             try:
+                self._validate_result(retrieval, question, mode)
                 evidence = self._typed_evidence(retrieval.answer_evidence)
                 documents = self._document_references(retrieval.document_matches)
             except SaturnContextError:
                 raise
-            except (ValueError, TypeError, AttributeError, KeyError, IndexError, OverflowError):
-                # Malformed result objects/canonical references are integrity
-                # failures, never empty retrieval or an opaque exception leak.
+            except Exception:
+                # Malformed candidates, indexes or canonical references must
+                # never expose internal diagnostics or look like empty hits.
                 _reject("evidence_integrity_failure")
             if sum(len(item.source_text) for item in evidence) > MAX_CONTEXT_TEXT_CHARS:
                 _reject("resource_budget_exceeded")
             policy = _safe_policy(self._service.policy_provider)
             context = SaturnEvidenceContext(
                 question=question,
-                question_sha256=sha256(question.encode("utf-8")).hexdigest(),
+                question_sha256=sha256(question_utf8).hexdigest(),
                 snapshot_id=self._bundle.snapshot.snapshot_id,
                 bundle_id=self._bundle.manifest.bundle_id, mode=mode,
                 policy_revision=policy.revision, answer_evidence=evidence,
@@ -326,24 +362,51 @@ class SaturnAnswerSession:
                              ("document_reference_count", len(documents)),
                              ("source_text_chars", sum(len(e.source_text) for e in evidence))),
             )
-            self._check_policy(context, policy)
+            try:
+                self._check_policy(context, policy)
+            except SaturnContextError:
+                raise
+            except Exception:
+                _reject("evidence_integrity_failure")
             if len(self._issued) >= MAX_SESSION_CONTEXTS:
                 _reject("resource_budget_exceeded")
-            self._issued.append((context, _context_fingerprint(context)))
+            try:
+                fingerprint = _context_fingerprint(context)
+            except Exception:
+                _reject("evidence_integrity_failure")
+            object.__setattr__(
+                self, "_issued", self._issued + ((context, fingerprint),)
+            )
             return context
 
     def recheck_policy(self, context: SaturnEvidenceContext):
         with self._lock:
             self._assert_open()
-            if (not isinstance(context, SaturnEvidenceContext) or
-                    not any(context is issued and digest == _context_fingerprint(context)
-                            for issued, digest in self._issued) or
-                    context.snapshot_id != self._bundle.snapshot.snapshot_id or
-                    context.bundle_id != self._bundle.manifest.bundle_id or
-                    context.question_sha256 != sha256(context.question.encode("utf-8")).hexdigest()):
+            if not isinstance(context, SaturnEvidenceContext):
+                _reject("context_identity_mismatch")
+            try:
+                fingerprint = _context_fingerprint(context)
+                question_digest = sha256(context.question.encode("utf-8")).hexdigest()
+                valid_identity = (
+                    any(context is issued and digest == fingerprint
+                        for issued, digest in self._issued)
+                    and context.snapshot_id == self._bundle.snapshot.snapshot_id
+                    and context.bundle_id == self._bundle.manifest.bundle_id
+                    and context.question_sha256 == question_digest
+                )
+            except Exception:
+                # Reflectively corrupted nested payloads may make dataclass
+                # serialization/hash encoding fail. Fail closed, no raw leak.
+                _reject("context_identity_mismatch")
+            if not valid_identity:
                 _reject("context_identity_mismatch")
             policy = _safe_policy(self._service.policy_provider)
-            self._check_policy(context, policy)
+            try:
+                self._check_policy(context, policy)
+            except SaturnContextError:
+                raise
+            except Exception:
+                _reject("evidence_integrity_failure")
             # This is an eligibility check at capture time, not a permanent
             # permission. Stage 5B-5D must recheck before consuming evidence.
             return policy.revision
