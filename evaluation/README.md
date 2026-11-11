@@ -1,3 +1,15 @@
+## Saturn Grounding Evaluation v0.1 (Stage 5E, 2026-11-11)
+
+**Distinct from legacy evaluation.** The new source-backed Saturn pipeline uses `SaturnAnswerResult` and an independent scorer, not legacy synthetic `GroundedResult` or planner-v2 datasets. Frozen open 28-case source-backed synthetic corpus: `datasets/saturn-grounding-calibration-v0.1.json`, original measured output: `reports/saturn-grounding-calibration-v0.1.json`. Original source code SHA, snapshot/corpus/dataset/config identities and exact denominators are recorded in the report and [Stage 5E engineering report](../docs/stages/2026-11-11-saturn-grounding-evaluation.md).
+
+```bash
+PYTHONPATH=backend/src python -m saturn_ai.evaluation.saturn_grounding --profile calibration --dataset evaluation/datasets/saturn-grounding-calibration-v0.1.json --report /tmp/saturn-grounding-calibration.json
+```
+
+First actual open calibration: 28/28 correct, positive 17/17, citations 24/24; open fixture and deterministic Fake provider only, not blind/real sample. A future independent blind requires separately authored gold, approved 40-case distribution/thresholds, freeze and a *single* first-run receipt. Until then `independent_blind_evaluation=NOT_RUN`; never treat green CI or open calibration as product acceptance. Historical frozen datasets and reports below are unchanged.
+
+---
+
 # Evaluation baseline
 
 `datasets/synthetic-v1.json` is a versioned, authored gold-label dataset for the synthetic offline profile. It contains 30 cases in the accepted category distribution: 20 calibration and 10 held_out, one held_out per category. Each expected fact points to an approved source and matching field/physical PDF page. Negative/clarification labels intentionally have no evidence.
