@@ -139,8 +139,9 @@ class SaturnAnswerAssemblyTests(unittest.TestCase):
         with patch.object(SaturnFakeClaimProvider, "generate", duplicate):
             result = self.ask(QUESTION)
         self.assertNotEqual(result.status, "answered")
-        self.assertEqual(result.status, "partial")
-        self.assertEqual(len(result.statements), 1)
+        self.assertEqual(result.status, "error")
+        self.assertEqual(result.reason_code, "answer_integrity_failure")
+        self.assertFalse(result.statements)
 
     def test_t10_quote_only_is_not_technical_answer(self):
         snap = build_saturn_knowledge_snapshot(*make_inputs({
@@ -293,8 +294,7 @@ class SaturnAnswerAssemblyTests(unittest.TestCase):
         from saturn_ai.grounding.saturn_citations import document_citation
         from saturn_ai.saturn_knowledge_snapshot import stage_saturn_knowledge_snapshot
         staged = stage_saturn_knowledge_snapshot(*make_inputs({
-            PRODUCT: source("Instrument",
-                            fields="documents:\\n - " + doc() + "\\n"),
+            PRODUCT: source(fields="documents:\n - " + doc() + "\n"),
         }, failure="network_error"))
         self.assertFalse(staged.ready_for_promotion)
         snapshot = staged.candidate
@@ -515,6 +515,98 @@ class SaturnAnswerAssemblyTests(unittest.TestCase):
             damaged = replace(evidence, canonical_id="wrong")
             self.assert_code("citation_identity_mismatch", lambda:
                 claim_citation(self.snapshot, damaged, claim, payload))
+
+
+    def test_t06_duplicate_entity_title_requires_clarification(self):
+        from unit.test_support_catalog_adapter import SECOND
+        snap = build_saturn_knowledge_snapshot(*make_inputs({
+            PRODUCT: source("Ambiguous Name", fields="interface: RS-485\n"),
+            SECOND: source("Ambiguous Name", fields="interface: RS-485\n"),
+        }))
+        outcome = self.ask("Ambiguous Name: interface?", self._service(snap))
+        self.assertEqual(outcome.status, "clarification")
+        self.assertFalse(outcome.statements)
+
+    def test_t07_competing_field_parse_requires_clarification(self):
+        snap = build_saturn_knowledge_snapshot(*make_inputs({
+            PRODUCT: source("Instrument", fields=(
+                'interface: RS-485\nprotocol: BACnet\n'
+                '"interface, protocol": "Combined value"\n')),
+        }))
+        outcome = self.ask("Instrument: interface, protocol?",
+                           self._service(snap))
+        self.assertEqual(outcome.status, "clarification")
+        self.assertFalse(outcome.citations)
+
+    def test_t34_t35_wrong_pdf_revision_or_page_is_not_citable(self):
+        from saturn_ai.grounding.saturn_citations import claim_citation
+        from types import SimpleNamespace
+        with self.service.open_answer_session() as session:
+            context = session.build_context("Alpha", top_k=10)
+            evidence = next(item for item in context.answer_evidence
+                            if item.evidence_type == "pdf_passage")
+        claim = SimpleNamespace(claim_kind="passage_quote",
+                                source_revision_id=evidence.source_revision_id)
+        good = claim_citation(self.snapshot, evidence, claim, None)
+        self.assertEqual(good.physical_page, evidence.physical_page)
+        self.assert_code("citation_identity_mismatch", lambda:
+            claim_citation(self.snapshot,
+                           replace(evidence, pdf_revision_id="other-revision"),
+                           claim, None))
+        self.assert_code("citation_identity_mismatch", lambda:
+            claim_citation(self.snapshot,
+                           replace(evidence, physical_page=None),
+                           claim, None))
+
+    def test_t48_concurrent_session_close_during_provider(self):
+        started, finish = Event(), Event()
+        caught = []
+        session = self.service.open_answer_session()
+        context = session.build_context(QUESTION, top_k=10)
+        original = SaturnFakeClaimProvider.generate
+
+        def gated(provider, request):
+            started.set()
+            finish.wait(10)
+            return original(provider, request)
+
+        def worker():
+            try:
+                self.assembly.assemble(session=session, context=context)
+            except SaturnContextError as exc:
+                caught.append(exc.reason_code)
+
+        try:
+            with patch.object(SaturnFakeClaimProvider, "generate", gated):
+                thread = Thread(target=worker)
+                thread.start()
+                self.assertTrue(started.wait(10))
+                session.close()
+                finish.set()
+                thread.join(15)
+                self.assertFalse(thread.is_alive())
+            self.assertEqual(caught, ["session_closed"])
+        finally:
+            finish.set()
+            session.close()
+
+    def test_t41_relation_object_revocation(self):
+        rel = self.snapshot.relations[0]
+        names = {item.entity_id: item.title for item in self.snapshot.entities}
+        query = "relation(" + names[rel.subject_entity_id] + ", " + (
+            rel.predicate) + ", " + names[rel.object_entity_id] + ")?"
+        with self.service.open_answer_session() as session:
+            context = session.build_context(query, top_k=10)
+            original = self.verifier.verify
+            def revoke(*, session, context):
+                result = original(session=session, context=context)
+                self.service.policy_provider.activate(SaturnOperationalPolicy(
+                    "revoke-object",
+                    blocked_entity_ids=frozenset({rel.object_entity_id})))
+                return result
+            with patch.object(self.verifier, "verify", side_effect=revoke):
+                self.assert_code("policy_blocked", lambda:
+                    self.assembly.assemble(session=session, context=context))
 
     def test_t65_regression_contract_reuse(self):
         # Invoking the public flow twice exercises all Stage 4A-5D paths;

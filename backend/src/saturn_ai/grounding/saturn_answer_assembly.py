@@ -288,6 +288,17 @@ def _build(snapshot, context, assessment, verification):
             verification.verification_state == "generation_not_required" and
             unresolved):
         _reject("answer_integrity_failure")
+    # If all needs are apparently satisfied but Stage 5C still rejected an
+    # additional proposal, calling this 'partial' would falsely imply a
+    # missing question need. Treat inconsistent all-covered output as an
+    # explicit integrity error; publish no positive statements.
+    if (supported == len(needs) and supported > 0 and
+            (verification.rejected_claims or verification.unresolved_need_ids or
+             verification.verification_state not in (
+                 "complete", "generation_not_required"))):
+        return _result(context, "", "error", (), (),
+                       tuple(n.need_id for n in needs),
+                       "answer_integrity_failure")
     # Rejected proposals prohibit a full positive answer, but cannot turn an
     # independently confirmed fact into an invented/unverified assertion.
     if (supported == len(needs) and supported > 0 and not

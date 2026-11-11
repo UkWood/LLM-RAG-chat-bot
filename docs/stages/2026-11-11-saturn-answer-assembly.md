@@ -6,7 +6,7 @@ Date: 2026-11-11. Project: AI Technical Consultant — МНПП «Сатурн»
 
 - Base `main`: `9d6c6fa1da180e62feb22134efa92724d8173f17`; Stage 5C PR #29 **MERGED** (merge CI 43052161495; 543 backend tests, 11 optional skips, 5 project tests).
 - Branch: `feat/saturn-answer-assembly-v0.1`.
-- Single Stage 5D PR: linked in GitHub PR description on publication; independent Session A Acceptance Review required. **NO MERGE. NO Stage 5E.**
+- Single [Stage 5D PR #30](https://github.com/UkWood/LLM-RAG-chat-bot/pull/30): independent Session A Acceptance Review required. **NO MERGE. NO Stage 5E.**
 - Site repository `UkWood/Saturn-Main-Site`: strictly read-only, **no changes**.
 
 ## Architecture / public entrypoint
@@ -97,5 +97,5 @@ and actual log totals. CI outcomes must not be asserted before completion.
 Limitations: exclusively offline Fake claim provider, no semantic entailment,
 no inferred compatibility/numeric conversion, no user testing, no production
 LLM/HTTP/chat UI. A verified PDF/site extract only proves source integrity.
-Stage 5E independent grounding quality evaluation is the *next* planned stage;
+Stage 4A currently rejects promotion of a candidate with failed PDF extraction. Stage 5D nevertheless preserves a failed extraction status in a standalone metadata citation unit test; the full public document-lookup flow can only use promotable snapshots. Also, Stage 5B currently refuses conditional structured fields when its query grammar cannot express qualifiers; the Stage 5D renderer preserves qualifiers but cannot override that conservative gate. Stage 5E independent grounding quality evaluation is the *next* planned stage;
 not started here.
