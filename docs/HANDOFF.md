@@ -1,3 +1,11 @@
+## Stage 5D — Answer Assembly, Citations & Final Policy Gate v0.1 (2026-11-11)
+
+- **Baseline main:** `9d6c6fa1da180e62feb22134efa92724d8173f17`; Stage 5C **PR #29 MERGED**, merge CI [#43052161495](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/43052161495).
+- **Active implementation:** `feat/saturn-answer-assembly-v0.1`; one PR to `main`, independent Session A review required; **NO MERGE / NO Stage 5E**.
+- Stage 5D consumes the real issued session/context; calls Stage 5C itself, re-runs Stage 5B on the same pinned snapshot, independently confirms canonical claims, renders exact backend text, constructs site/PDF/document metadata citations and performs a final operational policy recheck under the session lock.
+- Output: frozen `SaturnAnswerResult`, statement/citation records, statuses `answered/partial/clarification/needs_support/error`; no production model, API, UI or deployment. Source quotes are explicitly non-entailing and omitted from main answer text.
+- Budgets: max 6 technical statements, 10 document matches, 16 citations, 12,000 characters of answer text; no silent truncation. See [Stage 5D report](stages/2026-11-11-saturn-answer-assembly.md) and the PR for exact head and CI.
+
 ## Stage 5C — Bounded Generation & Atomic Claim Verification v0.1 (2026-11-11)
 
 - **Current main baseline:** `973c3d2f3ae2c5c7a079a3e92072121bf9082edf`; PR #28 **MERGED**. Historical older sections calling PR #28 OPEN or Stage 5C unstarted are superseded, not retroactively rewritten.

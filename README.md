@@ -2,9 +2,11 @@
 
 Отдельный технический консультант: ответы только по доверенным материалам сайта и PDF с источниками и отказом при недостатке доказательств. Статический интерфейс Astro, отдельный FastAPI backend, локальная KB и сменный LLM provider.
 
-**Стадия (2026-11-11):** Stage 5B — Question Needs, Sufficiency & Conflict Gate v0.1, PR #28 **MERGED** (`main=973c3d2f3ae2c5c7a079a3e92072121bf9082edf`). Stage 5C — Bounded Generation & Atomic Claim Verification v0.1 разрабатывается в ветке `feat/saturn-atomic-claim-verification-v0.1`: bounded offline Fake provider, самостоятельная проверка source-backed structured claims, точных цитат, безопасности policy/session и полноты. Без final answers/citations, реальной LLM, HTTP API или интерфейса; независимый Acceptance Review и exact-head CI обязательны. `UkWood/Saturn-Main-Site` — только чтение.
+**Стадия (2026-11-11):** Stage 5C PR #29 **MERGED** (`main=9d6c6fa1da180e62feb22134efa92724d8173f17`). Stage 5D — Answer Assembly, Citations & Final Policy Gate v0.1 — implementation candidate, one feature PR in independent review. Offline deterministic answer/result/citation contracts and policy safety; no production LLM, API, UI or real-user evaluation. `UkWood/Saturn-Main-Site` strictly read-only.
 
 ## Память проекта
+
+- [Stage 5D: Answer Assembly, Citations & Final Policy Gate](docs/stages/2026-11-11-saturn-answer-assembly.md)
 
 - [Stage 5C: Atomic Claim Verification](docs/stages/2026-11-11-saturn-atomic-claim-verification.md)
 
