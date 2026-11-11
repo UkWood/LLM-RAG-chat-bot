@@ -67,10 +67,12 @@ def _safe_error(snapshot_id, bundle_id, question):
 
 def _run_question(service, assembly, gate, verifier, question, profile):
     """One pinned bundle/session. No case labels or gold enter runtime."""
+    pinned_bundle = None
     try:
         with service.open_answer_session() as session:
             with session._lock:
                 bundle = session._bundle
+                pinned_bundle = bundle
                 # The diagnostic search uses the SAME captured bundle as
                 # build_context; never service.search_saturn(active) here.
                 retrieval = service._search_captured(
@@ -96,6 +98,7 @@ def _run_question(service, assembly, gate, verifier, question, profile):
                 policy = service.policy_provider.capture()
                 trace = SaturnStageTrace(
                     snapshot_id=context.snapshot_id,
+                    retrieval_diagnostics_complete=True,
                     bundle_id=context.bundle_id,
                     question_sha256=context.question_sha256,
                     ranked_evidence_ids=tuple(c.evidence_id for c in retrieval.answer_evidence),
@@ -117,7 +120,7 @@ def _run_question(service, assembly, gate, verifier, question, profile):
                 return answer, trace
     except Exception:
         # Error is not a missing-source/refusal result. No question/source text.
-        bundle = service.capture()
+        bundle = pinned_bundle or service.capture()
         return _safe_error(bundle.snapshot.snapshot_id,
                            bundle.manifest.bundle_id, question), SaturnStageTrace(
                                technical_failure=True, snapshot_id=bundle.snapshot.snapshot_id,
