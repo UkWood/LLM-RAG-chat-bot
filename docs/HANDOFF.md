@@ -297,7 +297,10 @@ Live provider smoke test не выполнялся: offline tests использ
 ## PR #31 — Final consolidated CR06–CR09 handoff (12 November 2026)
 
 - Four additional independent-review findings addressed in existing PR #31, Stage 5E only: (1) substantive exact site/PDF quote and independently authored pdf_quote semantics; (2) independent literal-question field/owner/entity/need binding, including unresolved multi-need fields; (3) COMPLETE receipt SHA equals persisted canonical report bytes; (4) retrieval hit metrics exclude unmeasured technical failures, with per-need error attribution.
-- Scorer and rubric now versioned `0.1.2`; original v0.1 gold/report and prior v0.1.1 reports retained, with new measurement artifacts separately versioned. Existing 121 Stage 5E + 25 CR06–CR09 cases = **146 targeted tests**.
+- Scorer and rubric now versioned `0.1.2`; original v0.1 gold/report and prior v0.1.1 reports retained, with new measurement artifacts separately versioned. Existing 121 Stage 5E + 26 CR06–CR09 cases = **147 targeted tests**.
 - Controlled policy / technical / simulated conflict remains **synthetic fault injection**, not independent blind. All gold labels remain out of the retrieval/answer application boundary. `independent_blind_evaluation=NOT_RUN`.
 - Details, new report links and CI proof: [Stage 5E Review Corrections](stages/2026-11-11-saturn-grounding-evaluation.md). PR #31 stays unmerged pending Session A independent review; Stage 4A–5D, Saturn-Main-Site and Stage 6 untouched.
 
+
+
+- **Final corrected 0.1.2 evidence:** [open calibration](../evaluation/reports/saturn-grounding-calibration-final-review-v0.1.2.json) is 28/28 (positive 17/17, 24/24 citations, 23/23 engineering requirements); [controlled injected faults](../evaluation/reports/saturn-grounding-controlled-final-review-v0.1.2.json) separate policy 1/3, technical 1/3, simulated conflict 1/3, with source-hit@5 **1/2 measured** and **one NOT_APPLICABLE** case. Both measured at `ab5b946d9f14edca89af66e644a2325ed57695b8`, open/non-blind. Intermediate 0.1.2 report 27/28 (C27 evaluator false negative) is retained and superseded, never overwritten. **147 targeted tests** including explicit C27 suffix coverage. Pending final exact-head push/PR CI.
