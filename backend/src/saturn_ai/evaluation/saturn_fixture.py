@@ -37,7 +37,7 @@ class _FixtureExtractor:
         return ExtractedPdf(2, PDF_PAGES)
 
 
-def fixture_snapshot():
+def fixture_snapshot(*, site_commit=FIXTURE_SITE_COMMIT):
     mapping = {}
     for path in sorted(FIXTURE_ROOT.rglob("*")):
         if path.is_file():
@@ -59,7 +59,7 @@ def fixture_snapshot():
         mapping[path] = (git_blob_sha1(raw), raw)
 
     pinned = PinnedSiteSnapshot.from_mapping(
-        commit_sha=FIXTURE_SITE_COMMIT, tree_sha=FIXTURE_SITE_TREE,
+        commit_sha=site_commit, tree_sha=FIXTURE_SITE_TREE,
         files=mapping)
     site = adapt_snapshot(pinned)
     catalog = adapt_support_catalog(site)
