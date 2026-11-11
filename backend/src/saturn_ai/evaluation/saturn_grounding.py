@@ -218,7 +218,7 @@ def main(argv=None):
         if blind:
             if len(report["cases"]) != blind.freeze["expected_case_count"]:
                 raise BlindIntegrityError("case_count_mismatch")
-            blind.complete(data, dataset=validate_gold(raw, snapshot, split="synthetic_blind"))
+            blind.complete(data, dataset_bytes=raw, snapshot=snapshot)
         else:
             args.report.parent.mkdir(parents=True, exist_ok=True)
             args.report.write_bytes(data)
