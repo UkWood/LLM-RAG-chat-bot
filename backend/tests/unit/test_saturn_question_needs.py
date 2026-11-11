@@ -435,3 +435,275 @@ class SaturnQuestionNeedsTests(unittest.TestCase):
         two = SaturnNeedFinding("y", "text_candidate", ("b",), (),
                                 "passage_requires_claim_verification")
         self.assertEqual(_aggregate((one, two)), "insufficient_evidence")
+
+
+    # CR-01 and CR-02 consolidated correction regression tests.
+    def _real_source_field_gate(self, fields, path):
+        snap = build_saturn_knowledge_snapshot(*make_inputs({
+            PRODUCT: source("Instrument", fields=fields),
+        }))
+        owner = next(e for e in snap.entities if e.title == "Instrument")
+        fact = next(f for f in snap.facts if f.entity_id == owner.entity_id
+                    and f.field_path == path)
+        service = SaturnRetrievalService()
+        service.publish(build_saturn_retrieval_bundle(snap))
+        question = "Instrument: " + path + "?"
+        with service.open_answer_session() as session:
+            context = session.build_context(question, top_k=10)
+            evidence = tuple(e for e in context.answer_evidence
+                             if e.evidence_type == "site_field"
+                             and e.entity_id == owner.entity_id
+                             and e.field_path == path)
+            self.assertTrue(evidence, "real Stage 5A evidence must be selected")
+            assessment = SaturnQuestionGate().assess(session=session, context=context)
+        self.assertEqual(assessment.needs[0].entity_id, owner.entity_id)
+        self.assertEqual(assessment.needs[0].field_path, fact.field_path)
+        self.assertEqual(assessment.needs[0].original_text,
+                         question[slice(*assessment.needs[0].question_span)])
+        self.assertEqual(assessment.needs[0].original_text, path)
+        self.assertIn(evidence[0].evidence_id, assessment.findings[0].evidence_ids)
+        return assessment, evidence, fact, snap
+
+    def test_cr01_t01_null_real_snapshot_no_false_coverage(self):
+        result, evidence, fact, _ = self._real_source_field_gate(
+            "future_parameter: null\n", "future_parameter")
+        self.assertEqual(fact.raw_value_json, "null")
+        self.assertEqual(evidence[0].raw_value_json, "null")
+        self.assertEqual(result.findings[0].status, "ambiguous")
+        self.assertEqual(result.findings[0].reason_code, "non_substantive_field_value")
+        self.assertNotEqual(result.gate_status, "provisionally_covered")
+
+    def test_cr01_t02_empty_string_real_snapshot(self):
+        result, evidence, fact, _ = self._real_source_field_gate(
+            'future_parameter: ""\n', "future_parameter")
+        self.assertEqual(fact.raw_value_json, '""')
+        self.assertEqual(evidence[0].raw_value_json, '""')
+        self.assertEqual(result.findings[0].reason_code, "non_substantive_field_value")
+        self.assertNotEqual(result.gate_status, "provisionally_covered")
+
+    def test_cr01_t03_empty_list_and_object_real_snapshot(self):
+        for value in ("[]", "{}"):
+            with self.subTest(raw=value):
+                result, evidence, fact, _ = self._real_source_field_gate(
+                    "future_parameter: " + value + "\n", "future_parameter")
+                self.assertEqual(fact.raw_value_json, value)
+                self.assertEqual(evidence[0].raw_value_json, value)
+                self.assertEqual(result.findings[0].status, "ambiguous")
+                self.assertEqual(result.findings[0].reason_code,
+                                 "non_substantive_field_value")
+
+    def test_cr01_t04_zero_real_snapshot_is_substantive(self):
+        result, evidence, fact, _ = self._real_source_field_gate(
+            "future_parameter: 0\n", "future_parameter")
+        self.assertEqual(fact.raw_value_json, "0")
+        self.assertEqual(evidence[0].raw_value_json, "0")
+        self.assertEqual(result.findings[0].status, "covered_structured")
+        self.assertEqual(result.gate_status, "provisionally_covered")
+
+    def test_cr01_t05_false_real_snapshot_is_substantive(self):
+        result, evidence, fact, _ = self._real_source_field_gate(
+            "future_parameter: false\n", "future_parameter")
+        self.assertEqual(fact.raw_value_json, "false")
+        self.assertEqual(evidence[0].raw_value_json, "false")
+        self.assertEqual(result.findings[0].status, "covered_structured")
+        self.assertEqual(result.gate_status, "provisionally_covered")
+
+    def test_cr01_t06_nonempty_structured_raw_preserved(self):
+        for yaml_value, raw in (
+            ("[10, 20]", "[10,20]"),
+            ("{max: 5, min: -1}", '{"max":5,"min":-1}'),
+        ):
+            with self.subTest(raw=raw):
+                result, evidence, fact, _ = self._real_source_field_gate(
+                    "future_parameter: " + yaml_value + "\n", "future_parameter")
+                self.assertEqual(fact.raw_value_json, raw)
+                self.assertEqual(evidence[0].raw_value_json, raw)
+                self.assertEqual(result.findings[0].status, "covered_structured")
+
+    def test_cr01_t07_mixed_nonempty_and_empty_helper(self):
+        from saturn_ai.grounding.saturn_sufficiency_gate import _comparison_status
+        first = self._sample_field()
+        for value in ("null", '""', "[]", "{}", '"   "'):
+            with self.subTest(value=value):
+                status, reason = _comparison_status((
+                    replace(first, raw_value_json='"RS-485"'),
+                    replace(first, evidence_id="other", raw_value_json=value),
+                ))
+                self.assertEqual((status, reason),
+                                 ("ambiguous", "non_substantive_field_value"))
+        self.assertEqual(_comparison_status((
+            replace(first, raw_value_json="0"),
+            replace(first, evidence_id="other", raw_value_json="0"),
+        ))[0], "covered_structured")
+
+    def test_cr02_t01_quoted_unicode_from_stage4a(self):
+        fields = 'specs:\n  "Класс точности": "0,5"\n'
+        snap = build_saturn_knowledge_snapshot(*make_inputs({
+            PRODUCT: source("Instrument", fields=fields),
+        }))
+        actual = next(f.field_path for f in snap.facts
+                      if f.field_path.startswith('specs['))
+        self.assertEqual(actual, 'specs["Класс точности"]')
+        result, evidence, _, _ = self._real_source_field_gate(fields, actual)
+        self.assertEqual(result.findings[0].status, "covered_structured")
+        self.assertEqual(result.gate_status, "provisionally_covered")
+        self.assertEqual(evidence[0].raw_value_json, '"0,5"')
+
+    def test_cr02_t02_nested_numeric_array_indexes(self):
+        result, evidence, fact, _ = self._real_source_field_gate(
+            "matrix:\n  - [11, 12]\n", "matrix[0][1]")
+        self.assertEqual(fact.field_path, "matrix[0][1]")
+        self.assertEqual(evidence[0].raw_value_json, "12")
+        self.assertEqual(result.findings[0].status, "covered_structured")
+
+    def test_cr02_t03_quoted_comma_is_one_need(self):
+        fields = 'parameters:\n  "Modbus, RTU": "active"\n'
+        result, _, fact, _ = self._real_source_field_gate(
+            fields, 'parameters["Modbus, RTU"]')
+        self.assertEqual(fact.field_path, 'parameters["Modbus, RTU"]')
+        self.assertEqual(len(result.needs), 1)
+        self.assertEqual(result.gate_status, "provisionally_covered")
+
+    def test_cr02_t04_mixed_quoted_comma_and_plain_field(self):
+        fields = ('parameters:\n  "Modbus, RTU": "active"\n'
+                  'interface: RS-485\n')
+        snap = build_saturn_knowledge_snapshot(*make_inputs({
+            PRODUCT: source("Instrument", fields=fields),
+        }))
+        question = 'Instrument: parameters["Modbus, RTU"], interface?'
+        parsed = parse_saturn_question_needs(question, snap)
+        self.assertEqual([n.field_path for n in parsed],
+                         ['parameters["Modbus, RTU"]', "interface"])
+        self.assertTrue(all(n.original_text == question[slice(*n.question_span)]
+                            for n in parsed))
+        service = SaturnRetrievalService()
+        service.publish(build_saturn_retrieval_bundle(snap))
+        with service.open_answer_session() as session:
+            context = session.build_context(question, top_k=10)
+            result = SaturnQuestionGate().assess(session=session, context=context)
+        self.assertEqual(len(result.needs), 2)
+        self.assertEqual([x.status for x in result.findings],
+                         ["covered_structured", "covered_structured"])
+        self.assertEqual(result.gate_status, "provisionally_covered")
+
+    def test_cr02_t05_quoted_and_or_i_not_separators(self):
+        fields = ('parameters:\n'
+                  '  "protocol and interface": "yes"\n'
+                  '  "канал и протокол": "yes"\n')
+        snap = build_saturn_knowledge_snapshot(*make_inputs({
+            PRODUCT: source("Instrument", fields=fields),
+        }))
+        for path in ('parameters["protocol and interface"]',
+                     'parameters["канал и протокол"]'):
+            with self.subTest(field=path):
+                q = "Instrument: " + path + "?"
+                needs = parse_saturn_question_needs(q, snap)
+                self.assertEqual(len(needs), 1)
+                self.assertEqual(needs[0].field_path, path)
+                self.assertEqual(needs[0].original_text, path)
+
+    def test_cr02_t06_json_escape_key_source_backed(self):
+        fields = "parameters:\n  'a\"b\\\\c': 'active'\n"
+        snap = build_saturn_knowledge_snapshot(*make_inputs({
+            PRODUCT: source("Instrument", fields=fields),
+        }))
+        path = next(f.field_path for f in snap.facts
+                    if f.field_path.startswith("parameters["))
+        self.assertIn(r'\"', path)
+        self.assertIn(r'\\', path)
+        result, evidence, _, _ = self._real_source_field_gate(fields, path)
+        self.assertEqual(result.findings[0].status, "covered_structured")
+        self.assertEqual(evidence[0].raw_value_json, '"active"')
+
+    def test_cr02_t07_invalid_quoted_brackets_are_unresolved(self):
+        snap = build_saturn_knowledge_snapshot(*make_inputs({
+            PRODUCT: source("Instrument", fields="interface: RS-485\n"),
+        }))
+        for text in ('parameters["Modbus, RTU"?',
+                     'matrix[0?',
+                     'specs["bad\\q"]?',
+                     'settings["not closed?'):
+            with self.subTest(text=text):
+                q = "Instrument: " + text
+                needs = parse_saturn_question_needs(q, snap)
+                self.assertEqual(len(needs), 1)
+                self.assertEqual(needs[0].kind, "unresolved")
+                self.assertEqual(needs[0].original_text, q)
+        suffix = parse_saturn_question_needs(
+            "Instrument: interface??", snap)
+        self.assertEqual([n.kind for n in suffix],
+                         ["field_value", "unresolved"])
+
+    def test_cr02_t08_unsupported_remainder_preserved(self):
+        fields = 'specs:\n  "Класс точности": "0,5"\n'
+        snap = build_saturn_knowledge_snapshot(*make_inputs({
+            PRODUCT: source("Instrument", fields=fields),
+        }))
+        q = 'Instrument: specs["Класс точности"]? И подходит ли для Ethernet?'
+        needs = parse_saturn_question_needs(q, snap)
+        self.assertEqual(len(needs), 2)
+        self.assertEqual(needs[0].field_path, 'specs["Класс точности"]')
+        self.assertEqual(needs[1].kind, "unresolved")
+        self.assertEqual(needs[1].original_text, q[slice(*needs[1].question_span)])
+        self.assertIn("Ethernet", needs[1].original_text)
+
+    def test_cr02_t09_need_limit_with_complex_paths(self):
+        fields = ('parameters:\n'
+                  + "".join('  "ключ, ' + str(i) + '": "v' + str(i) + '"\n'
+                            for i in range(MAX_QUESTION_NEEDS + 1)))
+        snap = build_saturn_knowledge_snapshot(*make_inputs({
+            PRODUCT: source("Instrument", fields=fields),
+        }))
+        paths = ['parameters["ключ, ' + str(i) + '"]'
+                 for i in range(MAX_QUESTION_NEEDS + 1)]
+        q = "Instrument: " + ", ".join(paths) + "?"
+        with self.assertRaises(SaturnContextError) as err:
+            parse_saturn_question_needs(q, snap)
+        self.assertEqual(err.exception.reason_code, "resource_budget_exceeded")
+
+    def test_cr02_t10_existing_grammar_regression(self):
+        for text, expected in (
+            ("interface?", ["interface"]),
+            ("interface, protocol?", ["interface", "protocol"]),
+            ("interface and protocol?", ["interface", "protocol"]),
+            ("interface и protocol?", ["interface", "protocol"]),
+            ("and?", ["and"]),
+            ("interface and and?", ["interface", "and"]),
+            ("future_name?", ["future_name"]),
+        ):
+            with self.subTest(input=text):
+                q = "БКД-ПК-РФ.2: " + text
+                parsed = parse_saturn_question_needs(q, self.snapshot)
+                self.assertEqual([n.field_path for n in parsed], expected)
+                self.assertTrue(all(n.original_text == q[slice(*n.question_span)]
+                                    for n in parsed))
+        self.assertEqual(parse_saturn_question_needs(
+            "catalog-a: interface?", self.snapshot)[0].entity_id,
+            self.entity.entity_id)
+        rel = self.snapshot.relations[0]
+        owners = {e.entity_id: e.title for e in self.snapshot.entities}
+        query = "relation(" + owners[rel.subject_entity_id] + ", " + \
+                rel.predicate + ", " + owners[rel.object_entity_id] + ")?"
+        self.assertEqual(parse_saturn_question_needs(
+            query, self.snapshot)[0].kind, "relation")
+        self.assertEqual(parse_saturn_question_needs(
+            "Документ: A guide", self.snapshot)[0].kind, "document_lookup")
+
+    def test_cr02_extra_quoted_question_mark_and_dot(self):
+        fields = ('parameters:\n'
+                  '  "mode?. serial, and и": "active"\n')
+        snap = build_saturn_knowledge_snapshot(*make_inputs({
+            PRODUCT: source("Instrument", fields=fields),
+        }))
+        path = 'parameters["mode?. serial, and и"]'
+        q = "Instrument: " + path + "?"
+        needs = parse_saturn_question_needs(q, snap)
+        self.assertEqual(len(needs), 1)
+        self.assertEqual(needs[0].field_path, path)
+        self.assertEqual(needs[0].original_text, path)
+
+    def test_cr02_extra_source_declared_root_with_comma(self):
+        result, evidence, fact, _ = self._real_source_field_gate(
+            "'non standard, root': 42\n", "non standard, root")
+        self.assertEqual(fact.field_path, "non standard, root")
+        self.assertEqual(result.findings[0].status, "covered_structured")

@@ -57,3 +57,15 @@ Test file: `backend/tests/unit/test_saturn_question_needs.py` (T-01–T-29 posit
 Scope changes: `grounding/saturn_question_needs.py`, `grounding/saturn_sufficiency_gate.py`, a minimal Stage 5A locked integration hook, the new test file and documentation. Unchanged: retrieval, canonical knowledge contracts, adapters, ADR, provider config, frozen datasets, UI/API, site source and deployment.
 
 `UkWood/Saturn-Main-Site` was not accessed for writing. No merge and no Stage 5C.
+
+## PR #28 — Consolidated Acceptance Review Corrections (CR-01 / CR-02)
+
+**Reviewed baseline:** 79a6a3b27a4be73bac509758a143e8d119d223cf. Status: CHANGES REQUESTED; one BLOCKER + one IMPORTANT. Final correction head and exact-head CI are tracked in PR #28; this report must not pre-claim a PASS.
+
+**CR-01:** Before positive field coverage, inspect exact canonical raw_value_json of every matched evidence. null, empty strings (including whitespace-only), [], {} produce ambiguous / non_substantive_field_value and retain all evidence IDs. Mixed substantive and empty values fail closed. 0, false, negative numbers, nonempty strings/arrays/objects remain substantive. No raw-value transformation or unit conversion.
+
+**CR-02:** A small bounded scanner now recognizes Stage 4A canonical paths: dotted components, repeated [index], bracketed canonical JSON-quoted keys and original punctuation. Commas/and/и/? inside quoted JSON key are literal field bytes, not delimiters. Source-declared unusual root keys may be used by exact match against pinned snapshot facts only. Unknown ordinary fields remain diagnosable; malformed/ambiguous expressions fail closed into unresolved. Original spans and maximum six requirements remain intact.
+
+**Regression tests:** CR01-T01–T07 plus CR02-T01–T10 and extra negative cases in test_saturn_question_needs.py. Real Stage 4A source fixtures traverse Stage 4B publish, Stage 5A issued context and Stage 5B public assess; synthetic mixtures only test pure helpers. Full offline and exact-head push/PR CI mandatory before repeated Acceptance Review.
+
+**Scope:** only Stage 5B parser/gate/tests and current documentation. No edits to Stage 4A adapter, 4B retrieval, Stage 5A lifecycle, policy, ADR, provider, frozen evaluations or Saturn-Main-Site. No merge; no Stage 5C.

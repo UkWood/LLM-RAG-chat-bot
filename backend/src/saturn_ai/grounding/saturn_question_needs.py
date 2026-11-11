@@ -8,25 +8,23 @@ from hashlib import sha256
 import json
 import re
 
-from ..ingestion.saturn_contracts import stable_id
+from ..ingestion.saturn_contracts import canonical_json, stable_id
 from .saturn_contracts import SaturnContextError
 
 MAX_QUESTION_NEEDS = 6
 
-# Field paths are exact canonical paths (including generic additive fields).
-# No field-name dictionary and no synonym or engineering unit inference.
-_COMPONENT = r"[\w-]+(?:\[\d+\])?"
-_FIELD = _COMPONENT + r"(?:\." + _COMPONENT + r")*"
-_SEPARATOR = r"(?:,|\band\b|\bи\b)"
-_LIST_RX = re.compile(r"^" + _FIELD + r"(?:[ \t]*" + _SEPARATOR +
-                      r"[ \t]*" + _FIELD + r")*$", re.IGNORECASE)
-_TOKEN_RX = re.compile(_FIELD, re.UNICODE)
-_SEPARATOR_RX = re.compile(r"[ \t]*" + _SEPARATOR + r"[ \t]*", re.IGNORECASE)
-_FIELD_QUERY = re.compile(
-    r"^\s*(?P<entity>[^:\r\n?]{1,160}?)\s*:\s*"
-    r"(?P<fields>[^?\r\n]{1,240}?)\s*\?",
-    re.UNICODE,
+# Stage 4A emits dotted ASCII components, repeated numeric index brackets,
+# and bracketed canonical JSON strings for every non-simple nested key.
+# Root keys are source-defined, so exact paths may additionally contain
+# punctuation; they can be recognized against this pinned snapshot only.
+_ROOT_TOKEN = re.compile(r"[\w-]+", re.UNICODE)
+_DOT_COMPONENT = re.compile(r"[A-Za-z_][A-Za-z0-9_-]*")
+_ARRAY_INDEX = re.compile(r"(?:0|[1-9][0-9]*)")
+_FIELD_HEAD = re.compile(
+    r"^\s*(?P<entity>[^:\r\n?]{1,160}?)\s*:\s*", re.UNICODE,
 )
+_JSON_DECODER = json.JSONDecoder()
+
 _RELATION_QUERY = re.compile(
     r"^\s*relation\(\s*(?P<subject>[^,()?]{1,160}?)\s*,\s*"
     r"(?P<predicate>[^,()?]{1,100}?)\s*,\s*"
@@ -104,6 +102,118 @@ def _unresolved(question, start=0, end=None):
                  "unresolved", resolution_status="unresolved")
 
 
+def _canonical_field_end(text, start):
+    """Read the exact Stage 4A child-path syntax, not comma-separated prose."""
+    root = _ROOT_TOKEN.match(text, start)
+    if root is None:
+        return None
+    cursor = root.end()
+    while cursor < len(text):
+        if text[cursor] == ".":
+            child = _DOT_COMPONENT.match(text, cursor + 1)
+            if child is None:
+                return None
+            cursor = child.end()
+        elif text[cursor] == "[":
+            part = cursor + 1
+            if part >= len(text):
+                return None
+            if text[part] == '"':
+                try:
+                    key, end = _JSON_DECODER.raw_decode(text, part)
+                except (ValueError, TypeError):
+                    return None
+                # Stage 4A uses canonical_json(key), not arbitrary JSON
+                # spelling or decoding/re-encoding with lost source identity.
+                if (not isinstance(key, str) or
+                        text[part:end] != canonical_json(key) or
+                        end >= len(text) or text[end] != "]"):
+                    return None
+                cursor = end + 1
+            else:
+                index = _ARRAY_INDEX.match(text, part)
+                if (index is None or index.end() >= len(text) or
+                        text[index.end()] != "]"):
+                    return None
+                cursor = index.end() + 1
+        else:
+            break
+    return cursor
+
+
+def _field_boundary(text, pos):
+    return pos == len(text) or text[pos] in " \t,?"
+
+
+def _field_end(text, start, declared):
+    """Prefer an exact source-backed field when Stage 4A root keys are unusual.
+
+    The ordinary scanner is still needed for absent/unknown fields, which
+    remain independently diagnosable as missing_in_context.
+    """
+    scanned = _canonical_field_end(text, start)
+    declared_ends = [
+        start + len(path) for path in declared
+        if text.startswith(path, start) and
+        _field_boundary(text, start + len(path))
+    ]
+    if declared_ends:
+        best = max(declared_ends)
+        if scanned is None or best > scanned:
+            return best
+    return scanned
+
+
+def _fields_for_entity(snapshot, entity_id):
+    return frozenset(f.field_path for f in snapshot.facts
+                     if f.entity_id == entity_id)
+
+
+def _parse_field_list(question, start, entity_id, status, declared):
+    """Bounded lexical scanner, respecting comma/and/и only outside JSON."""
+    cursor = start
+    needs = []
+    while True:
+        end = _field_end(question, cursor, declared)
+        if end is None or end <= cursor:
+            return (_unresolved(question),)
+        needs.append(_need(question, cursor, end, "field_value",
+                           entity_id=entity_id, field_path=question[cursor:end],
+                           resolution_status=status))
+        if len(needs) > MAX_QUESTION_NEEDS:
+            raise SaturnContextError("resource_budget_exceeded")
+        following = end
+        while following < len(question) and question[following] in " \t":
+            following += 1
+        if following < len(question) and question[following] == "?":
+            # The suffix is not assumed to be an optional extra question:
+            # it is a separate unresolved need, with its literal span.
+            remainder = question[following + 1:]
+            if remainder.strip():
+                needs.append(_unresolved(question, following + 1))
+                if len(needs) > MAX_QUESTION_NEEDS:
+                    raise SaturnContextError("resource_budget_exceeded")
+            return tuple(needs)
+        if following < len(question) and question[following] == ",":
+            cursor = following + 1
+            while cursor < len(question) and question[cursor] in " \t":
+                cursor += 1
+            continue
+        if following > end:
+            for word in ("and", "и"):
+                limit = following + len(word)
+                if (question[following:limit].casefold() == word and
+                        limit < len(question) and question[limit] in " \t"):
+                    cursor = limit
+                    while cursor < len(question) and question[cursor] in " \t":
+                        cursor += 1
+                    break
+            else:
+                return (_unresolved(question),)
+            continue
+        return (_unresolved(question),)
+
+
 def parse_saturn_question_needs(question, snapshot):
     """Pure parser: deterministic, original UTF-8 spans, max 6 needs.
 
@@ -140,40 +250,13 @@ def parse_saturn_question_needs(question, snapshot):
                       entity_id=entity_id, resolution_status=status,
                       document_title=title),)
 
-    match = _FIELD_QUERY.match(question)
+    match = _FIELD_HEAD.match(question)
     if match:
-        raw_fields = match.group("fields")
-        fields_text = raw_fields.strip()
-        if _LIST_RX.fullmatch(fields_text):
-            eid, status = _resolve(match.group("entity"), index)
-            result = []
-            cursor = 0
-            # Consume field / separator / field sequentially. Using re.split
-            # would incorrectly split a literal source field named "and".
-            origin = match.start("fields") + len(raw_fields) - len(raw_fields.lstrip())
-            while cursor < len(fields_text):
-                token = _TOKEN_RX.match(fields_text, cursor)
-                if token is None:
-                    return (_unresolved(question),)
-                field = token.group()
-                result.append(_need(question, origin + token.start(),
-                                    origin + token.end(), "field_value",
-                                    entity_id=eid, field_path=field,
-                                    resolution_status=status))
-                if len(result) > MAX_QUESTION_NEEDS:
-                    raise SaturnContextError("resource_budget_exceeded")
-                cursor = token.end()
-                if cursor < len(fields_text):
-                    separator = _SEPARATOR_RX.match(fields_text, cursor)
-                    if separator is None or separator.end() == cursor:
-                        return (_unresolved(question),)
-                    cursor = separator.end()
-            # A recognized prefix is not permission to discard the suffix.
-            if match.end() < len(question) and question[match.end():].strip():
-                result.append(_unresolved(question, match.end(), len(question)))
-            if len(result) > MAX_QUESTION_NEEDS:
-                raise SaturnContextError("resource_budget_exceeded")
-            return tuple(result)
+        entity_id, status = _resolve(match.group("entity"), index)
+        return _parse_field_list(
+            question, match.end(), entity_id, status,
+            _fields_for_entity(snapshot, entity_id) if entity_id else (),
+        )
 
     # Failure of the strict grammar includes all words, qualifiers, negations,
     # numeric expressions and unsupported question clauses in one safe need.

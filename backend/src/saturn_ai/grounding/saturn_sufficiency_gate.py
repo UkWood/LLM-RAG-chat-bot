@@ -78,6 +78,18 @@ def _comparison_status(evidence):
     # does not silently become an unconditional engineering answer.
     if any(e.qualifiers_json not in (None, "{}") for e in evidence):
         return "ambiguous", "unqualified_question"
+    # Every selected field must carry a substantive source value. A real
+    # structured field may have null/empty raw JSON while still being indexed;
+    # its existence alone is not evidence of the requested capability.
+    try:
+        decoded_all = tuple(json.loads(e.raw_value_json) for e in evidence)
+    except (ValueError, TypeError):
+        return "ambiguous", "invalid_raw_field_value"
+    if any(value is None or
+           (isinstance(value, (str, list, dict)) and not value) or
+           (isinstance(value, str) and not value.strip())
+           for value in decoded_all):
+        return "ambiguous", "non_substantive_field_value"
     values = {e.raw_value_json for e in evidence}
     if len(values) == 1:
         normalized = {e.normalized_value_json for e in evidence}

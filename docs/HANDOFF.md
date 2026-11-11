@@ -1,3 +1,11 @@
+## PR #28 — CR-01 / CR-02 Consolidated Corrections (2026-11-11)
+
+- Existing PR #28, branch feat/saturn-question-needs-gate-v0.1, reviewed head 79a6a3b27a4be73bac509758a143e8d119d223cf; main baseline 0f0286cf55b72c4793d66f5d648f5b37ab8356f4. Session A requested CR-01 BLOCKER and CR-02 IMPORTANT; these corrections remain in the same PR. NO MERGE / NO Stage 5C.
+- CR-01: non-substantive null/empty strings/lists/objects no longer count as covered_structured; existing evidence IDs retained. Numeric 0, false and nonempty structures keep their source semantics.
+- CR-02: source-compatible canonical field paths, bracketed JSON keys and repeated indexes, safe literal punctuation, no separator split in quoted key, bounded needs and conservative unresolved fallback.
+- CR01-T01–T07 and CR02-T01–T10 tests plus adversarial regressions; actual full offline and exact-head push/PR CI results must be confirmed in [PR #28](https://github.com/UkWood/LLM-RAG-chat-bot/pull/28). Historical green checks are not correction acceptance.
+- Saturn-Main-Site read-only, Stage 5A lifecycle/retrieval/ADR/provider unchanged. [Stage report](stages/2026-11-11-saturn-question-needs-gate.md).
+
 ## Stage 5B — Question Needs, Sufficiency & Conflict Gate v0.1 (2026-11-11)
 
 - **Live baseline:** `main=0f0286cf55b72c4793d66f5d648f5b37ab8356f4`; Stage 5A PR #27 MERGED. Older sections about #27 OPEN/NO 5B below are historical checkpoints.
