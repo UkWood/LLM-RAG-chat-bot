@@ -55,12 +55,15 @@ def freeze_manifest(*, experiment_id, code_revision, dataset_sha256, snapshot,
     if (type(mode) is not str or mode != "lexical" or
             type(top_k) is not int or top_k != 10):
         _refuse("invalid_blind_config")
+    from ..retrieval.saturn_channel import build_saturn_retrieval_bundle
+    bundle_id = build_saturn_retrieval_bundle(snapshot).manifest.bundle_id
     return {
         "schema_version": 1,
         "experiment_id": experiment_id,
         "code_revision": code_revision,
         "snapshot_id": snapshot.snapshot_id,
         "corpus_hash": snapshot.manifest.corpus_hash,
+        "bundle_id": bundle_id,
         "dataset_sha256": dataset_sha256,
         "scorer_revision": EVALUATOR_REVISION,
         "rubric_revision": RUBRIC_REVISION,
@@ -167,10 +170,18 @@ def _validate_result_case(row, gold):
             type(out.evidence_conflict) is not bool or
             out.policy_restriction != ("policy_restriction" in out.failure_codes) or
             out.evidence_conflict != ("evidence_conflict" in out.failure_codes) or
-            out.fully_correct and (not out.status_correct or
+            out.fully_correct and (not out.status_correct or out.failure_codes or
                  out.missing_requirement_count or out.unsupported_claim_count or
                  out.off_question_claim_count or out.extra_answer_text_count or
-                 out.actual_status == "error")):
+                 out.actual_status == "error" or out.citation_valid is False) or
+            type(out.answer_assertion_count) is not int or
+            not 0 <= out.off_question_claim_count <= out.answer_assertion_count or
+            out.answer_assertion_count < out.technical_assertion_count or
+            out.evidence_recall_denominator != len({x.evidence_id for x in gold.required if x.evidence_id}) or
+            type(out.evidence_recall_numerator) is not int or
+            not 0 <= out.evidence_recall_numerator <= out.evidence_recall_denominator or
+            (out.source_hit_at_5 is not None) != any(x.evidence_id for x in gold.required) or
+            (out.document_hit_at_5 is not None) != any(x.kind == "document" for x in gold.required)):
         _refuse("inconsistent_report_case")
     return out
 
@@ -178,7 +189,13 @@ def _validate_result_case(row, gold):
 def _validate_report(report, freeze, dataset):
     from .saturn_answer_reporting import breakdown, calculate_metrics
     from .saturn_answer_scoring import SaturnEvaluationOutcome
-    if (type(report) is not dict or
+    expected_keys = {
+        "report_kind", "schema_version", "experiment_id", "profile",
+        "runtime", "snapshot", "dataset", "configuration", "metrics",
+        "breakdown", "cases", "failed_case_ids", "quality_target_met",
+        "independent_blind_evaluation", "production_readiness",
+    }
+    if (type(report) is not dict or set(report) != expected_keys or
             report.get("report_kind") != "saturn_grounding_evaluation" or
             type(report.get("schema_version")) is not int or
             report["schema_version"] != 1 or
@@ -193,6 +210,12 @@ def _validate_report(report, freeze, dataset):
         report.get("configuration"))
     if (type(runtime) is not dict or type(snap) is not dict or
             type(declared_data) is not dict or type(config) is not dict or
+            set(runtime) != {"provider", "mode", "top_k", "code_revision",
+                             "scorer_revision", "rubric_revision"} or
+            set(snap) != {"snapshot_id", "corpus_hash", "bundle_id"} or
+            set(declared_data) != {"id", "sha256", "schema_version",
+                                   "case_count", "author", "reviewer"} or
+            set(config) != {"hash"} or
             runtime.get("code_revision") != freeze["code_revision"] or
             runtime.get("provider") != freeze["provider"] or
             runtime.get("mode") != freeze["mode"] or
@@ -202,7 +225,7 @@ def _validate_report(report, freeze, dataset):
             config.get("hash") != freeze["config_hash"] or
             snap.get("snapshot_id") != freeze["snapshot_id"] or
             snap.get("corpus_hash") != freeze["corpus_hash"] or
-            not _exact_sha(snap.get("bundle_id"), 64) or
+            snap.get("bundle_id") != freeze["bundle_id"] or
             declared_data.get("sha256") != freeze["dataset_sha256"] or
             declared_data.get("id") != dataset.dataset_id or
             declared_data.get("schema_version") != dataset.schema_version or
@@ -295,6 +318,18 @@ class BlindRun:
                 dataset.snapshot_id != self.freeze["snapshot_id"] or
                 dataset.corpus_hash != self.freeze["corpus_hash"]):
             _refuse("dataset_provenance_mismatch")
+        # START is durable identity evidence, not merely a Boolean flag.
+        start = _parse_report(self.start_path.read_bytes())
+        if (type(start) is not dict or set(start) != {
+                "status", "experiment_id", "freeze_hash", "dataset_sha256",
+                "code_revision", "snapshot_id"} or
+                start.get("status") != "START" or
+                start.get("experiment_id") != self.freeze["experiment_id"] or
+                start.get("freeze_hash") != canonical_digest(self.freeze) or
+                start.get("dataset_sha256") != dataset.sha256 or
+                start.get("code_revision") != self.freeze["code_revision"] or
+                start.get("snapshot_id") != self.freeze["snapshot_id"]):
+            _refuse("start_receipt_integrity_mismatch")
         report = _parse_report(report_bytes)
         _validate_report(report, self.freeze, dataset)
         # Preserve original exclusive-create and durable receipt guarantees.
