@@ -301,22 +301,29 @@ class BlindRun:
             _refuse("experiment_already_used")
         self.started = True
 
-    def complete(self, report_bytes, *, dataset=None):
-        """Re-verify the entire report *at completion*, not only at CLI.
+    def complete(self, report_bytes, *, dataset_bytes=None, snapshot=None):
+        """Revalidate raw independent gold and report AFTER durable START.
 
-        Dataset is independently gold-validated AFTER the one-shot START;
-        freeze binds its exact bytes and case IDs.
+        Completion never trusts a caller-constructed GoldDataset instance or
+        only an earlier CLI validation. Snapshot structural identity and
+        source-backed requirements are checked again inside this boundary.
         """
         if not self.started or not self.start_path.is_file():
             _refuse("missing_start")
         if (self.report_path.exists() or self.complete_path.exists() or
                 self.failed_path.exists()):
             _refuse("report_already_exists")
-        if dataset is None or dataset.sha256 != self.freeze["dataset_sha256"]:
+        if (type(dataset_bytes) is not bytes or snapshot is None or
+                sha256(dataset_bytes).hexdigest() != self.freeze["dataset_sha256"] or
+                snapshot.snapshot_id != self.freeze["snapshot_id"] or
+                snapshot.manifest.corpus_hash != self.freeze["corpus_hash"]):
             _refuse("dataset_binding_missing")
-        if (dataset.split != "synthetic_blind" or
-                dataset.snapshot_id != self.freeze["snapshot_id"] or
-                dataset.corpus_hash != self.freeze["corpus_hash"]):
+        from .saturn_answer_dataset import validate_gold, GoldValidationError
+        try:
+            dataset = validate_gold(dataset_bytes, snapshot, split="synthetic_blind")
+        except (GoldValidationError, ValueError, TypeError):
+            _refuse("dataset_provenance_mismatch")
+        if dataset.sha256 != self.freeze["dataset_sha256"]:
             _refuse("dataset_provenance_mismatch")
         # START is durable identity evidence, not merely a Boolean flag.
         start = _parse_report(self.start_path.read_bytes())
