@@ -11,6 +11,7 @@ from hashlib import sha256
 import http.client
 import json
 import re
+from time import perf_counter
 from urllib.parse import urlsplit
 
 from ..ingestion.saturn_contracts import canonical_json
@@ -146,6 +147,9 @@ class SaturnLocalClaimProvider:
         if type(config) is not SaturnLocalModelConfig:
             raise TypeError("SaturnLocalModelConfig required")
         self.config = config
+        self.successful_requests = 0
+        self.latencies_ms = []
+        self.last_usage = None
 
     def generate(self, request: SaturnGenerationRequest) -> tuple[SaturnClaimDraft, ...]:
         if type(request) is not SaturnGenerationRequest:
@@ -188,6 +192,7 @@ class SaturnLocalClaimProvider:
         raw = canonical_json(body).encode("utf-8")
         if len(raw) > _MAX_REQUEST_BYTES:
             raise LocalModelError("request_size")
+        started = perf_counter()
         reply = _decode_json(_post_loopback(self.config, raw))
         if (type(reply) is not dict or reply.get("model") != self.config.model_id
                 or type(reply.get("choices")) is not list
@@ -219,4 +224,13 @@ class SaturnLocalClaimProvider:
                     or len(item["asserted_payload"]) > MAX_CLAIM_PAYLOAD_CHARS):
                 raise LocalModelError("draft_schema")
             output.append(SaturnClaimDraft(**item))
+        usage = reply.get("usage")
+        if type(usage) is dict:
+            self.last_usage = {
+                key: value for key, value in usage.items()
+                if key in ("prompt_tokens", "completion_tokens", "total_tokens")
+                and type(value) is int and value >= 0
+            }
+        self.successful_requests += 1
+        self.latencies_ms.append(round((perf_counter() - started) * 1000, 3))
         return tuple(output)
