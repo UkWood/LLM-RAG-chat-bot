@@ -387,6 +387,19 @@ class SaturnAnswerSession:
             )
             return context
 
+    def _evaluate_pinned(self, context: SaturnEvidenceContext, evaluator):
+        """Stage 5B-only read of the issued snapshot under session ownership.
+
+        Evaluator is local deterministic code, never an external provider.
+        Both policy checks and the read run under the session lock; concurrent
+        close cannot release the dense lease during evaluation.
+        """
+        with self._lock:
+            self.recheck_policy(context)
+            value = evaluator(self._bundle.snapshot)
+            revision = self.recheck_policy(context)
+            return value, revision
+
     def recheck_policy(self, context: SaturnEvidenceContext):
         with self._lock:
             self._assert_open()
