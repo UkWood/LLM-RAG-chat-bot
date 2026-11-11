@@ -1,3 +1,11 @@
+## CURRENT — Stage 5E Saturn Grounding Evaluation v0.1 (11 November 2026)
+
+**Status:** coding candidate / independent Acceptance Review required, **NOT MERGED**. Verified `main=8dc9d2fbd20854bd54903ff617581ed4ecad6e31` after Stage 5D PR #30. Branch `feat/saturn-grounding-evaluation-v0.1` adds Saturn-specific gold validation, independent scoring, stage attribution, offline runner, deterministic safe reports and frozen one-shot blind protocol. Existing production answer stages, historical datasets/reports and Saturn-Main-Site remain untouched.
+
+**Measured calibration baseline:** 28 authored open synthetic Saturn cases; 17/17 complete positives, 5/5 correct needs_support, 3/3 clarification, 3/3 partial, 24/24 valid citations, 0 unsupported technical claims, 0 false refusals. Fixture snapshot `23363c78bdec37ffeb74fd5cc985e0bb781764049e4178f070f452651967d0cf`; dataset SHA-256 `eff320bc664fdb23dc7ee69ddb479c796a5c5aeee341a043f3d782119ab733e8`. First observed CI run [#43082293017](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/43082293017), evaluation code commit `4fde232947e6989a242fd3308e0c7cf4eedb29d1`. Actual report committed under `evaluation/reports/saturn-grounding-calibration-v0.1.json`.
+
+**Not completed:** new independent blind = `NOT_RUN`, real sample evaluation = `NOT_RUN`, product acceptance / production readiness = `false`; full exact-head push+PR CI and independent Session A review pending. No Stage 6. See [Stage 5E report](stages/2026-11-11-saturn-grounding-evaluation.md).
+
 ## Stage 5D PR #30 — Consolidated CR-01 / CR-02 Corrections (2026-11-11)
 
 - Session A's independent review of head `6b00e4b08a55098a73d8f1e6ded6c3108c5da811`: **1 BLOCKER + 1 IMPORTANT**. Both corrected together in existing PR #30 and branch `feat/saturn-answer-assembly-v0.1`.
