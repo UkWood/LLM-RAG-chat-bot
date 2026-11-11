@@ -382,3 +382,30 @@ class SaturnQuestionNeedsTests(unittest.TestCase):
         self.assertEqual([n.field_path for n in parsed],
                          ["future_field.detail", "pressure"])
         self.assertTrue(all(n.entity_id == entity.entity_id for n in parsed))
+
+    def test_literal_and_field_path_is_not_a_separator(self):
+        single = parse_saturn_question_needs(
+            "БКД-ПК-РФ.2: and?", self.snapshot)
+        self.assertEqual(len(single), 1)
+        self.assertEqual(single[0].field_path, "and")
+        self.assertEqual(single[0].original_text, "and")
+        joined = parse_saturn_question_needs(
+            "БКД-ПК-РФ.2: interface and and?", self.snapshot)
+        self.assertEqual([n.field_path for n in joined], ["interface", "and"])
+        self.assertEqual([n.original_text for n in joined], ["interface", "and"])
+        self.assertEqual(joined[1].original_text,
+                         "БКД-ПК-РФ.2: interface and and?"[
+                             slice(*joined[1].question_span)])
+
+    def test_integer_literals_are_potentially_conflicting(self):
+        first = self._sample_field()
+        status, reason = _comparison_status((
+            replace(first, raw_value_json='"24"'),
+            replace(first, raw_value_json='"48"'),
+        ))
+        self.assertEqual((status, reason),
+                         ("potential_conflict", "different_integer_literals"))
+        self.assertEqual(_comparison_status((
+            replace(first, raw_value_json='"0,5"'),
+            replace(first, raw_value_json='"0.5"'),
+        ))[0], "ambiguous")

@@ -20,7 +20,8 @@ _FIELD = _COMPONENT + r"(?:\." + _COMPONENT + r")*"
 _SEPARATOR = r"(?:,|\band\b|\bи\b)"
 _LIST_RX = re.compile(r"^" + _FIELD + r"(?:[ \t]*" + _SEPARATOR +
                       r"[ \t]*" + _FIELD + r")*$", re.IGNORECASE)
-_SPLIT = re.compile(r"[ \t]*" + _SEPARATOR + r"[ \t]*", re.IGNORECASE)
+_TOKEN_RX = re.compile(_FIELD, re.UNICODE)
+_SEPARATOR_RX = re.compile(r"[ \t]*" + _SEPARATOR + r"[ \t]*", re.IGNORECASE)
 _FIELD_QUERY = re.compile(
     r"^\s*(?P<entity>[^:\r\n?]{1,160}?)\s*:\s*"
     r"(?P<fields>[^?\r\n]{1,240}?)\s*\?",
@@ -147,16 +148,26 @@ def parse_saturn_question_needs(question, snapshot):
             eid, status = _resolve(match.group("entity"), index)
             result = []
             cursor = 0
-            for field in _SPLIT.split(fields_text):
-                position = raw_fields.find(field, cursor)
-                if position < 0:
+            # Consume field / separator / field sequentially. Using re.split
+            # would incorrectly split a literal source field named "and".
+            origin = match.start("fields") + len(raw_fields) - len(raw_fields.lstrip())
+            while cursor < len(fields_text):
+                token = _TOKEN_RX.match(fields_text, cursor)
+                if token is None:
                     return (_unresolved(question),)
-                start = match.start("fields") + position
-                end = start + len(field)
-                result.append(_need(question, start, end, "field_value",
+                field = token.group()
+                result.append(_need(question, origin + token.start(),
+                                    origin + token.end(), "field_value",
                                     entity_id=eid, field_path=field,
                                     resolution_status=status))
-                cursor = position + len(field)
+                if len(result) > MAX_QUESTION_NEEDS:
+                    raise SaturnContextError("resource_budget_exceeded")
+                cursor = token.end()
+                if cursor < len(fields_text):
+                    separator = _SEPARATOR_RX.match(fields_text, cursor)
+                    if separator is None or separator.end() == cursor:
+                        return (_unresolved(question),)
+                    cursor = separator.end()
             # A recognized prefix is not permission to discard the suffix.
             if match.end() < len(question) and question[match.end():].strip():
                 result.append(_unresolved(question, match.end(), len(question)))

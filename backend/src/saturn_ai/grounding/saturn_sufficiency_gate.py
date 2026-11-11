@@ -96,6 +96,10 @@ def _comparison_status(evidence):
     if all(type(value) in (int, float) for value in decoded):
         return "potential_conflict", "different_numeric_values"
     if all(isinstance(value, str) for value in decoded):
+        # Pure unsigned integer literal disagreement is directly observable;
+        # no value conversion is needed to flag a *potential* conflict.
+        if all(re.fullmatch(r"[0-9]+", value) for value in decoded):
+            return "potential_conflict", "different_integer_literals"
         # Decimal notation, attached units, +/- or ranges have no approved
         # conversion/canonicalization in v0.1.
         if any(re.match(r"^[+\-\u2212]?\d", value) for value in decoded):
