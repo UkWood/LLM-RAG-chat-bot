@@ -26,6 +26,7 @@ class SaturnStageTrace:
     parsed_need_kinds: tuple[str, ...] = ()
     finding_statuses: tuple[str, ...] = ()
     verified_evidence_ids: tuple[str, ...] = ()
+    verified_need_ids: tuple[str, ...] = ()
     technical_failure: bool = False
     ranked_document_ids: tuple[str, ...] = ()
     snapshot_id: str | None = None
@@ -608,7 +609,15 @@ def score_answer(case: SaturnEvaluationCase, result: SaturnAnswerResult,
                 not resolved_needs or not expected_unresolved or
                 set(unresolved) != expected_unresolved):
             codes.add("unresolved_need_mismatch")
-        elif actual == "needs_support" and (
+        if actual == "partial":
+            # An unresolved need with an already verified structured claim,
+            # or an exact found document requiring no provider, is an assembly
+            # omission, not a genuinely unsupported partial requirement.
+            if any(uid in trace.verified_need_ids or
+                   (uid in need_map and need_map[uid][1].status == "document_found")
+                   for uid in unresolved) if trace is not None else False:
+                codes.add("unresolved_need_mismatch")
+        if actual == "needs_support" and (
                 resolved_needs or set(unresolved) != known_ids):
             codes.add("unresolved_need_mismatch")
         elif actual == "clarification" and (
