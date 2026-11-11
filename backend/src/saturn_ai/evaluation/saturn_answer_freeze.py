@@ -164,8 +164,8 @@ def _validate_result_case(row, gold):
             (out.valid_citation_count == out.citation_count
              if out.citation_count else None) or
             type(out.failure_codes) is not list or
-            len(set(out.failure_codes)) != len(out.failure_codes) or
             not all(type(x) is str and 0 < len(x) <= 128 for x in out.failure_codes) or
+            len(set(out.failure_codes)) != len(out.failure_codes) or
             type(out.policy_restriction) is not bool or
             type(out.evidence_conflict) is not bool or
             out.policy_restriction != ("policy_restriction" in out.failure_codes) or
@@ -177,7 +177,10 @@ def _validate_result_case(row, gold):
             type(out.answer_assertion_count) is not int or
             not 0 <= out.off_question_claim_count <= out.answer_assertion_count or
             out.answer_assertion_count < out.technical_assertion_count or
+            type(out.evidence_recall_denominator) is not int or
             out.evidence_recall_denominator != len({x.evidence_id for x in gold.required if x.evidence_id}) or
+            type(out.source_hit_at_5) not in (bool, type(None)) or
+            type(out.document_hit_at_5) not in (bool, type(None)) or
             type(out.evidence_recall_numerator) is not int or
             not 0 <= out.evidence_recall_numerator <= out.evidence_recall_denominator or
             (out.source_hit_at_5 is not None) != any(x.evidence_id for x in gold.required) or
@@ -242,7 +245,9 @@ def _validate_report(report, freeze, dataset):
             set(gold) != set(freeze["expected_case_ids"]) or
             len({x.get("case_id") for x in items if type(x) is dict}) != len(items)):
         _refuse("report_case_identity_mismatch")
-    if {x.get("case_id") for x in items if type(x) is dict} != set(gold):
+    if (any(type(x) is not dict or type(x.get("case_id")) is not str
+            for x in items) or
+            {x.get("case_id") for x in items} != set(gold)):
         _refuse("report_case_identity_mismatch")
     outcomes = tuple(_validate_result_case(item, gold[item["case_id"]])
                      for item in items)
