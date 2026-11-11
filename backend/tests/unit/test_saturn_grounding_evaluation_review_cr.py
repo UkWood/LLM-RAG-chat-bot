@@ -461,6 +461,25 @@ class BlindReportContractTests(unittest.TestCase):
                             dataset_bytes=b"test", snapshot=self.snapshot,
                             mode="lexical", top_k=10)
 
+    def test_cr02_t07b_unavailable_git_head_cannot_make_start_receipt(self):
+        from saturn_ai.evaluation.saturn_grounding import main
+        with TemporaryDirectory() as tmp:
+            folder = Path(tmp)
+            dataset_path = folder / "unused-public-calibration.json"
+            dataset_path.write_bytes(self.raw)
+            freeze_path = folder / "freeze.json"
+            freeze_path.write_text("{}", encoding="utf-8")
+            receipts = folder / "receipts"
+            with patch("saturn_ai.evaluation.saturn_grounding._code_revision",
+                       return_value="unavailable"):
+                with self.assertRaises(SystemExit) as raised:
+                    main(["--profile", "blind", "--dataset", str(dataset_path),
+                          "--report", str(folder / "report.json"),
+                          "--freeze", str(freeze_path),
+                          "--receipts-dir", str(receipts)])
+            self.assertNotEqual(raised.exception.code, 0)
+            self.assertFalse(receipts.exists())
+
     def test_cr02_t08_valid_first_run_writes_start_and_complete(self):
         self.attempt(valid=True)
 
