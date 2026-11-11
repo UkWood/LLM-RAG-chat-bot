@@ -119,3 +119,6 @@ Stage 5E now checks literal source-question field/entity/owner binding and indep
 
 The initial v0.1 calibration gold and first report, and separately measured v0.1.1 correction reports, are immutable. The corrected v0.1.2 calibration and controlled-fault outputs are separate files. Controlled results are synthetic policy/error/simulated-conflict injections; **no independently authored blind has run**. Read [Stage 5E corrections](../docs/stages/2026-11-11-saturn-grounding-evaluation.md).
 
+
+
+The **authoritative final 0.1.2** source-backed synthetic measurements are [28/28 corrected open calibration](reports/saturn-grounding-calibration-final-review-v0.1.2.json) and [3-case controlled policy/error/simulated-conflict run](reports/saturn-grounding-controlled-final-review-v0.1.2.json), both measured on `ab5b946d9f14edca89af66e644a2325ed57695b8`. The earlier `saturn-grounding-calibration-review-v0.1.2.json` is retained as a transparent 27/28 intermediate run: C27 was incorrectly rejected by the evaluator for a recognized field followed by an unresolved question suffix. The final measurement fixes that evaluation error, without changing production Stage 5B or original frozen artifacts. No hidden/independent blind was ever run. **147 targeted tests** now cover this boundary.
