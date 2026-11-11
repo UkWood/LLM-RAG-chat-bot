@@ -4,7 +4,7 @@ Uses a fresh Stage 5B assessment, only a Stage 5A issued context, and never
 exposes a snapshot manager or unrestricted corpus to the draft provider.
 """
 from .saturn_claim_contracts import (
-    MAX_CLAIM_PROPOSALS, MAX_GENERATION_EVIDENCE, MAX_GENERATION_NEEDS,
+    MAX_CLAIM_PAYLOAD_CHARS, MAX_CLAIM_PROPOSALS, MAX_GENERATION_EVIDENCE, MAX_GENERATION_NEEDS,
     MAX_GENERATION_TEXT_CHARS, SaturnClaimDraft, SaturnClaimVerificationResult,
     SaturnGenerationEvidence, SaturnGenerationNeed, SaturnGenerationRequest,
     SaturnRejectedClaim,
@@ -165,6 +165,15 @@ class SaturnClaimVerificationService:
                for x in drafts):
             return _result(context, session.recheck_policy(context), assessment,
                            state="failed", error="invalid_provider_output")
+        # Reject oversized untrusted strings before any canonical comparison.
+        # Need/evidence IDs are fixed-length hashes in the real contracts.
+        if any(len(x.need_id) > 128 or len(x.evidence_id) > 128 or
+               len(x.claim_kind) > 64 or
+               len(x.asserted_payload) > MAX_CLAIM_PAYLOAD_CHARS
+               for x in drafts):
+            return _result(context, session.recheck_policy(context), assessment,
+                           state="resource_budget_exceeded",
+                           error="claim_budget_exceeded")
         # External provider is NOT called within _evaluate_pinned. Acquire
         # session lock for post-provider verification and final assembly only.
         with session._lock:
