@@ -27,9 +27,12 @@ def sample_request():
         "b" * 64, "c" * 64, "d" * 64, "policy-test",
         (SaturnGenerationNeed("need", "field_value", "owner", "interfaces", None, None),),
         (SaturnGenerationEvidence(
-            "need", "evidence", "site_field", "revision", "owner",
-            "fact", "interfaces", '["RS-485"]', None, None,
-            None, None, None, None, None, None, "interfaces: RS-485",
+            need_id="need", evidence_id="evidence", evidence_type="site_field",
+            source_revision_id="revision", entity_id="owner", fact_id="fact",
+            field_path="interfaces", raw_value_json='["RS-485"]',
+            unit=None, qualifiers_json=None, relation_id=None,
+            subject_entity_id=None, predicate=None, object_entity_id=None,
+            source_field_path=None, source_text="interfaces: RS-485",
         ),),
     )
 
