@@ -753,5 +753,93 @@ class Stage5AAcceptanceCorrectionTests(unittest.TestCase):
                 expect_code(ex, "evidence_integrity_failure")
 
 
+    def test_t16_del_protected_fields_preserves_pinned_session_and_qdrant_lease(self):
+        """Ordinary del cannot corrupt a live pinned session or double-release."""
+        dense_bundle = build_saturn_retrieval_bundle(
+            self.snapshot, encoder=ControlledEncoder())
+        service = SaturnRetrievalService()
+        service.publish(dense_bundle)
+        self.assertEqual(dense_bundle.dense._lifetime._refs, 1)
+
+        session = service.open_answer_session()
+        try:
+            self.assertEqual(dense_bundle.dense._lifetime._refs, 2)
+            pinned_lock = session._lock
+            pinned_context = session.build_context("RS-485", mode="dense")
+            original_snapshot_id = dense_bundle.snapshot.snapshot_id
+            original_bundle_id = dense_bundle.manifest.bundle_id
+
+            def assert_session_still_usable():
+                self.assertIs(session._bundle, dense_bundle)
+                self.assertIs(session._service, service)
+                self.assertIs(session._lock, pinned_lock)
+                self.assertFalse(session._closed)
+                self.assertEqual(dense_bundle.dense._lifetime._refs, 2)
+                fresh = session.build_context("RS-485", mode="dense")
+                self.assertEqual(fresh.snapshot_id, original_snapshot_id)
+                self.assertEqual(fresh.bundle_id, original_bundle_id)
+                self.assertEqual(session.recheck_policy(fresh), "initial")
+                self.assertEqual(session.recheck_policy(pinned_context), "initial")
+
+            # Exercise the exact regular Python 'del session.<field>' syntax.
+            before = session._issued
+            with self.assertRaises(AttributeError):
+                del session._bundle
+            self.assertIs(session._issued, before)
+            assert_session_still_usable()
+
+            before = session._issued
+            with self.assertRaises(AttributeError):
+                del session._service
+            self.assertIs(session._issued, before)
+            assert_session_still_usable()
+
+            before = session._issued
+            with self.assertRaises(AttributeError):
+                del session._lock
+            self.assertIs(session._issued, before)
+            assert_session_still_usable()
+
+            before = session._issued
+            with self.assertRaises(AttributeError):
+                del session._closed
+            self.assertIs(session._issued, before)
+            assert_session_still_usable()
+
+            before = session._issued
+            with self.assertRaises(AttributeError):
+                del session._issued
+            self.assertIs(session._issued, before)
+            assert_session_still_usable()
+
+            # delattr() is also a regular Python operation; no bypass.
+            for name in SaturnAnswerSession.__slots__:
+                with self.subTest(delattr=name):
+                    with self.assertRaises(AttributeError):
+                        delattr(session, name)
+                    self.assertIs(session._bundle, dense_bundle)
+                    self.assertEqual(dense_bundle.dense._lifetime._refs, 2)
+
+            successor = build_saturn_retrieval_bundle(
+                fixture_snapshot(commit="b" * 40))
+            service.publish(successor)
+            self.assertEqual(dense_bundle.dense._lifetime._refs, 1)
+            self.assertFalse(dense_bundle.dense._lifetime.closed)
+            self.assertEqual(
+                session.build_context("RS-485", mode="dense").snapshot_id,
+                original_snapshot_id)
+            self.assertEqual(session.recheck_policy(pinned_context), "initial")
+            self.assertEqual(service.search_saturn("RS-485").snapshot_id,
+                             successor.snapshot.snapshot_id)
+
+            session.close()
+            self.assertEqual(dense_bundle.dense._lifetime._refs, 0)
+            self.assertTrue(dense_bundle.dense._lifetime.closed)
+            session.close()
+            self.assertEqual(dense_bundle.dense._lifetime._refs, 0)
+        finally:
+            session.close()
+
+
 if __name__ == "__main__":
     unittest.main()
