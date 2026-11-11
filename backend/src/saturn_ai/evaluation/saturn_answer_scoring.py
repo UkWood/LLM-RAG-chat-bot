@@ -286,32 +286,165 @@ def _indexes(snapshot):
     }
 
 
+def _need_matches_requirement(need, req, indexes):
+    """Gold provenance is authored independently; 5B needs are only observed
+    runtime hypotheses, not a gold-definition mechanism.
+    """
+    if need.resolution_status != "resolved":
+        return False
+    if req.kind == "field":
+        fact = indexes["facts"].get(req.canonical_id)
+        return (fact is not None and need.kind == "field_value" and
+                need.entity_id == fact.entity_id and
+                need.field_path == fact.field_path)
+    if req.kind == "relation":
+        relation = indexes["relations"].get(req.canonical_id)
+        return (relation is not None and need.kind == "relation" and
+                need.entity_id == relation.subject_entity_id and
+                need.object_entity_id == relation.object_entity_id and
+                need.predicate == relation.predicate)
+    if req.kind == "document":
+        match = indexes["documents"].get(req.canonical_id)
+        return (match is not None and need.kind == "document_lookup" and
+                need.document_title == match.document.title and
+                need.entity_id == req.owner_entity_id and
+                (need.entity_id is None or
+                 any(o.owner_entity_id == need.entity_id for o in match.occurrences)))
+    return False  # PDF extractive quotes do not entail a technical fact.
+
+
+def _need_bindings(case, snapshot, trace, indexes):
+    """Validate need identity, spans, source meaning, and matched gold scopes.
+
+    Does not call production parse_saturn_question_needs. Every need ID is
+    independently reconstructed from the Stage 5B public ID contract.
+    """
+    if (trace is None or not trace.needs or
+            len(trace.needs) != len(trace.need_findings) or
+            len(trace.needs) > 6):
+        return {}, True
+    needs = {}
+    sha = sha256(case.question.encode("utf-8")).hexdigest()
+    for need, finding in zip(trace.needs, trace.need_findings):
+        span = getattr(need, "question_span", None)
+        if (not isinstance(span, tuple) or len(span) != 2 or
+                not all(type(i) is int for i in span) or
+                not 0 <= span[0] < span[1] <= len(case.question) or
+                need.original_text != case.question[span[0]:span[1]] or
+                need.need_id != stable_id(
+                    "saturn-question-need-v1", sha, span[0], span[1],
+                    need.kind, need.entity_id, need.field_path,
+                    need.predicate, need.object_entity_id,
+                    need.resolution_status, need.document_title) or
+                need.need_id in needs or finding.need_id != need.need_id):
+            return {}, True
+        needs[need.need_id] = (need, finding)
+    # Every positive source requirement must map to exactly ONE observed need.
+    for req in case.required:
+        if req.kind == "pdf_quote":
+            continue
+        matched = [need_id for need_id, (need, _) in needs.items()
+                   if _need_matches_requirement(need, req, indexes)]
+        if len(matched) != 1:
+            return needs, True
+    # A source-backed need for a *different* requirement must never be
+    # accepted as though the expected gold requirement were asked.
+    return needs, False
+
+
+def _statement_binds(s, match, needs, indexes):
+    if s.need_id not in needs:
+        return False
+    need, finding = needs[s.need_id]
+    if (type(s.citation_ids) is not tuple or len(s.citation_ids) != 1 or
+            s.statement_id != stable_id(
+                "saturn-answer-statement-v1", s.need_id, s.evidence_id,
+                s.document_id, s.statement_kind, s.citation_ids[0])):
+        return False
+    if match is None:
+        return False
+    kind, identity, revision, evidence_id = match
+    if kind in ("field", "relation"):
+        if (finding.status != "covered_structured" or
+                evidence_id not in finding.evidence_ids):
+            return False
+        fake = SaturnGoldRequirement("observed", kind, identity,
+                                     revision, evidence_id)
+        return _need_matches_requirement(need, fake, indexes)
+    if kind == "document":
+        if (finding.status != "document_found" or
+                identity not in finding.document_ids or
+                need.kind != "document_lookup"):
+            return False
+        doc = indexes["documents"].get(identity)
+        if doc is None or need.document_title != doc.document.title:
+            return False
+        return need.entity_id is None or any(
+            o.owner_entity_id == need.entity_id for o in doc.occurrences)
+    if kind == "quote":
+        unit = indexes["evidence"].get(identity)
+        return (finding.status == "text_candidate" and
+                identity in finding.evidence_ids and
+                need.kind in ("field_value", "relation") and
+                need.entity_id is not None and unit is not None and
+                (unit.entity_id == need.entity_id or
+                 (unit.evidence_type == "pdf_passage" and
+                  any(m.pdf_revision_id == revision and
+                      need.entity_id in m.document.owner_entity_ids
+                      for m in indexes["documents"].values()))))
+    return False
+
+
 def _attribution(case, trace, missing, result):
-    codes = []
+    if not missing:
+        return ()
     if trace is None:
-        return ("undetermined",) if missing else ()
+        return ("undetermined",)
     if trace.technical_failure:
         return ("technical_failure",)
+    codes = []
     for req in missing:
+        if (req.evidence_id in trace.policy_blocked_evidence_ids or
+                req.canonical_id in trace.policy_blocked_document_ids or
+                req.source_revision_id in trace.policy_blocked_source_revision_ids or
+                (req.owner_entity_id is not None and
+                 req.owner_entity_id in trace.policy_blocked_entity_ids)):
+            codes.append("policy_restriction")
+            continue
         if req.kind == "document":
-            if req.canonical_id not in trace.selected_document_ids:
-                codes.append("retrieval_miss")
-        elif req.evidence_id not in trace.ranked_evidence_ids:
-            codes.append("retrieval_miss")
+            if req.canonical_id not in trace.ranked_document_ids:
+                codes.append("retrieval_miss" if trace.retrieval_diagnostics_complete
+                             else "undetermined")
+            elif req.canonical_id not in trace.selected_document_ids:
+                codes.append("document_not_selected")
+            elif any(f.status in ("potential_conflict", "ambiguous") for f in trace.need_findings):
+                codes.append("evidence_conflict")
+            elif not any(f.status == "document_found" and req.canonical_id in f.document_ids
+                         for f in trace.need_findings):
+                codes.append("document_requirement_not_satisfied" if trace.need_findings
+                             else "undetermined")
+            else:
+                codes.append("answer_assembly_missing")
+            continue
+        if req.evidence_id not in trace.ranked_evidence_ids:
+            codes.append("retrieval_miss" if trace.retrieval_diagnostics_complete
+                         else "undetermined")
         elif req.evidence_id not in trace.selected_evidence_ids:
             codes.append("evidence_not_selected")
+        elif any(f.status == "potential_conflict" for f in trace.need_findings):
+            codes.append("evidence_conflict")
         elif req.kind != "pdf_quote":
-            if (not trace.parsed_need_kinds or
-                    req.kind == "field" and "field_value" not in trace.parsed_need_kinds or
-                    req.kind == "relation" and "relation" not in trace.parsed_need_kinds):
+            if not trace.parsed_need_kinds:
                 codes.append("question_parse_failure")
-            elif "covered_structured" not in trace.finding_statuses and req.kind != "document":
+            elif "covered_structured" not in trace.finding_statuses:
                 codes.append("sufficiency_false_negative")
-            elif req.evidence_id not in trace.verified_evidence_ids and req.kind != "document":
+            elif req.evidence_id not in trace.verified_evidence_ids:
                 codes.append("claim_generation_missing")
             else:
                 codes.append("answer_assembly_missing")
-    return tuple(sorted(set(codes))) or (("undetermined",) if missing else ())
+        else:
+            codes.append("undetermined")
+    return tuple(sorted(set(codes))) or ("undetermined",)
 
 
 def _gold_source_channel(case):
