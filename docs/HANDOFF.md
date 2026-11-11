@@ -1,3 +1,10 @@
+## Stage 5E — Saturn Grounding Evaluation v0.1 (2026-11-11; coding implementation, review pending)
+
+- Live checked `main=8dc9d2fbd20854bd54903ff617581ed4ecad6e31`, Stage 5D PR #30 **MERGED**; one new branch `feat/saturn-grounding-evaluation-v0.1`. **DO NOT MERGE**, wait for independent Session A Acceptance Review.
+- Independent strict Saturn gold/source/citation scorer, offline full Stage 4A–5D runner, privacy-safe metrics/reporting, immutable blind freeze/first-run receipts. Production Stage 4A–5D algorithms/contracts, old datasets, historical reports and Saturn-Main-Site untouched.
+- First actual open synthetic calibration (`SaturnFakeClaimProvider`, lexical/top_k=10) 28/28 correct total: positive complete 17/17, correct needs_support 5/5, clarification 3/3, partial 3/3, citation 24/24, false refusals 0/17, unsupported 0. Raw first measured JSON at `evaluation/reports/saturn-grounding-calibration-v0.1.json`, gold at `evaluation/datasets/saturn-grounding-calibration-v0.1.json`; source execution CI run #43082293017 on `4fde232947e6989a242fd3308e0c7cf4eedb29d1`.
+- **independent_blind_evaluation=NOT_RUN**, no independently authored/frozen 40-case set or real-sample gold; product acceptance and production readiness not established. Full implementation / final exact-head push+PR CI remains the independent review prerequisite. [Stage report](stages/2026-11-11-saturn-grounding-evaluation.md).
+
 ## Stage 5D PR #30 — Consolidated CR-01 / CR-02 Corrections (2026-11-11)
 
 - Session A's independent review of head `6b00e4b08a55098a73d8f1e6ded6c3108c5da811`: **1 BLOCKER + 1 IMPORTANT**. Both corrected together in existing PR #30 and branch `feat/saturn-answer-assembly-v0.1`.
