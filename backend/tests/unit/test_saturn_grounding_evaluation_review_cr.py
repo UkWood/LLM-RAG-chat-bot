@@ -417,7 +417,11 @@ class ReviewCorrections(unittest.TestCase):
         gold = SaturnGoldRequirement(
             "pdf-only", "pdf_quote", c.document_id, c.pdf_revision_id,
             unit.evidence_id, c.physical_page, exact)
-        case = replace(self.case("C26"), required=(gold,))
+        raw_gold = json.loads(calibration_gold_bytes(self.snapshot))
+        case_record = next(x for x in raw_gold["cases"] if x["case_id"] == "C26")
+        case_record["required"] = [asdict(gold)]
+        authenticated_gold = validate_gold(serialize_gold(raw_gold), self.snapshot)
+        case = next(x for x in authenticated_gold.cases if x.case_id == "C26")
         positive = score_answer(case, a, self.snapshot, t)
         self.assertTrue(positive.fully_correct)
         self.assertEqual(positive.verified_quote_count, 1)
@@ -445,22 +449,27 @@ class ReviewCorrections(unittest.TestCase):
     def test_cr07_t02_recalculated_need_id_cannot_hide_field_substitution(self):
         a, t = self.ask("C20")
         old = t.needs[1]
-        fake_field = replace(old, field_path="fabricated_different_field")
-        new_id = stable_id("saturn-question-need-v1", a.question_sha256,
-                           fake_field.question_span[0], fake_field.question_span[1],
-                           fake_field.kind, fake_field.entity_id,
-                           fake_field.field_path, fake_field.predicate,
-                           fake_field.object_entity_id,
-                           fake_field.resolution_status, fake_field.document_title)
-        fake_need = replace(fake_field, need_id=new_id)
-        fake_trace = replace(t,
-                             needs=(t.needs[0], fake_need),
-                             need_findings=(t.need_findings[0],
-                                            replace(t.need_findings[1], need_id=new_id)))
-        fake_answer = replace(a, unresolved_need_ids=(new_id,))
-        outcome = self.score("C20", fake_answer, fake_trace)
-        self.assertFalse(outcome.fully_correct)
-        self.assertIn("need_binding_failure", outcome.failure_codes)
+        second_entity = next(e.entity_id for e in self.snapshot.entities
+                             if e.title == "Device Y")
+        for change in ({"field_path": "fabricated_different_field"},
+                       {"entity_id": second_entity}):
+            with self.subTest(change=change):
+                forged_need = replace(old, **change)
+                new_id = stable_id(
+                    "saturn-question-need-v1", a.question_sha256,
+                    forged_need.question_span[0], forged_need.question_span[1],
+                    forged_need.kind, forged_need.entity_id,
+                    forged_need.field_path, forged_need.predicate,
+                    forged_need.object_entity_id,
+                    forged_need.resolution_status, forged_need.document_title)
+                forged_need = replace(forged_need, need_id=new_id)
+                trace = replace(t, needs=(t.needs[0], forged_need),
+                                need_findings=(t.need_findings[0],
+                                    replace(t.need_findings[1], need_id=new_id)))
+                answer = replace(a, unresolved_need_ids=(new_id,))
+                outcome = self.score("C20", answer, trace)
+                self.assertFalse(outcome.fully_correct)
+                self.assertIn("need_binding_failure", outcome.failure_codes)
 
     def test_cr07_t03_forged_span_and_text_fail(self):
         a, t = self.ask("C20")
