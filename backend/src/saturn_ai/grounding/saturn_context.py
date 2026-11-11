@@ -284,14 +284,18 @@ class SaturnAnswerSession:
                 _reject("invalid_request")
             if top_k > MAX_CONTEXT_EVIDENCE:
                 _reject("resource_budget_exceeded")
+            # Distinguish an unavailable policy provider from an empty
+            # retrieval result or a local index failure (fail-closed).
+            _safe_policy(self._service.policy_provider)
             try:
                 retrieval = self._service._search_captured(
                     self._bundle, question, mode, top_k)
-            except RuntimeError as exc:
-                if "policy" in str(exc).casefold():
+            except (RuntimeError, ValueError, LookupError, AttributeError, TypeError) as exc:
+                # A provider may fail at the second, post-search policy
+                # capture. Never mislabel that as "no evidence".
+                if isinstance(exc, RuntimeError) and "policy" in str(exc).casefold():
                     _reject("policy_unavailable")
-                _reject("retrieval_unavailable")
-            except (ValueError, LookupError, AttributeError, TypeError):
+                _safe_policy(self._service.policy_provider)
                 _reject("retrieval_unavailable")
             self._validate_result(retrieval, question, mode)
             evidence = self._typed_evidence(retrieval.answer_evidence)
