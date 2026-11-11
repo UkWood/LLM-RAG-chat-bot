@@ -6,7 +6,7 @@ Date: 2026-11-11. Project: AI Technical Consultant — МНПП «Сатурн»
 
 - Base `main`: `973c3d2f3ae2c5c7a079a3e92072121bf9082edf` (Stage 5B, PR #28 MERGED).
 - Branch: `feat/saturn-atomic-claim-verification-v0.1`.
-- Pull request and final exact-head CI: recorded in the PR upon completion, **no merge**.
+- Pull request: [PR #29](https://github.com/UkWood/LLM-RAG-chat-bot/pull/29), no merge. Final exact-head CI is recorded in the PR upon completion.
 - Historical references claiming PR #28 OPEN / Stage 5C not started are superseded by the live main baseline. Historical checkpoints remain untouched.
 
 ## Architecture
@@ -51,8 +51,9 @@ Final `complete` requires every structured need verified and every other need a 
 | Atomic proposals | 6 |
 | Total provider source text | 8000 characters |
 | Exact extractive quote | 1000 characters |
+| Single provider assertion payload | 10000 characters |
 
-The request is immutable and provider-facing evidence contains no URL, full corpus or snapshot manager. Provider allowlist accepts the **exact class** `SaturnFakeClaimProvider` (not a duck-typed object with `offline=True`). No production registry or egress permission is added.
+Oversized provider output tuples, payloads and identifiers are rejected before individual source comparisons. The request is immutable and provider-facing evidence contains no URL, full corpus or snapshot manager. Provider allowlist accepts the **exact class** `SaturnFakeClaimProvider` (not a duck-typed object with `offline=True`). No production registry or egress permission is added.
 
 ## Testing and acceptance
 
