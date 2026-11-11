@@ -518,5 +518,226 @@ class SaturnAtomicClaimsTests(unittest.TestCase):
         self.assertEqual(len(result.unresolved_need_ids), 1)
 
 
+    def test_cr01_t01_unexpected_verifier_oserror_is_technical_failure(self):
+        from saturn_ai.grounding import saturn_generation
+        with self.service.open_answer_session() as session:
+            context = session.build_context(FIELD, top_k=10)
+            with patch.object(
+                saturn_generation, "verify_pinned_draft",
+                side_effect=OSError("SECRET internal path and diagnostic"),
+            ):
+                with self.assertRaises(SaturnContextError) as caught:
+                    self.verifier.verify(session=session, context=context)
+        self.assertEqual(caught.exception.reason_code,
+                         "claim_verification_unavailable")
+        self.assertNotIn("SECRET", str(caught.exception))
+        self.assertNotIn("claim_identity_mismatch", str(caught.exception))
+        self.assertIsNone(caught.exception.__cause__)
+        self.assertTrue(caught.exception.__suppress_context__)
+
+    def test_cr01_t02_unexpected_verifier_runtimeerror_same_safe_code(self):
+        from saturn_ai.grounding import saturn_generation
+        with self.service.open_answer_session() as session:
+            context = session.build_context(FIELD, top_k=10)
+            with patch.object(
+                saturn_generation, "verify_pinned_draft",
+                side_effect=RuntimeError("SECRET implementation details"),
+            ):
+                with self.assertRaises(SaturnContextError) as caught:
+                    self.verifier.verify(session=session, context=context)
+        self.assertEqual(caught.exception.reason_code,
+                         "claim_verification_unavailable")
+        self.assertEqual(type(caught.exception), SaturnContextError)
+        self.assertNotIn("SECRET", repr(caught.exception))
+        self.assertIsNone(caught.exception.__cause__)
+        self.assertTrue(caught.exception.__suppress_context__)
+
+    def test_cr01_t03_normal_mismatch_remains_rejected_claim(self):
+        result = self.run_query(
+            FIELD,
+            mutation=lambda drafts, request: (
+                self.mutate_payload(drafts[0], raw_value_json='"wrong value"'),),
+        )
+        self.assertEqual(result.verification_state, "incomplete")
+        self.assertFalse(result.verified_claims)
+        self.assertEqual(len(result.rejected_claims), 1)
+        self.assertEqual(result.rejected_claims[0].reason_code,
+                         "claim_value_mismatch")
+        self.assertNotIn(("claim_verification_unavailable", 1),
+                         result.diagnostics)
+
+    def test_cr01_t04_verifier_error_after_valid_claim_discards_operation(self):
+        from saturn_ai.grounding import saturn_generation
+        original = saturn_generation.verify_pinned_draft
+        successful = []
+        calls = []
+
+        def check(snapshot, need, item, draft):
+            calls.append(draft.need_id)
+            if len(calls) == 1:
+                claim, reason = original(snapshot, need, item, draft)
+                self.assertIsNotNone(claim)
+                self.assertIsNone(reason)
+                successful.append(claim)
+                return claim, reason
+            raise OSError("SECRET after a successful first claim")
+
+        with self.service.open_answer_session() as session:
+            context = session.build_context(
+                PRODUCT_NAME + ": interface, protocol?", top_k=10)
+            with patch.object(saturn_generation, "verify_pinned_draft",
+                              side_effect=check):
+                with self.assertRaises(SaturnContextError) as caught:
+                    self.verifier.verify(session=session, context=context)
+
+        self.assertEqual(len(successful), 1)
+        self.assertEqual(len(calls), 2)
+        self.assertEqual(caught.exception.reason_code,
+                         "claim_verification_unavailable")
+        self.assertNotIn("SECRET", str(caught.exception))
+        self.assertTrue(caught.exception.__suppress_context__)
+        # No SaturnClaimVerificationResult was returned, even though the
+        # first canonical assertion was valid. No partial claims escape.
+
+    def test_cr01_t05_session_policy_and_publication_regression(self):
+        def fresh_service():
+            service = SaturnRetrievalService()
+            service.publish(build_saturn_retrieval_bundle(self.snapshot))
+            return service
+
+        # A context issued by one live session cannot be reused elsewhere.
+        service = fresh_service()
+        with service.open_answer_session() as first, \
+             service.open_answer_session() as second:
+            context = first.build_context(FIELD, top_k=10)
+            self.assert_code("context_identity_mismatch", lambda:
+                             self.verifier.verify(session=second, context=context))
+        self.assert_code("session_closed", lambda:
+                         self.verifier.verify(session=first, context=context))
+
+        # Revocation is still a policy_blocked error, not a verifier failure.
+        service = fresh_service()
+        with service.open_answer_session() as session:
+            context = session.build_context(FIELD, top_k=10)
+            field = next(item for item in context.answer_evidence
+                         if item.evidence_type == "site_field"
+                         and item.field_path == "interface")
+            service.policy_provider.activate(SaturnOperationalPolicy(
+                "cr01-revoked",
+                blocked_evidence_ids=frozenset({field.evidence_id})))
+            self.assert_code("policy_blocked", lambda:
+                             self.verifier.verify(session=session, context=context))
+
+        # Policy-provider failure remains distinct from missing evidence.
+        service = fresh_service()
+        with service.open_answer_session() as session:
+            context = session.build_context(FIELD, top_k=10)
+            object.__setattr__(service.policy_provider, "_active", None)
+            self.assert_code("policy_unavailable", lambda:
+                             self.verifier.verify(session=session, context=context))
+
+        # Concurrent publication cannot switch a pinned verification snapshot.
+        service = fresh_service()
+        newer = build_saturn_retrieval_bundle(fixture_snapshot(commit="b"*40))
+        original = SaturnFakeClaimProvider.generate
+        with service.open_answer_session() as session:
+            context = session.build_context(FIELD, top_k=10)
+            def publish(provider, request):
+                service.publish(newer)
+                return original(provider, request)
+            with patch.object(SaturnFakeClaimProvider, "generate", publish):
+                result = self.verifier.verify(session=session, context=context)
+            self.assertEqual(result.verification_state, "complete")
+            self.assertEqual(result.snapshot_id, self.snapshot.snapshot_id)
+            self.assertNotEqual(result.snapshot_id, newer.snapshot.snapshot_id)
+
+        # Closing a session during provider work remains session_closed.
+        service = fresh_service()
+        with service.open_answer_session() as session:
+            context = session.build_context(FIELD, top_k=10)
+            def close(provider, request):
+                session.close()
+                return original(provider, request)
+            with patch.object(SaturnFakeClaimProvider, "generate", close):
+                self.assert_code("session_closed", lambda:
+                                 self.verifier.verify(session=session, context=context))
+
+    def test_cr01_t06_provider_exception_still_provider_unavailable(self):
+        with self.service.open_answer_session() as session:
+            context = session.build_context(FIELD, top_k=10)
+            with patch.object(SaturnFakeClaimProvider, "generate",
+                              side_effect=OSError("SECRET provider failed")):
+                result = self.verifier.verify(session=session, context=context)
+        self.assertEqual(result.verification_state, "failed")
+        self.assertFalse(result.verified_claims)
+        self.assertFalse(result.rejected_claims)
+        self.assertIn(("provider_unavailable", 1), result.diagnostics)
+        self.assertNotIn(("claim_verification_unavailable", 1),
+                         result.diagnostics)
+        self.assertNotIn("SECRET", repr(result))
+
+    def test_cr01_t07_valid_claim_kinds_and_negative_paths_unchanged(self):
+        field = self.run_query(FIELD)
+        self.assertEqual(field.verification_state, "complete")
+        self.assertEqual(field.verified_claims[0].claim_kind, "field_value")
+        relation = self.snapshot.relations[0]
+        entities = {e.entity_id: e.title for e in self.snapshot.entities}
+        query = "relation(" + entities[relation.subject_entity_id] + ", " + (
+            relation.predicate) + ", " + entities[relation.object_entity_id] + ")?"
+        rel = self.run_query(query)
+        self.assertEqual(rel.verification_state, "complete")
+        self.assertEqual(rel.verified_claims[0].claim_kind, "relation")
+
+        site = build_saturn_knowledge_snapshot(*make_inputs({
+            PRODUCT: source("Instrument", body=(
+                "## Guide\nlegacy_parameter is in this passage.\n")),
+        }))
+        site_service = SaturnRetrievalService()
+        site_service.publish(build_saturn_retrieval_bundle(site))
+        quote = self.run_query("Instrument: legacy_parameter?",
+                               service=site_service)
+        self.assertEqual(quote.verified_claims[0].verification_status,
+                         "quote_integrity_verified")
+        self.assertEqual(quote.verification_state, "incomplete")
+
+        pdf = build_saturn_knowledge_snapshot(*make_inputs({
+            PRODUCT: source("Instrument", fields=(
+                "documents:\n - " + doc() + "\n"),
+                body="## Guide\nUnrelated text.\n"),
+        }, pages=((1, "pdf_parameter Alpha"), (2, "Beta"))))
+        pdf_service = SaturnRetrievalService()
+        pdf_service.publish(build_saturn_retrieval_bundle(pdf))
+        pdf_quote = self.run_query("Instrument: pdf_parameter?",
+                                   service=pdf_service)
+        self.assertEqual(pdf_quote.verified_claims[0].verification_status,
+                         "quote_integrity_verified")
+        self.assertEqual(pdf_quote.verified_claims[0].physical_page, 1)
+
+        for mutation, reason in (
+            (lambda drafts, request: drafts + drafts[:1], "claim_duplicate"),
+            (lambda drafts, request: (
+                replace(drafts[0], evidence_id="unknown-evidence"),),
+             "unknown_evidence_id"),
+            (lambda drafts, request: (
+                replace(drafts[0], need_id="foreign-need"),),
+             "unknown_need_id"),
+        ):
+            with self.subTest(reason=reason):
+                rejected = self.run_query(FIELD, mutation=mutation)
+                self.assertEqual(rejected.verification_state, "incomplete")
+                self.assertIn(reason,
+                              {x.reason_code for x in rejected.rejected_claims})
+                self.assertNotIn(("claim_verification_unavailable", 1),
+                                 rejected.diagnostics)
+        wrong_need = self.run_query(
+            PRODUCT_NAME + ": interface, protocol?",
+            mutation=lambda drafts, request: (
+                drafts[0],
+                replace(drafts[1], evidence_id=drafts[0].evidence_id),
+            ))
+        self.assertEqual(wrong_need.rejected_claims[0].reason_code,
+                         "unknown_evidence_id")
+
+
 if __name__ == "__main__":
     unittest.main()
