@@ -513,6 +513,15 @@ class Stage5AAcceptanceCorrectionTests(unittest.TestCase):
         with self.assertRaises(TypeError):
             SaturnAnswerSession(service, dense_bundle)
         self.assertEqual(dense_bundle.dense._lifetime._refs, refs_before)
+        # A failed internal construction AFTER retain must release that
+        # temporary lease and cannot leak internal diagnostics.
+        with patch("saturn_ai.grounding.saturn_context.RLock",
+                   side_effect=OSError("/secret/constructor/path")):
+            with self.assertRaises(SaturnContextError) as ex:
+                service.open_answer_session()
+            expect_code(ex, "retrieval_unavailable")
+            self.assertNotIn("/secret/", str(ex.exception))
+        self.assertEqual(dense_bundle.dense._lifetime._refs, refs_before)
         with service.open_answer_session() as session:
             self.assertEqual(dense_bundle.dense._lifetime._refs, refs_before + 1)
             self.assertIs(session._bundle, dense_bundle)
