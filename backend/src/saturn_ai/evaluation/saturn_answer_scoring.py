@@ -622,7 +622,8 @@ def score_answer(case: SaturnEvaluationCase, result: SaturnAnswerResult,
             case.case_id, case.category, case.split, expected, "error",
             expected == "error", False, len(case.required), 0, 0, 0,
             len(case.required), None, 0, 0, None, None, 0,
-            len(case.required), tuple(sorted(codes)), _gold_source_channel(case))
+            0, tuple(sorted(codes)), _gold_source_channel(case),
+            quote_requirement_count=sum(r.kind == "pdf_quote" for r in case.required))
 
     actual = result.status
     status_correct = actual == expected and actual in ANSWER_STATUSES
