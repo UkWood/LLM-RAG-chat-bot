@@ -4,7 +4,7 @@
 
 - 5F: explicit, verified ten-page/four-PDF sample and opt-in experimental CLI built on existing pipeline; **actual real integration not yet executed**, no source/PDF bytes measurement.
 - 5G: open real-source calibration runner composed from existing Stage 5E independent scorer; real authored dataset and measured results **not yet available**.
-- 5H: independent real blind and freeze **NOT_IMPLEMENTED / NOT_RUN**. Need independent author and separate frozen experiment; no use of open calibration as blind.
+- 5H: versioned real blind freeze/START/report validator and one-shot runner **implemented as unaccepted candidate**; actual independent dataset and experiment **NOT_RUN**, require Session A author/reviewer approval; no use of open calibration as blind.
 - 5I: bounded loopback-only local OpenAI-compatible draft provider integrated into **existing independent Stage 5C verifier**; mocks/contracts do not prove actual local inference. No local model/hardware/config measurement, no natural-language Stage 5B extension.
 - Offline tests added; exact-head CI must be inspected. Avoid interpreting in-progress/cancelled jobs as PASS. No Stage 6.
 
