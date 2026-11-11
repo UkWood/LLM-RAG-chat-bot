@@ -339,7 +339,7 @@ _RELATION_QUESTION = re.compile(
     r"\s*([^,()?]+?)\s*\)\s*\?\s*$")
 _DOCUMENT_QUESTION = re.compile(
     r"^\s*(?:Документ|Document)\s*:\s*([^|\r\n?]+?)"
-    r"(?:\s*\|\s*owner=([^|\r\n?]+?))?\s*\?\s*$",
+    r"(?:\s*\|\s*owner=([^|\r\n?]+?))?\s*\??\s*$",
     re.IGNORECASE,
 )
 
@@ -523,8 +523,7 @@ def _attribution(case, trace, missing, result, indexes=None):
                 need, req, indexes)
         ]
         if len(observed) != 1:
-            codes.append("question_parse_failure" if trace.needs
-                         else "undetermined")
+            codes.append("question_parse_failure")
             continue
         need, finding = observed[0]
         if finding.status in ("potential_conflict", "ambiguous"):
