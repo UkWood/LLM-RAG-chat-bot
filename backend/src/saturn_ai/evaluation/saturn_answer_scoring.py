@@ -475,7 +475,13 @@ def _statement_binds(s, match, needs, indexes):
     return False
 
 
-def _attribution(case, trace, missing, result):
+def _attribution(case, trace, missing, result, indexes=None):
+    """Explain each missing gold requirement using *its own* observed need.
+
+    Cross-need evidence (another covered_structured finding) cannot establish
+    that this requirement reached verification. Never infer a retrieval miss
+    from an unavailable or pre-retrieval technical trace.
+    """
     if not missing:
         return ()
     if trace is None:
@@ -491,39 +497,52 @@ def _attribution(case, trace, missing, result):
                  req.owner_entity_id in trace.policy_blocked_entity_ids)):
             codes.append("policy_restriction")
             continue
-        if req.kind == "document":
-            if req.canonical_id not in trace.ranked_document_ids:
-                codes.append("retrieval_miss" if trace.retrieval_diagnostics_complete
-                             else "undetermined")
-            elif req.canonical_id not in trace.selected_document_ids:
-                codes.append("document_not_selected")
-            elif any(f.status in ("potential_conflict", "ambiguous") for f in trace.need_findings):
-                codes.append("evidence_conflict")
-            elif not any(f.status == "document_found" and req.canonical_id in f.document_ids
-                         for f in trace.need_findings):
-                codes.append("document_requirement_not_satisfied" if trace.need_findings
-                             else "undetermined")
-            else:
-                codes.append("answer_assembly_missing")
-            continue
-        if req.evidence_id not in trace.ranked_evidence_ids:
-            codes.append("retrieval_miss" if trace.retrieval_diagnostics_complete
-                         else "undetermined")
-        elif req.evidence_id not in trace.selected_evidence_ids:
-            codes.append("evidence_not_selected")
-        elif any(f.status == "potential_conflict" for f in trace.need_findings):
-            codes.append("evidence_conflict")
-        elif req.kind != "pdf_quote":
-            if not trace.parsed_need_kinds:
-                codes.append("question_parse_failure")
-            elif "covered_structured" not in trace.finding_statuses:
-                codes.append("sufficiency_false_negative")
-            elif req.evidence_id not in trace.verified_evidence_ids:
-                codes.append("claim_generation_missing")
-            else:
-                codes.append("answer_assembly_missing")
-        else:
+        if not trace.retrieval_diagnostics_complete:
             codes.append("undetermined")
+            continue
+        ranked = (trace.ranked_document_ids if req.kind == "document"
+                  else trace.ranked_evidence_ids)
+        selected = (trace.selected_document_ids if req.kind == "document"
+                    else trace.selected_evidence_ids)
+        target = req.canonical_id if req.kind == "document" else req.evidence_id
+        if target not in ranked:
+            codes.append("retrieval_miss")
+            continue
+        if target not in selected:
+            codes.append("document_not_selected" if req.kind == "document"
+                         else "evidence_not_selected")
+            continue
+        if req.kind == "pdf_quote":
+            # Extraction and quotation are not verified technical facts.
+            codes.append("quote_requirement_not_satisfied")
+            continue
+        observed = [
+            (need, finding) for need, finding in
+            zip(trace.needs, trace.need_findings)
+            if indexes is not None and _need_matches_requirement(
+                need, req, indexes)
+        ]
+        if len(observed) != 1:
+            codes.append("question_parse_failure" if trace.needs
+                         else "undetermined")
+            continue
+        need, finding = observed[0]
+        if finding.status in ("potential_conflict", "ambiguous"):
+            codes.append("evidence_conflict")
+        elif req.kind == "document":
+            if (finding.status != "document_found" or
+                    target not in finding.document_ids):
+                codes.append("document_requirement_not_satisfied")
+            else:
+                codes.append("answer_assembly_missing")
+        elif finding.status != "covered_structured":
+            codes.append("sufficiency_false_negative")
+        elif target not in finding.evidence_ids:
+            codes.append("sufficiency_false_negative")
+        elif target not in trace.verified_evidence_ids:
+            codes.append("claim_generation_missing")
+        else:
+            codes.append("answer_assembly_missing")
     return tuple(sorted(set(codes))) or ("undetermined",)
 
 
@@ -687,7 +706,7 @@ def score_answer(case: SaturnEvaluationCase, result: SaturnAnswerResult,
     missing = tuple(r for r in case.required
                     if r.requirement_id not in emitted_requirements)
     if missing:
-        codes.update(_attribution(case, trace, missing, result))
+        codes.update(_attribution(case, trace, missing, result, indexes))
     if source_unsupported:
         codes.add("unsafe_claim")
     if off_question:
