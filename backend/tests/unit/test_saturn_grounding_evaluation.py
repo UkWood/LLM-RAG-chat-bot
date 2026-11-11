@@ -192,6 +192,7 @@ class SaturnGroundingEvaluationTests(unittest.TestCase):
     def test_t22_real_partial_is_not_full_positive(self):
         positive = next(x for x in self.dataset.cases if x.case_id == "C11")
         partial, trace = self.ask("C20")
+        partial = replace(partial, question_sha256=sha256(positive.question.encode("utf-8")).hexdigest())
         outcome = score_answer(positive, partial, self.snapshot, trace)
         self.assertFalse(outcome.fully_correct)
         self.assertGreaterEqual(outcome.missing_requirement_count, 1)
@@ -199,6 +200,8 @@ class SaturnGroundingEvaluationTests(unittest.TestCase):
     def test_t23_false_refusal(self):
         case = next(x for x in self.dataset.cases if x.case_id == "C01")
         result, trace = self.ask("C18")
+        result = replace(result, question_sha256=sha256(case.question.encode("utf-8")).hexdigest())
+        result = replace(result, question_sha256=sha256(case.question.encode("utf-8")).hexdigest())
         outcome = score_answer(case, result, self.snapshot, trace)
         self.assertFalse(outcome.fully_correct)
         self.assertIn("false_refusal", outcome.failure_codes)
@@ -290,6 +293,7 @@ class SaturnGroundingEvaluationTests(unittest.TestCase):
     def test_t36_document_is_not_technical_fact(self):
         case = next(x for x in self.dataset.cases if x.case_id == "C01")
         answer, trace = self.ask("C15")
+        answer = replace(answer, question_sha256=sha256(case.question.encode("utf-8")).hexdigest())
         scored = score_answer(case, answer, self.snapshot, trace)
         self.assertFalse(scored.fully_correct)
 
@@ -301,6 +305,7 @@ class SaturnGroundingEvaluationTests(unittest.TestCase):
     def test_t38_quote_only_not_technical_proof(self):
         answer, trace = self.ask("C26")
         case = next(x for x in self.dataset.cases if x.case_id == "C01")
+        answer = replace(answer, question_sha256=sha256(case.question.encode("utf-8")).hexdigest())
         scored = score_answer(case, answer, self.snapshot, trace)
         self.assertEqual(scored.supported_fact_count, 0)
         self.assertFalse(scored.fully_correct)
