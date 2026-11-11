@@ -94,7 +94,7 @@ class SaturnAnswerSession:
             except Exception:
                 if dense is not None:
                     dense._release()
-                raise
+                _reject("retrieval_unavailable")
 
     def __enter__(self):
         with self._lock:
