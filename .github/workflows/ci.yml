@@ -57,3 +57,16 @@ jobs:
           cmp /tmp/saturn-gold.json evaluation/datasets/saturn-grounding-calibration-v0.1.json
       - name: Measure Stage 5E end-to-end using frozen calibration gold
         run: PYTHONPATH=backend/src python -m saturn_ai.evaluation.saturn_grounding --profile calibration --dataset evaluation/datasets/saturn-grounding-calibration-v0.1.json --report /tmp/saturn-report.json --emit-open-json
+
+  saturn-evaluator-targeted:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install locked parser dependencies
+        run: python -m pip install --require-hashes -r backend/requirements.lock
+      - name: Stage 5E evaluator and Acceptance Review correction regressions
+        run: PYTHONPATH=backend/src python -m unittest discover -s backend/tests/unit -p 'test_saturn_grounding_evaluation*.py' -v
