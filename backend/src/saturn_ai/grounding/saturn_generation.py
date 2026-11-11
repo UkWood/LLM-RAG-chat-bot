@@ -150,14 +150,16 @@ class SaturnClaimVerificationService:
             return _result(context, session.recheck_policy(context), assessment,
                            state="failed", error="provider_unavailable")
         session.recheck_policy(context)
-        if (type(drafts) is not tuple or
-                any(type(x) is not SaturnClaimDraft for x in drafts)):
+        if type(drafts) is not tuple:
             return _result(context, session.recheck_policy(context), assessment,
                            state="failed", error="invalid_provider_output")
         if len(drafts) > MAX_CLAIM_PROPOSALS:
             return _result(context, session.recheck_policy(context), assessment,
                            state="resource_budget_exceeded",
                            error="claim_budget_exceeded")
+        if any(type(x) is not SaturnClaimDraft for x in drafts):
+            return _result(context, session.recheck_policy(context), assessment,
+                           state="failed", error="invalid_provider_output")
         if any(type(x.need_id) is not str or type(x.evidence_id) is not str or
                type(x.claim_kind) is not str or type(x.asserted_payload) is not str
                for x in drafts):
