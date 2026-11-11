@@ -121,6 +121,37 @@ def _parse_report(payload):
         _refuse("invalid_report_json")
 
 
+
+def _valid_retrieval_applicability(out, gold):
+    """Gold applicability and actual measurement are different properties.
+
+    A missing measurement is allowed only for a recorded technical *error*
+    before usable retrieval diagnostics; it must never hide an observed miss
+    or convert a failed search into a needs_support/refusal outcome. Without
+    the original trace this cannot authenticate an arbitrary fabricated
+    technical failure, but it rejects inconsistent reported outcomes.
+    """
+    source_expected = any(req.evidence_id for req in gold.required)
+    document_expected = any(req.kind == "document" for req in gold.required)
+    unavailable_due_to_error = (
+        out.actual_status == "error" and
+        out.fully_correct is False and
+        "technical_failure" in out.failure_codes and
+        "retrieval_miss" not in out.failure_codes
+    )
+
+    for applicable, measured in (
+        (source_expected, out.source_hit_at_5),
+        (document_expected, out.document_hit_at_5),
+    ):
+        if not applicable:
+            if measured is not None:
+                return False
+        elif measured is None and not unavailable_due_to_error:
+            return False
+    return True
+
+
 def _validate_result_case(row, gold):
     from .saturn_answer_scoring import SaturnEvaluationOutcome
     from ..grounding.saturn_answer_contracts import ANSWER_STATUSES
@@ -194,8 +225,9 @@ def _validate_result_case(row, gold):
             type(out.document_hit_at_5) not in (bool, type(None)) or
             type(out.evidence_recall_numerator) is not int or
             not 0 <= out.evidence_recall_numerator <= out.evidence_recall_denominator or
-            (out.source_hit_at_5 is not None) != any(x.evidence_id for x in gold.required) or
-            (out.document_hit_at_5 is not None) != any(x.kind == "document" for x in gold.required)):
+            (out.actual_status == "error" and
+             "technical_failure" not in out.failure_codes) or
+            not _valid_retrieval_applicability(out, gold)):
         _refuse("inconsistent_report_case")
     return out
 
