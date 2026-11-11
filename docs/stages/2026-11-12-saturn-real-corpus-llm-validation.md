@@ -97,17 +97,52 @@ first actual measured calibration, defect register and threshold decision.
 A unit test using synthetic fixtures with the real-profile API is ONLY a
 contract test; it is not a reported real quality measurement.
 
-## 4. Stage 5H — independent blind
+## 4. Stage 5H — versioned independent real-source blind infrastructure
 
-**Status: NOT IMPLEMENTED / NOT_RUN.**
+**Status: ENGINEERING INFRASTRUCTURE IMPLEMENTED (candidate); REAL BLIND NOT_RUN.**
 
-The accepted historical Stage 5E synthetic freeze/scorer is untouched.
-A new versioned real-blind freeze schema, independent author-controlled
-real gold, durable one-shot runner, gold isolation and actual blind results
-remain to be implemented and independently reviewed. They must not be
-substituted with reruns of open calibration. Session B must not author its
-own independent blind cases. Any thresholds must be settled by Session A
-*before* the first blind START.
+`backend/src/saturn_ai/real_blind.py` contains a separate v0.1 real-source
+freeze profile, including exact code revision, corpus/source manifest/snapshot/
+bundle, independent dataset digest and author/reviewer metadata, model/provider
+config, tokenizer and prompt revisions, rubric/scorer revisions, and fixed
+provisional 24-positive/16-negative thresholds. Freeze and explicit
+independent model-weight SHA attestation must originate outside Coding Session B.
+The module does **not** generate independent questions or gold.
+
+`RealBlindRun` reuses the original Stage 5E durable START/FAILED mechanics
+without editing Stage 5E; its real-source completion checks the original
+`real_sample` gold after START, validates case identities, source-backed
+pointers, source-anchored per-case outcomes, all report metrics/denominators,
+and writes exclusive persisted report bytes + SHA-256 COMPLETE receipt.
+The runner passes only question text to the Stage 5A–5D runtime and scores
+separately. A repeated START is refused. The original frozen synthetic
+blind artifacts and contracts are unchanged.
+
+**Important limitation:** local model digest is caller-declared in the
+inference adapter. The independent reviewer must inspect and attest actual
+weights and tokenizer/config outside this adapter; an arbitrary supplied
+string is not cryptographic proof. The `model_weights_verification` freeze
+field is an external assertion, not an automated check. Do not execute
+an independent blind until Session A confirms these identities and thresholds.
+
+```bash
+PYTHONPATH=backend/src python -m saturn_ai.real_blind \
+  --freeze /secure/real-blind-freeze.json \
+  --independent-gold /secure/real-blind-gold.json \
+  --report /secure/real-blind-report.json \
+  --receipts-dir /secure/real-blind-receipts \
+  --allow-real-network --allow-development-pdf-worker \
+  --allow-local-inference \
+  --local-endpoint http://127.0.0.1:11434/v1/chat/completions \
+  --local-model-id EXACT_FROZEN_MODEL \
+  --local-model-sha256 ACTUAL_REVIEWED_WEIGHTS_SHA256
+```
+
+This command is an **instruction only**, not a claim that an experiment ran.
+No independent gold set is committed or available; therefore
+`independent_blind_evaluation=NOT_RUN`, `quality_target_met=null`,
+`production_readiness=false`.
+
 
 ## 5. Stage 5I — experimental local provider
 
