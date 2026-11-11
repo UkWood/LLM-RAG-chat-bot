@@ -4,8 +4,35 @@
 Проект: AI Technical Consultant — МНПП «Сатурн»  
 Baseline main: `340e7d63e6899d855a01547003d1d983e9078eda` (PR #26 merged)  
 Ветка: `feat/saturn-evidence-context-v0.1`  
-PR: Stage 5A feature PR (ссылка и final head — в описании PR после публикации).  
+PR: [#27](https://github.com/UkWood/LLM-RAG-chat-bot/pull/27) (exact final head и CI — в PR).  
 Статус: implementation candidate; **independent Acceptance Review обязателен, NO MERGE**.
+
+## Consolidated Acceptance Review Corrections — PR #27 (CR-01 / CR-02)
+
+**Исходный review head:** `c95cef4aebfbdef512e4cb54d0b14585d089deb1`.  
+**PR:** [#27](https://github.com/UkWood/LLM-RAG-chat-bot/pull/27), та же feature branch; статус независимого review: **CHANGES REQUESTED**, исправления выполнены в рамках того же Stage 5A. Merge запрещён до отдельного распоряжения владельца.
+
+### CR-01 BLOCKER — immutable session ownership / lease
+
+- Прямой вызов `SaturnAnswerSession(service, bundle)` отвергается до побочных эффектов. `SaturnRetrievalService.open_answer_session()` использует внутреннюю `SaturnAnswerSession._from_service()`: получение bundle и `dense._retain()` происходят под единым publication `RLock`; ошибка создания освобождает полученный lease.
+- Привязки `_service`, `_bundle`, `_lock`, `_closed`, `_issued` защищены от обычного `setattr`. Законные lifecycle mutations выполняются только контролируемым `object.__setattr__` внутри session-методов.
+- `_issued` — immutable tuple пар `(context, fingerprint)`, пополняемый строго при выдаче контекста; `.append()`/`.clear()`/подмена fingerprint снаружи невозможны обычными операциями. Предел `MAX_SESSION_CONTEXTS`, ownership by identity и fingerprint сохранены.
+- `close()` idempotent, синхронизирован с активным `build_context()` и освобождает Qdrant lease последним удерживающим reader. Публикация нового bundle не изменяет pinned snapshot; legacy `search_saturn()` API не меняется.
+
+### CR-02 IMPORTANT — fail-closed classification boundaries
+
+- Валидация `question` проверяет UTF-8 encodability **до** tokenization/hash; unpaired surrogate → `invalid_request`, обычный русский и инженерный Unicode сохраняются.
+- `recheck_policy()` вычисляет fingerprint и hash внутри проверяемой границы; повреждённые nested dataclass fields и ошибка сериализации → `context_identity_mismatch` без утечки raw exception.
+- `_search_captured()` выделяет ошибку **только** при захвате policy через `SaturnPolicyCaptureError(RuntimeError)`. Stage 5A переводит её в `policy_unavailable`; любой обычный `Exception` внутри retrieval/index → `retrieval_unavailable`. Содержание `RuntimeError`, даже включающее слово `policy`, не используется для классификации.
+- Canonical materialization unexpected `Exception` → `evidence_integrity_failure`; policy provider outside retrieval → `policy_unavailable`. Ошибки безопасно диагностируются по `reason_code`; исходные исключения не включаются в публичный текст/traceback chaining. `KeyboardInterrupt`/`SystemExit` не подавляются.
+
+### Regression coverage
+
+В `test_saturn_evidence_context.py` добавлены **T-01–T-15**: immutable bindings, direct constructor/lease balance, issued registry integrity/cap, настоящие `Thread` + `Event` publication barriers, Qdrant deferred close, idempotent close, exception cleanup; invalid surrogate, valid RU/Unicode minus/decimal, corrupted nested context, unexpected `OSError`, provider failure within and outside retrieval, non-policy backend `RuntimeError`, legitimate empty result, сохранение существующих reason codes. Существующие Stage 4A/4B и legacy tests входят в полный offline suite.
+
+**Верификация:** baseline на review head (предоставлен независимой сессией A): **431 backend tests OK (11 skips), 5 project tests PASS**, оба jobs SUCCESS для [push #42977748475](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42977748475) и [PR #42977756429](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/42977756429). Это **исходные, не исправленные** проверки. Новый exact final PR head / фактические push+PR CI runs и числа проверок фиксируются в PR после завершения GitHub Actions.
+
+Никаких изменений `UkWood/Saturn-Main-Site`, ingestion adapters, Qdrant implementation, canonical Saturn contracts, ADR-0012/0013, frozen datasets, legacy approval semantics или Stage 5B–5E.
 
 ## 1. Архитектура / граница
 
