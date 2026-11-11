@@ -66,6 +66,13 @@ class SaturnAnswerSession:
             raise AttributeError("Saturn answer-session state is controlled: " + name)
         object.__setattr__(self, name, value)
 
+    def __delattr__(self, name):
+        # Pinned bindings and lease-accounting state cannot be removed by
+        # ordinary Python attribute deletion, including delattr().
+        if name in self.__slots__:
+            raise AttributeError("Saturn answer-session state is controlled: " + name)
+        object.__delattr__(self, name)
+
     @classmethod
     def _from_service(cls, service):
         """Internal factory: capture + retain under the SAME publication lock.
