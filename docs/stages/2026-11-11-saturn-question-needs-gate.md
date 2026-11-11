@@ -69,3 +69,16 @@ Scope changes: `grounding/saturn_question_needs.py`, `grounding/saturn_sufficien
 **Regression tests:** CR01-T01–T07 plus CR02-T01–T10 and extra negative cases in test_saturn_question_needs.py. Real Stage 4A source fixtures traverse Stage 4B publish, Stage 5A issued context and Stage 5B public assess; synthetic mixtures only test pure helpers. Full offline and exact-head push/PR CI mandatory before repeated Acceptance Review.
 
 **Scope:** only Stage 5B parser/gate/tests and current documentation. No edits to Stage 4A adapter, 4B retrieval, Stage 5A lifecycle, policy, ADR, provider, frozen evaluations or Saturn-Main-Site. No merge; no Stage 5C.
+
+
+## Final Acceptance Correction — CR-03 (source field/list syntactic ambiguity)
+
+**Review baseline:** 8a0091e3f1ec389a2e0ced0953bd7704669f4a4e. CR-01 and CR-02 are previously accepted and are not changed by this correction.
+
+Stage 4A can legitimately expose a root field named `interface, protocol` or `interface and protocol` alongside ordinary independently queryable fields. Previously Stage 5B selected the longest source-declared spelling first; that discarded a syntactically valid multi-need interpretation and could incorrectly issue `provisionally_covered`.
+
+**Minimal fail-closed fix:** Stage 5B `_field_end()` now enumerates both canonical scanner and source-declared exact field-end candidates, without prioritizing by length or source ordering. `_parse_field_list()` explores lexical alternatives under a strict 256-state bound and the original `MAX_QUESTION_NEEDS=6`. If there is more than one complete structural interpretation, it returns a whole-question `unresolved` need, resulting in `unresolved_question` rather than a false coverage PASS. Zero parses remain unresolved. Seven-field interpretations still raise `resource_budget_exceeded`, including when the same text is also a single declared field.
+
+**Preserved behavior:** unique ordinary lists stay as independent needs (including absent/generic fields), unique unusual root names remain exact fields, comma/`and`/`и` within quoted canonical JSON keys are never list delimiters, and original text spans/need IDs remain source-faithful and deterministic. This introduces neither inference nor new public contracts. `saturn_sufficiency_gate.py`, the Stage 4A adapter and Stage 5A lifecycle are unchanged.
+
+**Coverage:** add CR03-T01–T08 to `backend/tests/unit/test_saturn_question_needs.py`: comma collision, partial coverage collision, conjunction collision, non-collision list, unique unusual root, quoted key regression, real 4A→4B→5A→5B public integration and replay/spans/budget. Full `python scripts/verify_offline.py` plus exact-final-head push and pull-request workflow checks must be SUCCESS before reporting final acceptance readiness; links and SHA are recorded in PR #28.

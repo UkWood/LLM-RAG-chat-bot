@@ -146,22 +146,18 @@ def _field_boundary(text, pos):
 
 
 def _field_end(text, start, declared):
-    """Prefer an exact source-backed field when Stage 4A root keys are unusual.
+    """Return every exact syntactically valid field end at this offset.
 
-    The ordinary scanner is still needed for absent/unknown fields, which
-    remain independently diagnosable as missing_in_context.
+    A source-declared root name can contain literal separators, but the
+    alternative ordinary field-list grammar must not be discarded merely
+    because the declared name is longer.
     """
     scanned = _canonical_field_end(text, start)
-    declared_ends = [
-        start + len(path) for path in declared
-        if text.startswith(path, start) and
-        _field_boundary(text, start + len(path))
-    ]
-    if declared_ends:
-        best = max(declared_ends)
-        if scanned is None or best > scanned:
-            return best
-    return scanned
+    ends = {scanned} if scanned is not None else set()
+    ends.update(start + len(path) for path in declared
+                if text.startswith(path, start)
+                and _field_boundary(text, start + len(path)))
+    return tuple(sorted(ends))
 
 
 def _fields_for_entity(snapshot, entity_id):
@@ -170,48 +166,85 @@ def _fields_for_entity(snapshot, entity_id):
 
 
 def _parse_field_list(question, start, entity_id, status, declared):
-    """Bounded lexical scanner, respecting comma/and/и only outside JSON."""
-    cursor = start
-    needs = []
-    while True:
-        end = _field_end(question, cursor, declared)
-        if end is None or end <= cursor:
+    """Enumerate bounded competing syntactic parses; never guess between them.
+
+    Both source-declared unusual names and ordinary comma/and/и lists are
+    eligible. The chosen interpretation must be unique regardless of
+    retrieval evidence, source order, or token length. Quoted JSON components
+    are consumed as a whole by _canonical_field_end, not split by punctuation.
+    """
+    pending = [(start, ())]
+    complete = set()
+    visited = 0
+    # This is a lexical ambiguity guard, not an unbounded combinatorial
+    # parser. Resource exhaustion fails closed instead of selecting a path.
+    max_states = 256
+
+    while pending:
+        cursor, spans = pending.pop()
+        visited += 1
+        if visited > max_states:
             return (_unresolved(question),)
-        needs.append(_need(question, cursor, end, "field_value",
-                           entity_id=entity_id, field_path=question[cursor:end],
-                           resolution_status=status))
-        if len(needs) > MAX_QUESTION_NEEDS:
-            raise SaturnContextError("resource_budget_exceeded")
-        following = end
-        while following < len(question) and question[following] in " \t":
-            following += 1
-        if following < len(question) and question[following] == "?":
-            # The suffix is not assumed to be an optional extra question:
-            # it is a separate unresolved need, with its literal span.
-            remainder = question[following + 1:]
-            if remainder.strip():
-                needs.append(_unresolved(question, following + 1))
-                if len(needs) > MAX_QUESTION_NEEDS:
+        for end in _field_end(question, cursor, declared):
+            if end <= cursor:
+                continue
+            fields = spans + ((cursor, end),)
+            if len(fields) > MAX_QUESTION_NEEDS:
+                raise SaturnContextError("resource_budget_exceeded")
+            following = end
+            while following < len(question) and question[following] in " \t":
+                following += 1
+            if following < len(question) and question[following] == "?":
+                if (question[following + 1:].strip()
+                        and len(fields) == MAX_QUESTION_NEEDS):
                     raise SaturnContextError("resource_budget_exceeded")
-            return tuple(needs)
-        if following < len(question) and question[following] == ",":
-            cursor = following + 1
-            while cursor < len(question) and question[cursor] in " \t":
-                cursor += 1
-            continue
-        if following > end:
-            for word in ("and", "и"):
-                limit = following + len(word)
-                if (question[following:limit].casefold() == word and
-                        limit < len(question) and question[limit] in " \t"):
-                    cursor = limit
-                    while cursor < len(question) and question[cursor] in " \t":
-                        cursor += 1
-                    break
-            else:
-                return (_unresolved(question),)
-            continue
+                complete.add(fields)
+                continue
+
+            # A list delimiter is recognized only *between* field tokens.
+            # In particular, a comma inside a canonical ["JSON, key"] is
+            # consumed in the field token and cannot start a new list item.
+            separator_end = None
+            if following < len(question) and question[following] == ",":
+                separator_end = following + 1
+            elif following > end:
+                for word in ("and", "и"):
+                    limit = following + len(word)
+                    if (question[following:limit].casefold() == word
+                            and limit < len(question)
+                            and question[limit] in " \t"):
+                        separator_end = limit
+                        break
+            if separator_end is None:
+                continue
+            while (separator_end < len(question)
+                   and question[separator_end] in " \t"):
+                separator_end += 1
+            if len(fields) == MAX_QUESTION_NEEDS:
+                # Do not allow a long declared field to bypass the limit of
+                # a competing multi-need interpretation.
+                raise SaturnContextError("resource_budget_exceeded")
+            pending.append((separator_end, fields))
+
+    if len(complete) != 1:
+        # Zero parses: unsupported syntax. Multiple parses: syntactically
+        # competing needs, even if just one has selected structured evidence.
         return (_unresolved(question),)
+
+    spans = next(iter(complete))
+    needs = [
+        _need(question, left, right, "field_value",
+              entity_id=entity_id, field_path=question[left:right],
+              resolution_status=status)
+        for left, right in spans
+    ]
+    # No valid parse may silently hide an unsupported question suffix.
+    end = question.find("?", spans[-1][1])
+    if end >= 0 and question[end + 1:].strip():
+        needs.append(_unresolved(question, end + 1))
+    if len(needs) > MAX_QUESTION_NEEDS:
+        raise SaturnContextError("resource_budget_exceeded")
+    return tuple(needs)
 
 
 def parse_saturn_question_needs(question, snapshot):

@@ -709,3 +709,160 @@ class SaturnQuestionNeedsTests(unittest.TestCase):
             "'non standard, root': 42\n", "non standard, root")
         self.assertEqual(fact.field_path, "non standard, root")
         self.assertEqual(result.findings[0].status, "covered_structured")
+
+
+    # CR-03: competing exact source root names vs explicit multi-field lists.
+    def _cr03_snapshot(self, fields):
+        return build_saturn_knowledge_snapshot(*make_inputs({
+            PRODUCT: source("Instrument", fields=fields),
+        }))
+
+    def _cr03_public(self, snapshot, question, *, top_k=10):
+        service = SaturnRetrievalService()
+        service.publish(build_saturn_retrieval_bundle(snapshot))
+        with service.open_answer_session() as session:
+            context = session.build_context(question, top_k=top_k)
+            outcome = SaturnQuestionGate().assess(session=session, context=context)
+        return outcome, context
+
+    def test_cr03_t01_comma_collision_detected(self):
+        snapshot = self._cr03_snapshot(
+            'interface: RS-485\n'
+            'protocol: Modbus\n'
+            '"interface, protocol": "Combined description"\n')
+        owner = next(e for e in snapshot.entities if e.title == "Instrument")
+        self.assertTrue(all(any(f.entity_id == owner.entity_id
+                                and f.field_path == field
+                                for f in snapshot.facts)
+                            for field in ("interface", "protocol",
+                                          "interface, protocol")))
+        query = "Instrument: interface, protocol?"
+        parsed = parse_saturn_question_needs(query, snapshot)
+        self.assertEqual(len(parsed), 1)
+        self.assertEqual(parsed[0].kind, "unresolved")
+        self.assertEqual(parsed[0].original_text, query)
+        outcome, _ = self._cr03_public(snapshot, query)
+        self.assertEqual(outcome.gate_status, "unresolved_question")
+        self.assertNotEqual(outcome.gate_status, "provisionally_covered")
+
+    def test_cr03_t02_partial_coverage_collision(self):
+        # Even absent "protocol" is a valid independent requested field:
+        # selected evidence for the joined field must not hide its absence.
+        snapshot = self._cr03_snapshot(
+            'interface: RS-485\n'
+            '"interface, protocol": "Combined description"\n')
+        owner = next(e for e in snapshot.entities if e.title == "Instrument")
+        self.assertFalse(any(f.entity_id == owner.entity_id
+                             and f.field_path == "protocol"
+                             for f in snapshot.facts))
+        query = "Instrument: interface, protocol?"
+        outcome, _ = self._cr03_public(snapshot, query)
+        self.assertEqual(tuple(n.kind for n in outcome.needs),
+                         ("unresolved",))
+        self.assertEqual(outcome.findings[0].status, "unresolved")
+        self.assertNotEqual(outcome.gate_status, "provisionally_covered")
+
+    def test_cr03_t03_conjunction_collision(self):
+        snapshot = self._cr03_snapshot(
+            'interface: RS-485\n'
+            'protocol: Modbus\n'
+            '"interface and protocol": "Combined description"\n')
+        query = "Instrument: interface and protocol?"
+        parsed = parse_saturn_question_needs(query, snapshot)
+        self.assertEqual(len(parsed), 1)
+        self.assertEqual(parsed[0].kind, "unresolved")
+        outcome, _ = self._cr03_public(snapshot, query)
+        self.assertEqual(outcome.gate_status, "unresolved_question")
+
+    def test_cr03_t04_plain_list_without_collision(self):
+        snapshot = self._cr03_snapshot(
+            'interface: RS-485\n'
+            'protocol: Modbus\n')
+        query = "Instrument: interface, protocol?"
+        parsed = parse_saturn_question_needs(query, snapshot)
+        self.assertEqual(tuple(n.field_path for n in parsed),
+                         ("interface", "protocol"))
+        outcome, _ = self._cr03_public(snapshot, query)
+        self.assertEqual(tuple(n.field_path for n in outcome.needs),
+                         ("interface", "protocol"))
+        self.assertEqual(tuple(f.status for f in outcome.findings),
+                         ("covered_structured", "covered_structured"))
+        self.assertEqual(outcome.gate_status, "provisionally_covered")
+
+    def test_cr03_t05_unusual_root_without_competitor(self):
+        snapshot = self._cr03_snapshot(
+            "'non standard, root': 42\n")
+        query = "Instrument: non standard, root?"
+        parsed = parse_saturn_question_needs(query, snapshot)
+        self.assertEqual(len(parsed), 1)
+        self.assertEqual(parsed[0].field_path, "non standard, root")
+        self.assertEqual(parsed[0].original_text, "non standard, root")
+        outcome, _ = self._cr03_public(snapshot, query)
+        self.assertEqual(outcome.findings[0].status, "covered_structured")
+        self.assertEqual(outcome.gate_status, "provisionally_covered")
+
+    def test_cr03_t06_quoted_json_key_not_list_separator(self):
+        snapshot = self._cr03_snapshot(
+            'parameters:\n'
+            '  "Modbus, RTU": "active"\n'
+            '  "name and и mode": "test"\n'
+            'interface: RS-485\n')
+        for query, paths in (
+            ('Instrument: parameters["Modbus, RTU"], interface?',
+             ('parameters["Modbus, RTU"]', "interface")),
+            ('Instrument: parameters["name and и mode"] and interface?',
+             ('parameters["name and и mode"]', "interface")),
+        ):
+            with self.subTest(query=query):
+                parsed = parse_saturn_question_needs(query, snapshot)
+                self.assertEqual(tuple(n.field_path for n in parsed), paths)
+                outcome, _ = self._cr03_public(snapshot, query)
+                self.assertEqual(len(outcome.needs), 2)
+                self.assertEqual(outcome.gate_status, "provisionally_covered")
+
+    def test_cr03_t07_public_context_evidence_cannot_select_parse(self):
+        snapshot = self._cr03_snapshot(
+            'interface: RS-485\n'
+            'protocol: Modbus\n'
+            '"interface, protocol": "Combined description"\n')
+        question = "Instrument: interface, protocol?"
+        service = SaturnRetrievalService()
+        service.publish(build_saturn_retrieval_bundle(snapshot))
+        with service.open_answer_session() as session:
+            context = session.build_context(question, top_k=10)
+            self.assertTrue(context.answer_evidence)
+            first = SaturnQuestionGate().assess(session=session, context=context)
+            second = SaturnQuestionGate().assess(session=session, context=context)
+        self.assertEqual(first, second)
+        self.assertEqual(first.needs[0].original_text, question)
+        self.assertEqual(first.findings[0].status, "unresolved")
+        self.assertEqual(first.gate_status, "unresolved_question")
+
+    def test_cr03_t08_determinism_spans_and_need_budget(self):
+        snapshot = self._cr03_snapshot(
+            'interface: RS-485\n'
+            'protocol: Modbus\n'
+            '"interface, protocol": "Combined description"\n')
+        question = "Instrument: interface, protocol?"
+        first = parse_saturn_question_needs(question, snapshot)
+        second = parse_saturn_question_needs(question, snapshot)
+        self.assertEqual(first, second)
+        self.assertEqual(first[0].original_text,
+                         question[slice(*first[0].question_span)])
+        self.assertEqual(first[0].question_span, (0, len(question)))
+        self.assertEqual(first[0].need_id, second[0].need_id)
+        standard = "Instrument: " + ", ".join(
+            "f" + str(i) for i in range(MAX_QUESTION_NEEDS + 1)) + "?"
+        with self.assertRaises(SaturnContextError) as exc:
+            parse_saturn_question_needs(standard, snapshot)
+        self.assertEqual(exc.exception.reason_code, "resource_budget_exceeded")
+        # A single source-declared field covering the full text must not
+        # bypass the six-need budget of the competing list interpretation.
+        joined = ", ".join("f" + str(i)
+                           for i in range(MAX_QUESTION_NEEDS + 1))
+        large_snapshot = self._cr03_snapshot(
+            '"' + joined + '": "summary"\n')
+        with self.assertRaises(SaturnContextError) as exc:
+            parse_saturn_question_needs("Instrument: " + joined + "?",
+                                        large_snapshot)
+        self.assertEqual(exc.exception.reason_code, "resource_budget_exceeded")
