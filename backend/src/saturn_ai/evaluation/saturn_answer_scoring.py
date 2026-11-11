@@ -333,13 +333,13 @@ def _need_matches_requirement(need, req, indexes):
 # Stage 5B parsing, look up source values, or use model-produced gold. Field
 # tokens are taken literally from the authored question; punctuation, nested
 # paths, indexed paths and JSON-quoted keys remain opaque exact substrings.
-_FIELD_QUESTION_HEAD = re.compile(r"^\\s*[^:\\r\\n?]{1,160}?\\s*:\\s*")
+_FIELD_QUESTION_HEAD = re.compile(r"^\s*[^:\r\n?]{1,160}?\s*:\s*")
 _RELATION_QUESTION = re.compile(
-    r"^\\s*relation\\(\\s*([^,()?]+?)\\s*,\\s*([^,()?]+?)\\s*,"
-    r"\\s*([^,()?]+?)\\s*\\)\\s*\\?\\s*$")
+    r"^\s*relation\(\s*([^,()?]+?)\s*,\s*([^,()?]+?)\s*,"
+    r"\s*([^,()?]+?)\s*\)\s*\?\s*$")
 _DOCUMENT_QUESTION = re.compile(
-    r"^\\s*(?:Документ|Document)\\s*:\\s*([^|\\r\\n?]+?)"
-    r"(?:\\s*\\|\\s*owner=([^|\\r\\n?]+?))?\\s*\\?\\s*$",
+    r"^\s*(?:Документ|Document)\s*:\s*([^|\r\n?]+?)"
+    r"(?:\s*\|\s*owner=([^|\r\n?]+?))?\s*\?\s*$",
     re.IGNORECASE,
 )
 
@@ -364,11 +364,11 @@ def _semantic_need_binding(question, needs):
             if i == 0:
                 if gap.strip():
                     return False
-            elif not (re.fullmatch(r"\\s*,\\s*", gap) or
-                      re.fullmatch(r"\\s+(?:and|и)\\s+", gap, re.IGNORECASE)):
+            elif not (re.fullmatch(r"\s*,\s*", gap) or
+                      re.fullmatch(r"\s+(?:and|и)\s+", gap, re.IGNORECASE)):
                 return False
             cursor = right
-        return re.fullmatch(r"\\s*\\?\\s*", question[cursor:]) is not None
+        return re.fullmatch(r"\s*\?\s*", question[cursor:]) is not None
     if len(needs) != 1:
         return False
     need = needs[0]
