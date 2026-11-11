@@ -1,3 +1,19 @@
+## CURRENT HANDOFF — Consolidated Stage 5F–5I, PR #32 (12 November 2026)
+
+**State:** One DRAFT PR [#32](https://github.com/UkWood/LLM-RAG-chat-bot/pull/32), feature branch `feat/saturn-real-corpus-llm-validation-v0.1`. Work IN PROGRESS; not ready for Session A Acceptance Review or merge. AI base `84d783331cc755e688a7f8637be13c297c07f43e`; site READ-ONLY baseline `084d759487bfab6e111549c9b5469711ac5fc13e`.
+
+- 5F: explicit, verified ten-page/four-PDF sample and opt-in experimental CLI built on existing pipeline; **actual real integration not yet executed**, no source/PDF bytes measurement.
+- 5G: open real-source calibration runner composed from existing Stage 5E independent scorer; real authored dataset and measured results **not yet available**.
+- 5H: independent real blind and freeze **NOT_IMPLEMENTED / NOT_RUN**. Need independent author and separate frozen experiment; no use of open calibration as blind.
+- 5I: bounded loopback-only local OpenAI-compatible draft provider integrated into **existing independent Stage 5C verifier**; mocks/contracts do not prove actual local inference. No local model/hardware/config measurement, no natural-language Stage 5B extension.
+- Offline tests added; exact-head CI must be inspected. Avoid interpreting in-progress/cancelled jobs as PASS. No Stage 6.
+
+**Implementation/report:** [docs/stages/2026-11-12-saturn-real-corpus-llm-validation.md](stages/2026-11-12-saturn-real-corpus-llm-validation.md). No historic Stage 5E frozen gold/reports changed. Saturn-Main-Site unchanged.
+
+**Next actions:** finish 5H versioned real blind infrastructure and acceptance tests; obtain real PDF access and honest source-backed calibration; provision a licensed local model on suitable hardware; run measured local pilot; use an independently authored blind only after final model/code/config freeze; fix failures in same PR and request full independent Session A Acceptance Review. Do **not** merge without owner instruction.
+
+---
+
 ## PR #31 Stage 5E — consolidated Acceptance Review corrections (2026-11-11)
 
 - Architectural Session A: 2 BLOCKER (need/owner binding; blind freeze/report integrity) + 3 IMPORTANT (exact quote substring, pinned diagnostics, measurement coverage). Corrected within original PR #31; no merge. See [Stage 5E report](stages/2026-11-11-saturn-grounding-evaluation.md).
