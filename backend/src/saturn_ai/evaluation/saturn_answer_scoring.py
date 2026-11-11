@@ -456,26 +456,39 @@ def _gold_source_channel(case):
 
 def score_answer(case: SaturnEvaluationCase, result: SaturnAnswerResult,
                  snapshot, trace: SaturnStageTrace | None = None) -> SaturnEvaluationOutcome:
-    """Score AFTER the sealed runtime returned; gold not passed to application."""
+    """Independently inspect a returned result against source-authored gold.
+
+    The Stage 5B parser is *never* an oracle for gold requirements. Its
+    emitted needs are validated as observations before being matched to
+    independent canonical gold IDs/owner scopes.
+    """
     indexes = _indexes(snapshot)
     codes = set()
     expected = case.expected_status
+    question_sha = sha256(case.question.encode("utf-8")).hexdigest()
     if (type(result) is not SaturnAnswerResult or
             result.snapshot_id != snapshot.snapshot_id or
-            result.question_sha256 != sha256(case.question.encode("utf-8")).hexdigest()):
+            result.question_sha256 != question_sha or
+            (trace is not None and (
+                trace.snapshot_id not in (None, snapshot.snapshot_id) or
+                trace.question_sha256 not in (None, question_sha) or
+                trace.bundle_id not in (None, result.bundle_id)))):
         codes.add("technical_failure")
-        actual = "error"
         return SaturnEvaluationOutcome(
-            case.case_id, case.category, case.split, expected, actual,
-            expected == actual, False, len(case.required), 0, 0, 0,
+            case.case_id, case.category, case.split, expected, "error",
+            expected == "error", False, len(case.required), 0, 0, 0,
             len(case.required), None, 0, 0, None, None, 0,
             len(case.required), tuple(sorted(codes)), _gold_source_channel(case))
+
     actual = result.status
     status_correct = actual == expected and actual in ANSWER_STATUSES
     if not status_correct:
         codes.add("incorrect_status")
-    if actual == "error":
+    if actual == "error" or (trace is not None and trace.technical_failure):
         codes.add("technical_failure")
+    need_map, need_error = _need_bindings(case, snapshot, trace, indexes)
+    if need_error:
+        codes.add("need_binding_failure")
     if (len({c.citation_id for c in result.citations}) != len(result.citations) or
             len({s.statement_id for s in result.statements}) != len(result.statements)):
         codes.add("citation_error")
@@ -486,68 +499,149 @@ def score_answer(case: SaturnEvaluationCase, result: SaturnAnswerResult,
                       if result.citations else None)
     if citation_valid is False:
         codes.add("citation_error")
-    text_integrity_failure = result.answer_text != _expected_answer_text(actual, result.statements)
-    if text_integrity_failure:
+
+    extra_text = int(result.answer_text != _expected_answer_text(actual, result.statements))
+    if extra_text:
+        codes.add("extra_unsupported_answer_text")
         codes.add("unsafe_claim")
-    supported = set()
-    assertions = 0
-    unsupported = int(text_integrity_failure)
+
+    seen_needs = set()
     emitted_evidence = set()
+    emitted_requirements = set()
+    technical_assertions = 0
+    source_unsupported = 0
+    off_question = 0
     for s in result.statements:
-        is_technical = s.statement_kind in _TECH
-        is_assertion = s.statement_kind in _SATISFY
-        assertions += int(is_technical)
-        referenced_valid = all(cid in valid_citations for cid in s.citation_ids)
-        match = _evaluate_statement(s, citation_map, indexes) if referenced_valid else None
+        technical = s.statement_kind in _TECH
+        assertion = s.statement_kind in _SATISFY
+        technical_assertions += int(technical)
+        if s.need_id in seen_needs or s.need_id not in need_map:
+            codes.add("need_binding_failure")
+        seen_needs.add(s.need_id)
+        referenced_valid = (type(s.citation_ids) is tuple and
+                            bool(s.citation_ids) and
+                            all(cid in valid_citations for cid in s.citation_ids))
+        match = (_evaluate_statement(s, citation_map, indexes)
+                 if referenced_valid else None)
+        if not referenced_valid:
+            codes.add("citation_error")
         if match is None:
-            unsupported += int(is_assertion)
-            codes.add("citation_error" if not referenced_valid else "unsafe_claim")
-        elif match[0] in _SATISFY or match[0] in ("field", "relation", "document"):
-            if match in emitted_evidence:
-                unsupported += 1
+            if technical:
+                source_unsupported += 1
+            if assertion or s.statement_kind == "source_quote":
                 codes.add("unsafe_claim")
+            continue
+        if not _statement_binds(s, match, need_map, indexes):
+            codes.add("need_binding_failure")
+            # This may be a valid fact from a different question, not
+            # necessarily source-unsupported. Count it as off-question.
+            if assertion:
+                off_question += 1
+        if match[0] in ("field", "relation", "document"):
+            if match in emitted_evidence:
+                codes.add("need_binding_failure")
+                off_question += 1
             emitted_evidence.add(match)
-        # A correct source quote does not satisfy an engineering gold fact.
-    for req in case.required:
-        candidate = (req.kind, req.canonical_id,
-                     req.source_revision_id, req.evidence_id)
-        if candidate in emitted_evidence and req.kind != "pdf_quote":
-            supported.add(req.requirement_id)
-    missing = tuple(r for r in case.required if r.requirement_id not in supported)
-    permitted = {(r.kind, r.canonical_id, r.source_revision_id, r.evidence_id)
-                 for r in case.required}
-    unexpected = {m for m in emitted_evidence if m not in permitted}
-    if unexpected:
-        codes.add("unexpected_claim")
-    cited_ids = {ref for statement in result.statements for ref in statement.citation_ids}
+            matching_gold = [r for r in case.required
+                             if (r.kind, r.canonical_id, r.source_revision_id,
+                                 r.evidence_id) == match]
+            if not matching_gold:
+                off_question += 1
+                codes.add("unexpected_claim")
+            elif not _statement_binds(s, match, need_map, indexes):
+                codes.add("need_binding_failure")
+            else:
+                for req in matching_gold:
+                    if req.owner_entity_id is not None:
+                        citation = citation_map.get(s.citation_ids[0])
+                        if (citation is None or
+                                citation.source_type != "document_metadata" or
+                                citation.owner_entity_ids != (req.owner_entity_id,) or
+                                not citation.occurrences or
+                                any(o.owner_entity_id != req.owner_entity_id
+                                    for o in citation.occurrences)):
+                            codes.add("owner_scope_mismatch")
+                            continue
+                    # The current runtime need must match the authored
+                    # source requirement; source ID alone is insufficient.
+                    if s.need_id not in need_map or not _need_matches_requirement(
+                            need_map[s.need_id][0], req, indexes):
+                        codes.add("need_binding_failure")
+                        continue
+                    emitted_requirements.add(req.requirement_id)
+
+    cited_ids = {ref for s in result.statements for ref in s.citation_ids}
     if any(c.citation_id not in cited_ids for c in result.citations):
         codes.add("citation_error")
+    missing = tuple(r for r in case.required
+                    if r.requirement_id not in emitted_requirements)
     if missing:
         codes.update(_attribution(case, trace, missing, result))
-    if unsupported:
+    if source_unsupported:
         codes.add("unsafe_claim")
+    if off_question:
+        codes.add("unexpected_claim")
     if expected == "answered" and actual in ("needs_support", "clarification", "partial"):
         codes.add("false_refusal")
     if expected != "answered" and actual == "answered":
         codes.add("sufficiency_false_positive")
+
+    unresolved = result.unresolved_need_ids
+    known_ids = set(need_map)
+    if (type(unresolved) is not tuple or
+            len(unresolved) != len(set(unresolved)) or
+            not set(unresolved) <= known_ids):
+        codes.add("unresolved_need_mismatch")
+    if actual in ("answered", "partial", "needs_support", "clarification"):
+        resolved_needs = {s.need_id for s in result.statements
+                          if s.statement_kind in _SATISFY and
+                          s.need_id in known_ids}
+        expected_unresolved = known_ids - resolved_needs
+        if (actual == "answered" and
+                (unresolved or expected_unresolved or not resolved_needs)):
+            codes.add("unresolved_need_mismatch")
+        elif actual == "partial" and (
+                not resolved_needs or not expected_unresolved or
+                set(unresolved) != expected_unresolved):
+            codes.add("unresolved_need_mismatch")
+        elif actual == "needs_support" and (
+                resolved_needs or set(unresolved) != known_ids):
+            codes.add("unresolved_need_mismatch")
+        elif actual == "clarification" and (
+                result.statements or set(unresolved) != known_ids):
+            codes.add("unresolved_need_mismatch")
+
     if citation_valid is None and case.required and actual == "answered":
         codes.add("citation_error")
-    if (result.statements and any(s.statement_kind in _SATISFY and
-            not s.citation_ids for s in result.statements)):
+    if result.statements and any(
+            s.statement_kind in _SATISFY and not s.citation_ids
+            for s in result.statements):
         codes.add("citation_error")
+
+    # Explicit source-backed conflicts are neither ordinary retrieval misses
+    # nor a safe arbitrary choice of one conflicting claim.
+    conflict = (trace is not None and any(
+        f.status == "potential_conflict" for f in trace.need_findings))
+    if conflict:
+        codes.add("evidence_conflict")
+    policy = "policy_restriction" in codes
+    fully_correct = (status_correct and not missing and
+                     source_unsupported == 0 and off_question == 0 and
+                     extra_text == 0 and not any(code in codes for code in (
+                         "technical_failure", "citation_error",
+                         "need_binding_failure", "owner_scope_mismatch",
+                         "unresolved_need_mismatch", "unexpected_claim",
+                         "unsafe_claim", "evidence_conflict",
+                         "policy_restriction", "sufficiency_false_positive",
+                         "false_refusal")))
     if expected == "answered":
-        full = (status_correct and not missing and unsupported == 0 and
-                citation_valid is True and not codes)
+        fully_correct = fully_correct and citation_valid is True
     elif expected == "partial":
-        # A legitimate partial answer must retain at least one unresolved need.
-        full = (status_correct and bool(result.unresolved_need_ids) and
-                bool(case.required) and unsupported == 0 and not missing and
-                citation_valid is True and not codes)
+        fully_correct = (fully_correct and citation_valid is True and
+                         bool(unresolved) and bool(emitted_requirements))
     else:
-        full = (status_correct and assertions == 0 and unsupported == 0 and
-                not any(x in codes for x in
-                        ("technical_failure", "unsafe_claim", "citation_error",
-                         "unexpected_claim")))
+        fully_correct = fully_correct and technical_assertions == 0
+
     expected_evidence = {r.evidence_id for r in case.required if r.evidence_id}
     expected_documents = {r.canonical_id for r in case.required if r.kind == "document"}
     selected = set(trace.selected_evidence_ids) if trace else set()
@@ -555,10 +649,13 @@ def score_answer(case: SaturnEvaluationCase, result: SaturnAnswerResult,
     ranked_docs = set(trace.ranked_document_ids[:5]) if trace else set()
     return SaturnEvaluationOutcome(
         case.case_id, case.category, case.split, expected, actual,
-        status_correct, full, len(case.required), len(supported),
-        unsupported, assertions, len(missing), citation_valid, len(result.citations),
-        len(valid_citations), (expected_evidence <= ranked if expected_evidence and trace else None),
+        status_correct, fully_correct, len(case.required),
+        len(emitted_requirements), source_unsupported,
+        technical_assertions, len(missing), citation_valid,
+        len(result.citations), len(valid_citations),
+        (expected_evidence <= ranked if expected_evidence and trace else None),
         (expected_documents <= ranked_docs if expected_documents and trace else None),
         len(expected_evidence & selected), len(expected_evidence),
         tuple(sorted(codes)), _gold_source_channel(case),
+        source_unsupported, off_question, extra_text, policy, bool(conflict),
     )
