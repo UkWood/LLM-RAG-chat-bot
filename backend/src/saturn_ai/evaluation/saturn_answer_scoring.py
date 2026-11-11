@@ -68,6 +68,7 @@ class SaturnEvaluationOutcome:
     extra_answer_text_count: int = 0
     policy_restriction: bool = False
     evidence_conflict: bool = False
+    answer_assertion_count: int = 0
 
 
 def _expected_field(fact, entities):
@@ -510,11 +511,13 @@ def score_answer(case: SaturnEvaluationCase, result: SaturnAnswerResult,
     emitted_requirements = set()
     technical_assertions = 0
     source_unsupported = 0
-    off_question = 0
+    off_question_ids = set()
+    answer_assertions = 0
     for s in result.statements:
         technical = s.statement_kind in _TECH
         assertion = s.statement_kind in _SATISFY
         technical_assertions += int(technical)
+        answer_assertions += int(assertion)
         if s.need_id in seen_needs or s.need_id not in need_map:
             codes.add("need_binding_failure")
         seen_needs.add(s.need_id)
@@ -536,17 +539,17 @@ def score_answer(case: SaturnEvaluationCase, result: SaturnAnswerResult,
             # This may be a valid fact from a different question, not
             # necessarily source-unsupported. Count it as off-question.
             if assertion:
-                off_question += 1
+                off_question_ids.add(s.statement_id)
         if match[0] in ("field", "relation", "document"):
             if match in emitted_evidence:
                 codes.add("need_binding_failure")
-                off_question += 1
+                off_question_ids.add(s.statement_id)
             emitted_evidence.add(match)
             matching_gold = [r for r in case.required
                              if (r.kind, r.canonical_id, r.source_revision_id,
                                  r.evidence_id) == match]
             if not matching_gold:
-                off_question += 1
+                off_question_ids.add(s.statement_id)
                 codes.add("unexpected_claim")
             elif not _statement_binds(s, match, need_map, indexes):
                 codes.add("need_binding_failure")
@@ -570,6 +573,7 @@ def score_answer(case: SaturnEvaluationCase, result: SaturnAnswerResult,
                         continue
                     emitted_requirements.add(req.requirement_id)
 
+    off_question = len(off_question_ids)
     cited_ids = {ref for s in result.statements for ref in s.citation_ids}
     if any(c.citation_id not in cited_ids for c in result.citations):
         codes.add("citation_error")
@@ -658,4 +662,5 @@ def score_answer(case: SaturnEvaluationCase, result: SaturnAnswerResult,
         len(expected_evidence & selected), len(expected_evidence),
         tuple(sorted(codes)), _gold_source_channel(case),
         source_unsupported, off_question, extra_text, policy, bool(conflict),
+        answer_assertions,
     )
