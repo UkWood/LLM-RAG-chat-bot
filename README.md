@@ -2,9 +2,12 @@
 
 Отдельный технический консультант: ответы только по доверенным материалам сайта и PDF с источниками и отказом при недостатке доказательств. Статический интерфейс Astro, отдельный FastAPI backend, локальная KB и сменный LLM provider.
 
-**Стадия (2026-11-11):** Stage 5C PR #29 **MERGED** (`main=9d6c6fa1da180e62feb22134efa92724d8173f17`). Stage 5D — Answer Assembly, Citations & Final Policy Gate v0.1 — implementation candidate, one feature PR in independent review. Offline deterministic answer/result/citation contracts and policy safety; no production LLM, API, UI or real-user evaluation. `UkWood/Saturn-Main-Site` strictly read-only.
+**Стадия (2026-11-11):** Stage 5D PR #30 **MERGED**, baseline `main=8dc9d2fbd20854bd54903ff617581ed4ecad6e31`. Stage 5E — Saturn Grounding Evaluation v0.1 — отдельная feature branch `feat/saturn-grounding-evaluation-v0.1` (PR/независимый review; merge запрещён). Измеренный open synthetic calibration: 28/28 полностью корректных случаев на fixture corpus, 17/17 positive, 0 unsupported claims, 24/24 citations; **независимый blind NOT_RUN, production readiness false**. Продуктовая приёмка не выполнена; AI provider исключительно offline `SaturnFakeClaimProvider`. `UkWood/Saturn-Main-Site` строго read-only.
 
 ## Память проекта
+
+- [Stage 5E — Saturn Grounding Evaluation, schema/scorer/metrics, first measured open calibration](docs/stages/2026-11-11-saturn-grounding-evaluation.md)
+- [Frozen Saturn-specific open calibration gold](evaluation/datasets/saturn-grounding-calibration-v0.1.json) и [first measured report](evaluation/reports/saturn-grounding-calibration-v0.1.json)
 
 - [Stage 5D: Answer Assembly, Citations & Final Policy Gate](docs/stages/2026-11-11-saturn-answer-assembly.md)
 
@@ -35,6 +38,15 @@
 Репозиторий `UkWood/Saturn-Main-Site` — **только чтение**, без изменений файлов, CI, адресов и assets. Все результаты AI хранятся в этом репозитории. Чат не заменяет документацию и Git-историю.
 
 ## Проверка текущего этапа
+
+Stage 5E использует 28 source-backed synthetic fixture cases. Для воспроизводимого измерения на неизменном наборе:
+
+```bash
+PYTHONPATH=backend/src python -m saturn_ai.evaluation.saturn_grounding --profile calibration --dataset evaluation/datasets/saturn-grounding-calibration-v0.1.json --report /tmp/saturn-grounding-calibration.json
+```
+
+Отчёт измеряет отдельно positive completeness, correct refusals/clarifications, partial, citations, false refusals, source-hit@5 и evidence recall; не объявляет independent blind PASS. Отдельный offline test suite и GitHub CI проверяют корректность кода.
+
 
 ```bash
 python3 -m venv work/venv
