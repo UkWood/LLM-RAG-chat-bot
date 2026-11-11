@@ -4,7 +4,7 @@
 
 - Stage 5F: partial engineering implementation — pinned experimental site/PDF sample and existing production-like RAG CLI; **real PDF ingestion/snapshot/query not measured yet**.
 - Stage 5G: real open calibration **runner implemented**, real gold/25–40 cases/metrics **NOT_RUN**.
-- Stage 5H: independent real blind infrastructure and source-backed independently authored dataset **NOT_IMPLEMENTED / NOT_RUN**.
+- Stage 5H: separate real blind freeze/one-shot runner and validation **implemented as candidate**; independent source-backed blind dataset and actual measured run **NOT_RUN**.
 - Stage 5I: local loopback-only provider and Stage 5C exact-class allowlist implemented with offline/mocked tests. **Real inference NOT_RUN**, model quality **NOT_ESTABLISHED**. Existing Stage 5B free-form limitations remain.
 - Exact-head CI and independent Acceptance Review are required. None of the new unit tests constitute real-site or real-LLM evidence.
 - Stage 5E synthetic historical frozen artifacts unchanged. No Stage 6, production or cloud egress.
