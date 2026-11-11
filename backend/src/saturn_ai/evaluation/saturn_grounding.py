@@ -66,35 +66,63 @@ def _safe_error(snapshot_id, bundle_id, question):
 
 
 def _run_question(service, assembly, gate, verifier, question, profile):
-    """Application boundary: NO case metadata or gold labels accepted."""
-    bundle = service.capture()
-    trace = SaturnStageTrace()
+    """One pinned bundle/session. No case labels or gold enter runtime."""
     try:
-        retrieval = service.search_saturn(
-            question, mode=profile.mode, top_k=profile.top_k)
         with service.open_answer_session() as session:
-            context = session.build_context(
-                question, mode=profile.mode, top_k=profile.top_k)
-            assessment = gate.assess(session=session, context=context)
-            verified = verifier.verify(session=session, context=context)
-            answer = assembly.assemble(session=session, context=context)
-            trace = SaturnStageTrace(
-                ranked_evidence_ids=tuple(c.evidence_id for c in retrieval.answer_evidence),
-                selected_evidence_ids=tuple(e.evidence_id for e in context.answer_evidence),
-                selected_document_ids=tuple(d.document_id for d in context.document_references),
-                ranked_document_ids=tuple(d.match.document.document_id
-                                          for d in retrieval.document_matches),
-                parsed_need_kinds=tuple(n.kind for n in assessment.needs),
-                finding_statuses=tuple(f.status for f in assessment.findings),
-                verified_evidence_ids=tuple(c.evidence_id for c in verified.verified_claims
-                                            if c.verification_status == "verified_structured"),
-            )
-            return answer, trace
+            with session._lock:
+                bundle = session._bundle
+                # The diagnostic search uses the SAME captured bundle as
+                # build_context; never service.search_saturn(active) here.
+                retrieval = service._search_captured(
+                    bundle, question, profile.mode, profile.top_k)
+                context = session.build_context(
+                    question, mode=profile.mode, top_k=profile.top_k)
+                if (retrieval.snapshot_id != context.snapshot_id or
+                        retrieval.bundle_id != context.bundle_id or
+                        retrieval.index_manifest != bundle.manifest or
+                        tuple(c.evidence_id for c in retrieval.answer_evidence) !=
+                        tuple(e.evidence_id for e in context.answer_evidence) or
+                        tuple(d.match.document.document_id for d in retrieval.document_matches) !=
+                        tuple(d.document_id for d in context.document_references)):
+                    raise ValueError("pinned diagnostic context drift")
+                assessment = gate.assess(session=session, context=context)
+                verified = verifier.verify(session=session, context=context)
+                answer = assembly.assemble(session=session, context=context)
+                if any((item.snapshot_id != context.snapshot_id or
+                        item.bundle_id != context.bundle_id or
+                        item.question_sha256 != context.question_sha256)
+                       for item in (assessment, verified, answer)):
+                    raise ValueError("stage identity drift")
+                policy = service.policy_provider.capture()
+                trace = SaturnStageTrace(
+                    snapshot_id=context.snapshot_id,
+                    bundle_id=context.bundle_id,
+                    question_sha256=context.question_sha256,
+                    ranked_evidence_ids=tuple(c.evidence_id for c in retrieval.answer_evidence),
+                    selected_evidence_ids=tuple(e.evidence_id for e in context.answer_evidence),
+                    selected_document_ids=tuple(d.document_id for d in context.document_references),
+                    ranked_document_ids=tuple(d.match.document.document_id
+                                              for d in retrieval.document_matches),
+                    parsed_need_kinds=tuple(n.kind for n in assessment.needs),
+                    finding_statuses=tuple(f.status for f in assessment.findings),
+                    needs=assessment.needs,
+                    need_findings=assessment.findings,
+                    verified_evidence_ids=tuple(c.evidence_id for c in verified.verified_claims
+                                                if c.verification_status == "verified_structured"),
+                    policy_blocked_evidence_ids=tuple(sorted(policy.blocked_evidence_ids)),
+                    policy_blocked_document_ids=tuple(sorted(policy.blocked_document_ids)),
+                    policy_blocked_source_revision_ids=tuple(sorted(policy.blocked_source_revision_ids)),
+                    policy_blocked_entity_ids=tuple(sorted(policy.blocked_entity_ids)),
+                )
+                return answer, trace
     except Exception:
-        # No sensitive exception strings, traceback or partial source data.
+        # Error is not a missing-source/refusal result. No question/source text.
+        bundle = service.capture()
         return _safe_error(bundle.snapshot.snapshot_id,
                            bundle.manifest.bundle_id, question), SaturnStageTrace(
-                               technical_failure=True)
+                               technical_failure=True, snapshot_id=bundle.snapshot.snapshot_id,
+                               bundle_id=bundle.manifest.bundle_id,
+                               question_sha256=sha256(question.encode("utf-8")).hexdigest())
 
 
 def evaluate(dataset_bytes, snapshot, *, profile: SaturnEvaluationProfile,
@@ -166,6 +194,8 @@ def main(argv=None):
     blind = None
     code_revision = _code_revision()
     if args.profile == "blind":
+        if code_revision == "unavailable":
+            parser.error("Exact Git SHA required before blind START")
         if args.freeze is None:
             parser.error("--freeze required for blind evaluation")
         freeze = json.loads(args.freeze.read_text(encoding="utf-8"))
@@ -183,7 +213,7 @@ def main(argv=None):
         if blind:
             if len(report["cases"]) != blind.freeze["expected_case_count"]:
                 raise BlindIntegrityError("case_count_mismatch")
-            blind.complete(data)
+            blind.complete(data, dataset=validate_gold(raw, snapshot, split="synthetic_blind"))
         else:
             args.report.parent.mkdir(parents=True, exist_ok=True)
             args.report.write_bytes(data)
