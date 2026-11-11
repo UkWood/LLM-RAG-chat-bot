@@ -164,40 +164,33 @@ class SaturnGroundingAdversarialTests(unittest.TestCase):
 
     def test_t71_parser_failure_after_source_hit(self):
         a, _ = self.ask("C18")
-        eid = self.gold("C01").required[0].evidence_id
-        trace = SaturnStageTrace(ranked_evidence_ids=(eid,),
-                                 selected_evidence_ids=(eid,))
+        _, observed = self.ask("C01")
+        trace = replace(observed, needs=(), need_findings=(),
+                        parsed_need_kinds=())
         out = self.score("C01", a, trace, rebind_question=True)
         self.assertIn("question_parse_failure", out.failure_codes)
 
     def test_t72_gate_false_negative_after_parse(self):
         a, _ = self.ask("C18")
-        eid = self.gold("C01").required[0].evidence_id
-        trace = SaturnStageTrace(ranked_evidence_ids=(eid,),
-                                 selected_evidence_ids=(eid,),
-                                 parsed_need_kinds=("field_value",),
-                                 finding_statuses=("missing_in_context",))
+        _, observed = self.ask("C01")
+        trace = replace(observed, need_findings=(
+            replace(observed.need_findings[0], status="missing_in_context",
+                    evidence_ids=()),),
+            finding_statuses=("missing_in_context",))
         out = self.score("C01", a, trace, rebind_question=True)
         self.assertIn("sufficiency_false_negative", out.failure_codes)
 
     def test_t73_claim_generation_missing_after_sufficiency(self):
         a, _ = self.ask("C18")
-        eid = self.gold("C01").required[0].evidence_id
-        trace = SaturnStageTrace(ranked_evidence_ids=(eid,),
-                                 selected_evidence_ids=(eid,),
-                                 parsed_need_kinds=("field_value",),
-                                 finding_statuses=("covered_structured",))
+        _, observed = self.ask("C01")
+        trace = replace(observed, verified_evidence_ids=(),
+                        verified_need_ids=())
         self.assertIn("claim_generation_missing",
                       self.score("C01", a, trace, rebind_question=True).failure_codes)
 
     def test_t74_assembly_missing_after_verified_fact(self):
         a, _ = self.ask("C18")
-        eid = self.gold("C01").required[0].evidence_id
-        trace = SaturnStageTrace(ranked_evidence_ids=(eid,),
-                                 selected_evidence_ids=(eid,),
-                                 parsed_need_kinds=("field_value",),
-                                 finding_statuses=("covered_structured",),
-                                 verified_evidence_ids=(eid,))
+        _, trace = self.ask("C01")
         self.assertIn("answer_assembly_missing",
                       self.score("C01", a, trace, rebind_question=True).failure_codes)
 
