@@ -376,6 +376,25 @@ def _semantic_need_binding(question, needs, indexes=None):
     Only checks source-question wording, not which source facts exist. Commas
     inside source-declared field names are preserved within the literal span.
     """
+    if (len(needs) == 2 and needs[0].kind == "field_value" and
+            needs[1].kind == "unresolved"):
+        # Stage 5B deliberately preserves an unsupported clause following a
+        # recognized first field rather than silently dropping it (C27).
+        first, tail = needs
+        if (tail.question_span[0] <= first.question_span[1] or
+                tail.question_span[1] != len(question) or
+                not tail.original_text.strip() or
+                re.fullmatch(r"\s*\?\s*",
+                             question[first.question_span[1]:tail.question_span[0]]) is None):
+            return False
+        prefix = question[:first.question_span[1]] + "?"
+        return (_semantic_need_binding(prefix, (first,), indexes) and
+                _semantic_need_binding(tail.original_text, (
+                    type(tail)(tail.need_id, tail.kind,
+                               (0, len(tail.original_text)), tail.original_text,
+                               tail.entity_id, tail.field_path, tail.predicate,
+                               tail.object_entity_id, tail.resolution_status,
+                               tail.document_title),), None))
     if all(n.kind == "field_value" for n in needs):
         header = _FIELD_QUESTION_HEAD.match(question)
         if header is None:
@@ -432,7 +451,9 @@ def _semantic_need_binding(question, needs, indexes=None):
             return False
         return need.question_span == (0, len(question))
     if need.kind == "unresolved":
-        return (need.field_path is None and need.predicate is None and
+        return (need.resolution_status == "unresolved" and
+                need.entity_id is None and need.field_path is None and
+                need.predicate is None and need.object_entity_id is None and
                 need.document_title is None)
     return False
 
