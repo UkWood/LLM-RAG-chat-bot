@@ -818,5 +818,221 @@ class BlindReportContractTests(unittest.TestCase):
     def test_cr08_t06_unavailable_git_revision_still_blocked(self):
         self.test_cr02_t06_unavailable_code_sha_no_freeze()
 
+
+    # CR09F exercises the public Stage 5E pipeline on IN-MEMORY synthetic
+    # blind-shaped copies of OPEN cases; no blind CLI or held-out data.
+    def _cr09f_observed_report(self, scenarios):
+        freeze, dataset, _, raw = self.sample(tuple(scenarios))
+        bundle = build_saturn_retrieval_bundle(self.snapshot)
+        svc = SaturnRetrievalService()
+        svc.publish(bundle)
+        verifier = SaturnClaimVerificationService(provider=SaturnFakeClaimProvider())
+        assembly = SaturnAnswerAssemblyService(verifier=verifier)
+        gate = SaturnQuestionGate()
+        profile = SaturnEvaluationProfile("synthetic_calibration")
+        outcomes = []
+
+        for case in dataset.cases:
+            scenario = scenarios[case.case_id]
+            if scenario == "error":
+                # The first diagnostic retrieval raises; no usable result.
+                with patch.object(SaturnRetrievalService, "_search_captured",
+                                  side_effect=RuntimeError("test-only pre-retrieval failure")):
+                    answer, trace = _run_question(svc, assembly, gate, verifier,
+                                                  case.question, profile)
+                self.assertTrue(trace.technical_failure)
+                self.assertFalse(trace.retrieval_diagnostics_complete)
+            elif scenario == "miss":
+                expected_eid = case.required[0].evidence_id
+                original_search = SaturnRetrievalService._search_captured
+                performed = []
+
+                def controlled_miss(service, pinned, question, mode, top_k):
+                    # Execute real lexical retrieval first, then inject a
+                    # deterministic filtered ranking at the response boundary.
+                    # Both diagnostic search and answer context see the SAME
+                    # deliberately missed source result.
+                    observed = original_search(service, pinned, question, mode, top_k)
+                    performed.append(question)
+                    if question != case.question:
+                        return observed
+                    self.assertIn(expected_eid, tuple(
+                        x.evidence_id for x in observed.answer_evidence))
+                    other = (candidate for candidate in observed.answer_evidence
+                             if candidate.evidence_id != expected_eid)
+                    return replace(observed, answer_evidence=tuple(
+                        replace(candidate, rank=rank)
+                        for rank, candidate in enumerate(other, 1)))
+
+                with patch.object(SaturnRetrievalService, "_search_captured",
+                                  new=controlled_miss):
+                    answer, trace = _run_question(svc, assembly, gate, verifier,
+                                                  case.question, profile)
+                self.assertGreaterEqual(len(performed), 2)
+                self.assertTrue(trace.retrieval_diagnostics_complete)
+                self.assertNotIn(expected_eid, trace.ranked_evidence_ids[:5])
+                self.assertFalse(trace.technical_failure)
+            elif scenario == "correct":
+                answer, trace = _run_question(svc, assembly, gate, verifier,
+                                              case.question, profile)
+                self.assertTrue(trace.retrieval_diagnostics_complete)
+            else:
+                raise AssertionError("Unexpected test-only retrieval scenario")
+            outcomes.append(score_answer(case, answer, self.snapshot, trace))
+
+        report = build_report(
+            dataset, outcomes, code_revision=freeze["code_revision"],
+            config_hash=freeze["config_hash"], bundle=bundle,
+            blind_status="RUN", experiment_id=freeze["experiment_id"])
+        return freeze, dataset, report, raw
+
+    def _cr09f_complete(self, freeze, report, raw):
+        with TemporaryDirectory() as tmp:
+            run = BlindRun(freeze=freeze, receipts_dir=Path(tmp)/"receipts",
+                           report_path=Path(tmp)/"result.json")
+            run.start()
+            run.complete(report_bytes(report), dataset_bytes=raw, snapshot=self.snapshot)
+            self.assertTrue(run.start_path.exists())
+            self.assertTrue(run.complete_path.exists())
+            self.assertEqual(json.loads(run.complete_path.read_text())["report_sha256"],
+                             sha256(run.report_path.read_bytes()).hexdigest())
+            self.assertEqual(json.loads(run.report_path.read_text())["metrics"],
+                             report["metrics"])
+
+    def test_cr09f_t01_field_failure_before_retrieval_completes(self):
+        freeze, dataset, report, raw = self._cr09f_observed_report({"C01": "error"})
+        row = report["cases"][0]
+        self.assertEqual(row["actual_status"], "error")
+        self.assertFalse(row["fully_correct"])
+        self.assertIsNone(row["source_hit_at_5"])
+        self.assertIn("technical_failure", row["failure_codes"])
+        self.assertEqual(report["metrics"]["technical_error"]["numerator"], 1)
+        self.assertEqual(report["metrics"]["source_hit_at_5"]["denominator"], 0)
+        self.assertEqual(report["metrics"]["source_hit_at_5_not_measured_cases"], 1)
+        self._cr09f_complete(freeze, report, raw)
+
+    def test_cr09f_t02_document_failure_before_retrieval_completes(self):
+        freeze, dataset, report, raw = self._cr09f_observed_report({"C15": "error"})
+        row = report["cases"][0]
+        self.assertEqual(row["actual_status"], "error")
+        self.assertFalse(row["fully_correct"])
+        self.assertIn("technical_failure", row["failure_codes"])
+        self.assertIsNone(row["document_hit_at_5"])
+        self.assertEqual(report["metrics"]["document_hit_at_5"]["denominator"], 0)
+        self.assertEqual(report["metrics"]["document_hit_at_5_not_measured_cases"], 1)
+        self._cr09f_complete(freeze, report, raw)
+
+    def test_cr09f_t03_executed_retrieval_measured_miss(self):
+        freeze, dataset, report, raw = self._cr09f_observed_report({"C02": "miss"})
+        row = report["cases"][0]
+        self.assertIs(row["source_hit_at_5"], False)
+        self.assertFalse(row["fully_correct"])
+        self.assertNotEqual(row["actual_status"], "error")
+        self.assertIn("retrieval_miss", row["failure_codes"])
+        self.assertEqual(report["metrics"]["source_hit_at_5"]["denominator"], 1)
+        self.assertEqual(report["metrics"]["source_hit_at_5_not_measured_cases"], 0)
+        self._cr09f_complete(freeze, report, raw)
+
+    def test_cr09f_t04_forged_missing_measurement_is_rejected(self):
+        for scenario, target, field in (
+            ("miss", "C02", "source_hit_at_5"),
+            ("correct", "C15", "document_hit_at_5"),
+        ):
+            with self.subTest(scenario=scenario, target=target):
+                freeze, dataset, report, raw = self._cr09f_observed_report(
+                    {target: scenario})
+                # Recompute all report metrics: reject at case integrity,
+                # not merely because a denominator was left unchanged.
+                forged = json.loads(json.dumps(report))
+                row = forged["cases"][0]
+                row[field] = None
+                if field == "source_hit_at_5":
+                    row["evidence_recall_denominator"] = 0
+                    row["evidence_recall_numerator"] = 0
+                outcomes = tuple(SaturnEvaluationOutcome(**item)
+                                 for item in forged["cases"])
+                forged["metrics"] = calculate_metrics(outcomes)
+                forged["breakdown"] = breakdown(outcomes)
+                with TemporaryDirectory() as tmp:
+                    run = BlindRun(freeze=freeze, receipts_dir=Path(tmp)/"receipts",
+                                   report_path=Path(tmp)/"report.json")
+                    run.start()
+                    with self.assertRaises(BlindIntegrityError) as raised:
+                        run.complete(report_bytes(forged), dataset_bytes=raw,
+                                     snapshot=self.snapshot)
+                    self.assertEqual(raised.exception.code,
+                                     "inconsistent_report_case")
+                    self.assertFalse(run.complete_path.exists())
+                    self.assertFalse(run.report_path.exists())
+
+        # Even a forged technical-error label must not launder a *recorded*
+        # retrieval_miss into an unmeasured case.
+        freeze, dataset, report, raw = self._cr09f_observed_report({"C02": "miss"})
+        forged = json.loads(json.dumps(report))
+        row = forged["cases"][0]
+        row["actual_status"] = "error"
+        row["fully_correct"] = False
+        row["source_hit_at_5"] = None
+        row["evidence_recall_denominator"] = 0
+        row["evidence_recall_numerator"] = 0
+        row["failure_codes"] = sorted(set(row["failure_codes"]) | {"technical_failure"})
+        outcomes = (SaturnEvaluationOutcome(**row),)
+        forged["metrics"] = calculate_metrics(outcomes)
+        forged["breakdown"] = breakdown(outcomes)
+        with TemporaryDirectory() as tmp:
+            run = BlindRun(freeze=freeze, receipts_dir=Path(tmp)/"receipts",
+                           report_path=Path(tmp)/"report.json")
+            run.start()
+            with self.assertRaises(BlindIntegrityError):
+                run.complete(report_bytes(forged), dataset_bytes=raw,
+                             snapshot=self.snapshot)
+            self.assertFalse(run.complete_path.exists())
+
+    def test_cr09f_t05_mixed_complete_miss_and_pre_retrieval_failure(self):
+        freeze, dataset, report, raw = self._cr09f_observed_report({
+            "C01": "correct", "C02": "miss", "C15": "error",
+        })
+        rows = {x["case_id"]: x for x in report["cases"]}
+        self.assertTrue(rows["C01"]["fully_correct"])
+        self.assertIs(rows["C01"]["source_hit_at_5"], True)
+        self.assertIs(rows["C02"]["source_hit_at_5"], False)
+        self.assertFalse(rows["C02"]["fully_correct"])
+        self.assertIsNone(rows["C15"]["document_hit_at_5"])
+        self.assertEqual(rows["C15"]["actual_status"], "error")
+        self.assertEqual(report["failed_case_ids"], ["C02", "C15"])
+        self.assertEqual(report["metrics"]["fully_correct_all"]["numerator"], 1)
+        self.assertEqual(report["metrics"]["technical_error"]["numerator"], 1)
+        self.assertEqual(report["metrics"]["source_hit_at_5"],
+                         {"numerator": 1, "denominator": 2, "rate": 0.5})
+        self.assertEqual(report["metrics"]["document_hit_at_5"]["denominator"], 0)
+        self.assertEqual(report["metrics"]["document_hit_at_5_not_measured_cases"], 1)
+        self._cr09f_complete(freeze, report, raw)
+
+    def test_cr09f_t06_freeze_and_one_shot_receipts_regression(self):
+        freeze, dataset, report, raw = self._cr09f_observed_report({"C01": "error"})
+        with TemporaryDirectory() as tmp:
+            receipts = Path(tmp)/"receipts"
+            path = Path(tmp)/"report.json"
+            run = BlindRun(freeze=freeze, receipts_dir=receipts,
+                           report_path=path)
+            run.start()
+            with self.assertRaises(BlindIntegrityError):
+                run.complete(report_bytes(report), dataset_bytes=raw + b" ",
+                             snapshot=self.snapshot)
+            self.assertFalse(run.complete_path.exists())
+            run.complete(report_bytes(report), dataset_bytes=raw,
+                         snapshot=self.snapshot)
+            saved = path.read_bytes()
+            digest = json.loads(run.complete_path.read_text())["report_sha256"]
+            self.assertEqual(digest, sha256(saved).hexdigest())
+            with self.assertRaises(BlindIntegrityError):
+                run.complete(report_bytes(report), dataset_bytes=raw,
+                             snapshot=self.snapshot)
+            with self.assertRaises(BlindIntegrityError):
+                BlindRun(freeze=freeze, receipts_dir=receipts,
+                         report_path=path).start()
+            self.assertEqual(path.read_bytes(), saved)
+        self.assertNotEqual(freeze["code_revision"], "unavailable")
+
 if __name__ == "__main__":
     unittest.main()
