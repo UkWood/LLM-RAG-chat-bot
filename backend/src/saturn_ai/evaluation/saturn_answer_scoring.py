@@ -227,7 +227,8 @@ def _citation_ok(c, snapshot, indexes):
 
 def _evaluate_statement(s, citations, indexes):
     """Return canonical kind/id/revision/evidence if an assertion is exact."""
-    if type(s) is not SaturnAnswerStatement or len(s.citation_ids) != 1:
+    if (type(s) is not SaturnAnswerStatement or type(s.text) is not str or
+            type(s.citation_ids) is not tuple or len(s.citation_ids) != 1):
         return None
     citation = citations.get(s.citation_ids[0])
     if (citation is None or (s.evidence_id is not None and
@@ -488,21 +489,33 @@ def score_answer(case: SaturnEvaluationCase, result: SaturnAnswerResult,
         codes.add("incorrect_status")
     if actual == "error" or (trace is not None and trace.technical_failure):
         codes.add("technical_failure")
-    need_map, need_error = _need_bindings(case, snapshot, trace, indexes)
+    try:
+        need_map, need_error = _need_bindings(case, snapshot, trace, indexes)
+    except (TypeError, AttributeError, ValueError, IndexError):
+        need_map, need_error = {}, True
     if need_error:
         codes.add("need_binding_failure")
     if (len({c.citation_id for c in result.citations}) != len(result.citations) or
             len({s.statement_id for s in result.statements}) != len(result.statements)):
         codes.add("citation_error")
     citation_map = {c.citation_id: c for c in result.citations}
-    valid_citations = {c.citation_id for c in result.citations
-                       if _citation_ok(c, snapshot, indexes)}
+    valid_citations = set()
+    for citation in result.citations:
+        try:
+            if _citation_ok(citation, snapshot, indexes):
+                valid_citations.add(citation.citation_id)
+        except (TypeError, ValueError, KeyError, AttributeError, IndexError):
+            pass
     citation_valid = (len(valid_citations) == len(result.citations)
                       if result.citations else None)
     if citation_valid is False:
         codes.add("citation_error")
 
-    extra_text = int(result.answer_text != _expected_answer_text(actual, result.statements))
+    try:
+        extra_text = int(result.answer_text != _expected_answer_text(
+            actual, result.statements))
+    except (TypeError, AttributeError, ValueError):
+        extra_text = 1
     if extra_text:
         codes.add("extra_unsupported_answer_text")
         codes.add("unsafe_claim")
