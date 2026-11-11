@@ -541,8 +541,10 @@ class SaturnQuestionNeedsTests(unittest.TestCase):
         snap = build_saturn_knowledge_snapshot(*make_inputs({
             PRODUCT: source("Instrument", fields=fields),
         }))
+        owner = next(e for e in snap.entities if e.title == "Instrument")
         actual = next(f.field_path for f in snap.facts
-                      if f.field_path.startswith('specs['))
+                      if f.entity_id == owner.entity_id
+                      and f.field_path.startswith('specs['))
         self.assertEqual(actual, 'specs["Класс точности"]')
         result, evidence, _, _ = self._real_source_field_gate(fields, actual)
         self.assertEqual(result.findings[0].status, "covered_structured")
