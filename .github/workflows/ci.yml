@@ -57,6 +57,8 @@ jobs:
           cmp /tmp/saturn-gold.json evaluation/datasets/saturn-grounding-calibration-v0.1.json
       - name: Measure Stage 5E end-to-end using frozen calibration gold
         run: PYTHONPATH=backend/src python -m saturn_ai.evaluation.saturn_grounding --profile calibration --dataset evaluation/datasets/saturn-grounding-calibration-v0.1.json --report /tmp/saturn-report.json --emit-open-json
+      - name: Controlled Stage 5E policy, technical error and simulated conflict measurement
+        run: PYTHONPATH=backend/src python -m saturn_ai.evaluation.saturn_controlled
 
   saturn-evaluator-targeted:
     runs-on: ubuntu-latest
