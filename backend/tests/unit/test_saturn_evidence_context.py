@@ -21,8 +21,8 @@ from unit.test_support_catalog_adapter import PRODUCT, SECOND, doc, source
 
 
 def expect_code(case, code):
-    case.assertIsInstance(case.exception, SaturnContextError)
-    case.assertEqual(case.exception.reason_code, code)
+    assert isinstance(case.exception, SaturnContextError), type(case.exception).__name__
+    assert case.exception.reason_code == code, case.exception.reason_code
 
 
 class SaturnEvidenceContextTests(unittest.TestCase):
@@ -352,6 +352,93 @@ class SaturnEvidenceContextTests(unittest.TestCase):
                 raise ValueError("injected")
         session.close()
         self.assertTrue(old.dense._lifetime.closed)
+
+    def test_canonical_field_or_relation_mutation_rejected(self):
+        # Adversarial reflective corruption AFTER publication. Normal frozen
+        # assignment is already forbidden; runtime still verifies projections.
+        for kind in ("field_path", "field_revision", "relation_predicate",
+                     "relation_object"):
+            with self.subTest(kind=kind):
+                snapshot = fixture_snapshot()
+                bundle = build_saturn_retrieval_bundle(snapshot)
+                service = SaturnRetrievalService()
+                service.publish(bundle)
+                if kind.startswith("field"):
+                    fact = next(f for f in snapshot.facts if f.field_path == "interface")
+                    altered = replace(fact, **(
+                        {"field_path": "invented_compatibility"}
+                        if kind == "field_path" else
+                        {"source_revision_id": "forged-revision"}
+                    ))
+                    object.__setattr__(snapshot, "facts", tuple(
+                        altered if f.fact_id == fact.fact_id else f
+                        for f in snapshot.facts))
+                    query = "RS-485"
+                else:
+                    rel = snapshot.relations[0]
+                    altered = replace(rel, **(
+                        {"predicate": "compatible_with"}
+                        if kind == "relation_predicate" else
+                        {"object_entity_id": "saturn:fake-target"}
+                    ))
+                    object.__setattr__(snapshot, "relations", tuple(
+                        altered if r.relation_id == rel.relation_id else r
+                        for r in snapshot.relations))
+                    query = rel.predicate
+                with service.open_answer_session() as session:
+                    with self.assertRaises(SaturnContextError) as ex:
+                        session.build_context(query, top_k=10)
+                    expect_code(ex, "evidence_integrity_failure")
+
+    def test_pdf_hash_revision_parser_page_owner_corruption_rejected(self):
+        # Canonical source objects remain frozen. A forced SearchRecord drift
+        # cannot become an engineering PDF fact without exact PDF match.
+        for field, forged in (
+            ("pdf_bytes_sha256", "a"*64),
+            ("pdf_parser_version", "untrusted-parser"),
+            ("physical_page", 999),
+            ("pdf_document_id", "forged-document"),
+            ("pdf_owner_entity_ids", ("forged-owner",)),
+            ("source_revision_id", "forged-pdf-revision"),
+        ):
+            with self.subTest(field=field):
+                bundle = build_saturn_retrieval_bundle(self.snapshot)
+                service = SaturnRetrievalService()
+                service.publish(bundle)
+                target = next(r for r in bundle.records
+                              if r.evidence_type == "pdf_passage"
+                              and r.physical_page == 1)
+                forged_record = replace(target, **{field: forged})
+                object.__setattr__(bundle, "records", tuple(
+                    forged_record if r.evidence_id == target.evidence_id else r
+                    for r in bundle.records))
+                with service.open_answer_session() as session:
+                    with self.assertRaises(SaturnContextError) as ex:
+                        session.build_context("Alpha", top_k=10)
+                    expect_code(ex, "evidence_integrity_failure")
+
+    def test_pdf_link_source_and_owner_revocation(self):
+        with self.service.open_answer_session() as session:
+            pdf_ctx = session.build_context("Alpha", top_k=10)
+            pdf_item = next(e for e in pdf_ctx.answer_evidence if e.pdf_document_id)
+            link_revision = pdf_item.pdf_link_source_revision_ids[0]
+            self.service.policy_provider.activate(SaturnOperationalPolicy(
+                "link-revoked", blocked_source_revision_ids=frozenset({link_revision})))
+            with self.assertRaises(SaturnContextError) as ex:
+                session.recheck_policy(pdf_ctx)
+            expect_code(ex, "policy_blocked")
+
+    def test_broken_policy_provider_raises_policy_unavailable(self):
+        class BrokenPolicy:
+            def capture(self):
+                raise ValueError("confidential provider diagnostic")
+        service = SaturnRetrievalService(policy_provider=BrokenPolicy())
+        service.publish(self.bundle)
+        with service.open_answer_session() as session:
+            with self.assertRaises(SaturnContextError) as ex:
+                session.build_context("RS-485")
+            expect_code(ex, "policy_unavailable")
+            self.assertNotIn("confidential", str(ex.exception))
 
     def test_existing_stage4b_search_stays_unchanged(self):
         with self.service.open_answer_session() as session:
