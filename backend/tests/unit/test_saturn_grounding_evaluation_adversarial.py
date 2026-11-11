@@ -53,7 +53,12 @@ class SaturnGroundingAdversarialTests(unittest.TestCase):
             cls.gold(case_id).question, cls.profile)
 
     @classmethod
-    def score(cls, case_id, result, trace=None):
+    def score(cls, case_id, result, trace=None, *, rebind_question=False):
+        if rebind_question:
+            # Hypothetical forged answer for this case; the scorer must check
+            # substantive policy/errors independently from question-hash guard.
+            result = replace(result, question_sha256=sha256(
+                cls.gold(case_id).question.encode("utf-8")).hexdigest())
         return score_answer(cls.gold(case_id), result, cls.snapshot, trace)
 
     def test_t58_wrong_field_unit_changes_assertion(self):
@@ -137,7 +142,7 @@ class SaturnGroundingAdversarialTests(unittest.TestCase):
 
     def test_t68_unsafe_negative_answer(self):
         positive, trace = self.ask("C01")
-        out = self.score("C18", positive, trace)
+        out = self.score("C18", positive, trace, rebind_question=True)
         self.assertFalse(out.fully_correct)
         self.assertIn("sufficiency_false_positive", out.failure_codes)
 
@@ -150,7 +155,7 @@ class SaturnGroundingAdversarialTests(unittest.TestCase):
 
     def test_t70_observed_retrieval_miss_attribution(self):
         a, _ = self.ask("C18")
-        out = self.score("C01", a, SaturnStageTrace())
+        out = self.score("C01", a, SaturnStageTrace(), rebind_question=True)
         self.assertIn("retrieval_miss", out.failure_codes)
 
     def test_t71_parser_failure_after_source_hit(self):
@@ -158,7 +163,7 @@ class SaturnGroundingAdversarialTests(unittest.TestCase):
         eid = self.gold("C01").required[0].evidence_id
         trace = SaturnStageTrace(ranked_evidence_ids=(eid,),
                                  selected_evidence_ids=(eid,))
-        out = self.score("C01", a, trace)
+        out = self.score("C01", a, trace, rebind_question=True)
         self.assertIn("question_parse_failure", out.failure_codes)
 
     def test_t72_gate_false_negative_after_parse(self):
@@ -168,7 +173,7 @@ class SaturnGroundingAdversarialTests(unittest.TestCase):
                                  selected_evidence_ids=(eid,),
                                  parsed_need_kinds=("field_value",),
                                  finding_statuses=("missing_in_context",))
-        out = self.score("C01", a, trace)
+        out = self.score("C01", a, trace, rebind_question=True)
         self.assertIn("sufficiency_false_negative", out.failure_codes)
 
     def test_t73_claim_generation_missing_after_sufficiency(self):
@@ -179,7 +184,7 @@ class SaturnGroundingAdversarialTests(unittest.TestCase):
                                  parsed_need_kinds=("field_value",),
                                  finding_statuses=("covered_structured",))
         self.assertIn("claim_generation_missing",
-                      self.score("C01", a, trace).failure_codes)
+                      self.score("C01", a, trace, rebind_question=True).failure_codes)
 
     def test_t74_assembly_missing_after_verified_fact(self):
         a, _ = self.ask("C18")
@@ -190,7 +195,7 @@ class SaturnGroundingAdversarialTests(unittest.TestCase):
                                  finding_statuses=("covered_structured",),
                                  verified_evidence_ids=(eid,))
         self.assertIn("answer_assembly_missing",
-                      self.score("C01", a, trace).failure_codes)
+                      self.score("C01", a, trace, rebind_question=True).failure_codes)
 
     def test_t75_technical_failure_not_evidence_miss(self):
         a, _ = self.ask("C18")
@@ -199,7 +204,7 @@ class SaturnGroundingAdversarialTests(unittest.TestCase):
 
     def test_t76_false_partial_on_positive_gold(self):
         partial, trace = self.ask("C20")
-        out = self.score("C11", partial, trace)
+        out = self.score("C11", partial, trace, rebind_question=True)
         self.assertIn("false_refusal", out.failure_codes)
 
     def test_t77_source_channel_breakdown(self):
