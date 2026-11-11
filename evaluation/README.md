@@ -1,3 +1,17 @@
+## PR #31 — Stage 5E 0.1.1 corrected evaluator (independent-review cycle)
+
+The first `saturn-grounding-calibration-v0.1.json` gold **and first v0.1 report** are immutable. The corrected scorer uses its own versioned `0.1.1` rubric/report: need/owner-qualified source binding, exact passage substrings, pinned bundle diagnostics and separate source-unsupported/off-question/extra-text metrics with explicit denominators. These changes may alter metrics while retaining the original gold; never relabel the first measurement.
+
+Additional `saturn_controlled.py` cases deliberately inject policy restriction, technical error and a **simulated** conflict into three openly authored synthetic questions. Those outputs must be labeled `synthetic_controlled_fault_injection` and remain separate from actual calibration and any real/independent blind results.
+
+```sh
+PYTHONPATH=backend/src python -m saturn_ai.evaluation.saturn_grounding --profile calibration --dataset evaluation/datasets/saturn-grounding-calibration-v0.1.json --report /tmp/calibration-corrected.json
+PYTHONPATH=backend/src python -m saturn_ai.evaluation.saturn_controlled
+```
+
+Blind completion now requires bound experiment/code/bundle/dataset/case IDs, report status/citation metrics consistency, and durable exclusive START/COMPLETE receipts. The test suite exercises only synthetic **open-case copies**; no actual blind dataset has run (`NOT_RUN`).
+
+---
 ## Saturn Grounding Evaluation v0.1 (Stage 5E, 2026-11-11)
 
 **Distinct from legacy evaluation.** The new source-backed Saturn pipeline uses `SaturnAnswerResult` and an independent scorer, not legacy synthetic `GroundedResult` or planner-v2 datasets. Frozen open 28-case source-backed synthetic corpus: `datasets/saturn-grounding-calibration-v0.1.json`, original measured output: `reports/saturn-grounding-calibration-v0.1.json`. Original source code SHA, snapshot/corpus/dataset/config identities and exact denominators are recorded in the report and [Stage 5E engineering report](../docs/stages/2026-11-11-saturn-grounding-evaluation.md).
