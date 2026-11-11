@@ -154,3 +154,10 @@ PYTHONPATH=backend/src python -m saturn_ai.evaluation.saturn_controlled
 A dedicated fast `saturn-evaluator-targeted` job was added to the existing CI, alongside the full offline, ONNX and calibration jobs. Independent Acceptance Review and a separate owner-directed merge remain mandatory; no Stage 6.
 
 **Known limits:** deterministic Fake provider and narrow source-declared query grammar; no independently authored blind, external LLM generalization, real-device verification or production readiness. The simulated conflict is a fault-injection test of *measurement classification*, not a real engineering conflict benchmark.
+
+
+### Revised measurements, scorer/rubric 0.1.1 (preserved as NEW files)
+
+- [Actual revised open calibration JSON](../../evaluation/reports/saturn-grounding-calibration-review-v0.1.1.json) — measured on code SHA `bad73187f6e3dca187636ae5cea4cbca0c69dded`, **same original gold SHA-256** `eff320bc664fdb23dc7ee69ddb479c796a5c5aeee341a043f3d782119ab733e8`: 28/28 fully correct, 17/17 positive, 5/5 needs_support, 3/3 clarification, 3/3 partial, citations 24/24, requirement recall 23/23, false refusals 0/17, source-unsupported 0/21 technical assertions, off-question 0/23 answer assertions, extra unsupported text 0/28 cases, policy restrictions 0/28, evidence conflicts 0/28, errors 0/28.
+- [Separate controlled fault injection JSON](../../evaluation/reports/saturn-grounding-controlled-review-v0.1.1.json) — **3 intentionally failing cases**, policy 1/3, error 1/3, injected conflict 1/3, expected complete-answer rate 0/3. These are *deliberate injections*, not three real failures of unmodified application source evidence, and never blind or real sample.
+- Dedicated `saturn-evaluator-targeted` suite: **120 tests** (original 83 + 37 review-correction tests); exact-head final push/PR CI to be checked in PR. The historical original calibration JSON and first v0.1 report are protected in CI by their original Git blob SHA (`a4ca1c2567e391319e26b0ca905c38f8739400cb`, `ffd6259552c56cd86c230490f60339e437303f7f`).
