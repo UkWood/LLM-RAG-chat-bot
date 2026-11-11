@@ -248,6 +248,12 @@ class SaturnEvidenceContextTests(unittest.TestCase):
                         replace(result, **{field: value})),
                 "context_identity_mismatch")
 
+    def test_malformed_retrieval_candidate_fails_with_safe_integrity_code(self):
+        self.assertEqual(
+            self._tampered_retrieval("RS-485",
+                lambda result: replace(result, answer_evidence=("malformed",))),
+            "evidence_integrity_failure")
+
     def test_metadata_cannot_be_promoted_to_answer_evidence(self):
         def edit(result):
             doc_id = result.document_matches[0].match.document.document_id
