@@ -3,11 +3,11 @@
 No planning, semantic sufficiency, generation, citations or source approval.
 All lookups use the exact published immutable snapshot and index bindings.
 """
-from dataclasses import replace
+from dataclasses import asdict
 from hashlib import sha256
 from threading import RLock
 
-from ..ingestion.saturn_contracts import stable_id
+from ..ingestion.saturn_contracts import canonical_json, stable_id
 from ..saturn_knowledge_snapshot import (
     _field_projection, _relation_projection, site_passages,
 )
@@ -24,6 +24,11 @@ from .saturn_contracts import (
 
 def _reject(code):
     raise SaturnContextError(code)
+
+
+def _context_fingerprint(context):
+    """Bind every issued field, not merely object identity or snapshot ID."""
+    return sha256(canonical_json(asdict(context)).encode("utf-8")).hexdigest()
 
 
 def _safe_policy(provider):
@@ -317,14 +322,14 @@ class SaturnAnswerSession:
             self._check_policy(context, policy)
             if len(self._issued) >= MAX_SESSION_CONTEXTS:
                 _reject("resource_budget_exceeded")
-            self._issued.append(context)
+            self._issued.append((context, _context_fingerprint(context)))
             return context
 
     def recheck_policy(self, context: SaturnEvidenceContext):
         with self._lock:
             self._assert_open()
             if (not isinstance(context, SaturnEvidenceContext) or
-                    not any(context is issued for issued in self._issued) or
+                    not any(context is issued and digest == _context_fingerprint(context)\n                            for issued, digest in self._issued) or
                     context.snapshot_id != self._bundle.snapshot.snapshot_id or
                     context.bundle_id != self._bundle.manifest.bundle_id or
                     context.question_sha256 != sha256(context.question.encode("utf-8")).hexdigest()):
