@@ -51,6 +51,10 @@ jobs:
           python-version: '3.12'
       - name: Install locked parser dependencies
         run: python -m pip install --require-hashes -r backend/requirements.lock
+      - name: Assert original frozen calibration artifacts unchanged
+        run: |
+          test "$(git rev-parse HEAD:evaluation/datasets/saturn-grounding-calibration-v0.1.json)" = "a4ca1c2567e391319e26b0ca905c38f8739400cb"
+          test "$(git rev-parse HEAD:evaluation/reports/saturn-grounding-calibration-v0.1.json)" = "ffd6259552c56cd86c230490f60339e437303f7f"
       - name: Verify committed open calibration dataset against canonical fixture
         run: |
           PYTHONPATH=backend/src python -m saturn_ai.evaluation.saturn_grounding --profile calibration --generate-calibration --dataset /tmp/saturn-gold.json
