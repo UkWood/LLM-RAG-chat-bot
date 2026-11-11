@@ -196,8 +196,17 @@ A dedicated fast `saturn-evaluator-targeted` job was added to the existing CI, a
 
 ### Tests and measurement constraints
 
-- Added **25 CR06–CR09 targeted tests** to the existing 121 Stage 5E tests (146 targeted cases total). Tests exercise nonempty/mid-passage/PDF provenance, source-authored `exact_quote`, field/entity tampering, unusual field tokens, multi-need parser attribution, retrieval NOT_APPLICABLE, and persisted canonical/noncanonical JSON SHA receipts.
+- Added **26 CR06–CR09 targeted tests** to the existing 121 Stage 5E tests (147 targeted cases total). Tests exercise nonempty/mid-passage/PDF provenance, source-authored `exact_quote`, field/entity tampering, unusual field tokens, multi-need parser attribution, retrieval NOT_APPLICABLE, and persisted canonical/noncanonical JSON SHA receipts.
 - The new open calibration and controlled-fault measurements are versioned **0.1.2** separately from historical 0.1 and 0.1.1 reports. Calibration uses the same frozen, open 28-case gold (`eff320bc664fdb23dc7ee69ddb479c796a5c5aeee341a043f3d782119ab733e8`).
 - Controlled examples include intentionally policy-blocked evidence, an injected retrieval error and a *simulated* conflict; they are **not real-site failures or independent blind**. `independent_blind_evaluation=NOT_RUN`, `production_readiness=false` throughout.
 - Final independent Acceptance Review and explicit owner-directed merge are separate decisions; no Stage 6.
+
+
+
+### Final independently measurable Stage 5E revision 0.1.2
+
+- [Final open calibration report](../../evaluation/reports/saturn-grounding-calibration-final-review-v0.1.2.json) — measured on `ab5b946d9f14edca89af66e644a2325ed57695b8`, **28/28** fully correct, 17/17 positive, 5/5 needs_support, 3/3 clarification, 3/3 partial; engineering requirement recall 23/23, citation validity 24/24, source-hit@5 18/18, document-hit@5 2/2, 0 source-unsupported technical assertions, 0 off-question assertions, 0 extra unsupported answer text.
+- [Final controlled-fault report](../../evaluation/reports/saturn-grounding-controlled-final-review-v0.1.2.json) — measured on the same code SHA. Of 3 intentionally injected faults, policy restriction 1, technical error 1, simulated conflict 1. `source_hit_at_5` 1/2 **measured** cases, **1 not measured** (technical retrieval failure C02 is `null`, excluded from denominator). All controlled cases intentionally fail complete-answer assessment; no hidden blind test performed.
+- The earlier separately recorded `saturn-grounding-calibration-review-v0.1.2.json` showed **27/28** because independent semantic validation incorrectly rejected case C27, a field with a preserved unresolved suffix. This was fixed in evaluator code at `ab5b946...`; the original intermediate report is **retained, not rewritten**. The final report above is the authoritative corrected measurement. This historical transient was an *evaluator false negative*, not a production Stage 5B change.
+- An extra C27 mixed field/unresolved regression means **147 targeted tests** (original Stage 5E 121 + final-review 26). Original frozen v0.1 calibration and its first measured report, and v0.1.1 reports, remain unchanged. The `0.1.2` measurement is open synthetic calibration, not a blind benchmark; `production_readiness=false`.
 
