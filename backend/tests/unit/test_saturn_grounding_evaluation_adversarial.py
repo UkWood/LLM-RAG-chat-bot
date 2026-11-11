@@ -259,5 +259,25 @@ class SaturnGroundingAdversarialTests(unittest.TestCase):
         self.assertEqual(out.unsupported_claim_count, 1)
 
 
+    def test_t82_wrong_question_hash_not_same_answer(self):
+        a, trace = self.ask("C01")
+        bad = replace(a, question_sha256="f"*64)
+        out = self.score("C01", bad, trace)
+        self.assertFalse(out.fully_correct)
+        self.assertIn("technical_failure", out.failure_codes)
+
+    def test_t83_negative_cannot_emit_unrequested_valid_document(self):
+        doc, trace = self.ask("C15")
+        # Deliberately self-consistent final text + source-backed citation.
+        # Even if provenance is valid, negative gold forbids this content.
+        forged = replace(
+            doc, status="needs_support",
+            question_sha256=sha256(self.gold("C18").question.encode("utf-8")).hexdigest(),
+            answer_text=render_answer("needs_support", doc.statements))
+        out = self.score("C18", forged, trace)
+        self.assertFalse(out.fully_correct)
+        self.assertIn("unexpected_claim", out.failure_codes)
+
+
 if __name__ == "__main__":
     unittest.main()
