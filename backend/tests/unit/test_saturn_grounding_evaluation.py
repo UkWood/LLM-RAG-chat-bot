@@ -390,7 +390,7 @@ class SaturnGroundingEvaluationTests(unittest.TestCase):
         return freeze_manifest(
             experiment_id="blind-001", code_revision="a"*40,
             dataset_sha256=sha256(self.raw).hexdigest(), snapshot=self.snapshot,
-            case_count=28)
+            case_count=28, case_ids=tuple(x.case_id for x in self.dataset.cases))
 
     def test_t48_freeze_matches_code_and_dataset(self):
         value = self._freeze()
