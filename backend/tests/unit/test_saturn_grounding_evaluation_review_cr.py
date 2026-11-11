@@ -732,5 +732,73 @@ class BlindReportContractTests(unittest.TestCase):
         self.assertEqual(freeze["expected_case_ids"], ["C01"])
 
 
+    # CR08: COMPLETE hashes exact persisted bytes, preserving one-shot semantics
+    def test_cr08_t01_complete_receipt_hashes_persisted_canonical_file(self):
+        freeze, dataset, report, raw = self.sample()
+        with TemporaryDirectory() as tmp:
+            b = BlindRun(freeze=freeze, receipts_dir=Path(tmp)/"receipts",
+                         report_path=Path(tmp)/"report.json")
+            b.start()
+            b.complete(report_bytes(report), dataset_bytes=raw, snapshot=self.snapshot)
+            receipt = json.loads(b.complete_path.read_text(encoding="utf-8"))
+            persisted = b.report_path.read_bytes()
+            self.assertEqual(receipt["report_sha256"], sha256(persisted).hexdigest())
+            self.assertEqual(persisted, report_bytes(report))
+
+    def test_cr08_t02_noncanonical_equivalent_json_has_actual_hash(self):
+        freeze, dataset, report, raw = self.sample()
+        pretty = (json.dumps(report, indent=2, ensure_ascii=False)+"\\n").encode("utf-8")
+        self.assertNotEqual(pretty, report_bytes(report))
+        with TemporaryDirectory() as tmp:
+            b = BlindRun(freeze=freeze, receipts_dir=Path(tmp)/"receipts",
+                         report_path=Path(tmp)/"report.json")
+            b.start()
+            b.complete(pretty, dataset_bytes=raw, snapshot=self.snapshot)
+            persisted = b.report_path.read_bytes()
+            receipt = json.loads(b.complete_path.read_text(encoding="utf-8"))
+            self.assertEqual(receipt["report_sha256"], sha256(persisted).hexdigest())
+            self.assertNotEqual(receipt["report_sha256"], sha256(pretty).hexdigest())
+
+    def test_cr08_t03_no_replay_or_report_overwrite(self):
+        freeze, dataset, report, raw = self.sample()
+        with TemporaryDirectory() as tmp:
+            receipts = Path(tmp)/"receipts"
+            report_path = Path(tmp)/"report.json"
+            b = BlindRun(freeze=freeze, receipts_dir=receipts, report_path=report_path)
+            b.start()
+            b.complete(report_bytes(report), dataset_bytes=raw, snapshot=self.snapshot)
+            original = report_path.read_bytes()
+            with self.assertRaises(BlindIntegrityError):
+                b.complete(report_bytes(report), dataset_bytes=raw, snapshot=self.snapshot)
+            with self.assertRaises(BlindIntegrityError):
+                BlindRun(freeze=freeze, receipts_dir=receipts, report_path=report_path).start()
+            self.assertEqual(report_path.read_bytes(), original)
+
+    def test_cr08_t04_corrupted_report_creates_no_complete_receipt(self):
+        freeze, dataset, report, raw = self.sample()
+        with TemporaryDirectory() as tmp:
+            b = BlindRun(freeze=freeze, receipts_dir=Path(tmp)/"receipts",
+                         report_path=Path(tmp)/"report.json")
+            b.start()
+            with self.assertRaises(BlindIntegrityError):
+                b.complete(b"{bad_json", dataset_bytes=raw, snapshot=self.snapshot)
+            self.assertFalse(b.complete_path.exists())
+            self.assertFalse(b.report_path.exists())
+            self.assertTrue(b.start_path.exists())
+
+    def test_cr08_t05_raw_gold_is_revalidated_at_completion(self):
+        freeze, dataset, report, raw = self.sample()
+        with TemporaryDirectory() as tmp:
+            b = BlindRun(freeze=freeze, receipts_dir=Path(tmp)/"receipts",
+                         report_path=Path(tmp)/"report.json")
+            b.start()
+            with self.assertRaises(BlindIntegrityError):
+                b.complete(report_bytes(report), dataset_bytes=raw + b" ",
+                           snapshot=self.snapshot)
+            self.assertFalse(b.complete_path.exists())
+
+    def test_cr08_t06_unavailable_git_revision_still_blocked(self):
+        self.test_cr02_t06_unavailable_code_sha_no_freeze()
+
 if __name__ == "__main__":
     unittest.main()
