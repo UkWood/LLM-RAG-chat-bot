@@ -2,6 +2,18 @@
 
 Date: 2026-11-11. Project: AI Technical Consultant — МНПП «Сатурн».
 
+## Acceptance Review Correction — CR-01: verifier failure isolation (2026-11-11)
+
+Independent session A review of head `2ac508104a28bc3fc4a087bd4ee22bbd460e71bb` requested one IMPORTANT correction. This change is confined to the same PR #29 and branch. All other Stage 5C behavior remains accepted.
+
+In `saturn_generation._verification()`, ordinary mismatch results returned by `verify_pinned_draft()` continue to become `SaturnRejectedClaim` using their documented safe reason codes. An **unexpected raised `Exception`** now immediately raises `SaturnContextError("claim_verification_unavailable") from None`, aborting the whole operation without any partially successful `SaturnClaimVerificationResult` and suppressing internal diagnostic exception chaining. `BaseException` is never caught.
+
+The pre-existing Fake provider exception path still returns `verification_state="failed"` with `provider_unavailable`; policy/session failures, invalid provider output, claim types, exact canonical verification, and all budgets are unchanged. No new public contracts are introduced.
+
+`backend/tests/unit/test_saturn_atomic_claims.py` adds CR01-T01–T07 covering thrown OSError and RuntimeError with confidential error text, ordinary `claim_value_mismatch`, a crash after one valid claim, policy/session/publication/close regressions, provider error separation, and positive/negative field, relation, site/PDF quote and ID-binding paths.
+
+**Verification:** final exact head and both push/pull-request CI checks are recorded in PR #29 after checks finish. Existing baseline on the original reviewed head: 536 backend tests OK (11 optional skips), 5 project tests PASS. These baseline results do not constitute verification of CR-01.
+
 ## Scope and provenance
 
 - Base `main`: `973c3d2f3ae2c5c7a079a3e92072121bf9082edf` (Stage 5B, PR #28 MERGED).
