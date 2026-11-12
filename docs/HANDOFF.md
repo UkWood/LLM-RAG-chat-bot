@@ -1,3 +1,15 @@
+## CURRENT — PR #32 Acceptance Review CR-01…CR-05 corrections (12 Nov 2026)
+
+**Same branch** `feat/saturn-real-corpus-llm-validation-v0.1`, **same PR #32**, no merge. Review baseline `7eda73849b814a296182346f4238ce920ed082db`; current branch has later corrections awaiting final CI/re-review. No Stage 6; source-site `UkWood/Saturn-Main-Site` remains READ-ONLY at `084d759487bfab6e111549c9b5469711ac5fc13e`.
+
+**CR-01**: fixed double generation: Stage 5E gets trace/verification from the same Stage 5D answer path. **CR-02**: strict MET/NOT_MET/NOT_APPLICABLE threshold scorecard and completion validation. **CR-03**: 24 positive/16 only supported negative/ambiguous cases, exact category/expected status, independent open-question overlap check. **CR-04**: measured local model/tokenizer SHA and independently reviewed identity/attestation freeze, NO false runtime attestation. **CR-05**: 40-case controlled synthetic lifecycle and adversarial report tests. These are engineering corrections, not real quality measurements.
+
+**Experiment status**: 5F BLOCKED_BY_ENVIRONMENT (read-only SATURN_GITHUB_TOKEN / object format absent, no real PDF); 5G NOT_RUN (30 candidate open real questions, not reviewed gold); 5H NOT_RUN (independent blind has no outside-author dataset/freeze); 5I BLOCKED_BY_ENVIRONMENT (no local model runtime and attested weights). Natural Russian Stage5B extension NOT_IMPLEMENTED; architecture delta required.
+
+**Authoritative report**: [2026-11-12 stage report](stages/2026-11-12-saturn-real-corpus-llm-validation.md). Run exact-head CI and review all new failures before submitting to Session A. No merge until separate owner approval.
+
+---
+
 ## CURRENT HANDOFF — Consolidated Stage 5F–5I, PR #32 (12 November 2026)
 
 **State:** One DRAFT PR [#32](https://github.com/UkWood/LLM-RAG-chat-bot/pull/32), feature branch `feat/saturn-real-corpus-llm-validation-v0.1`. Work IN PROGRESS; not ready for Session A Acceptance Review or merge. AI base `84d783331cc755e688a7f8637be13c297c07f43e`; site READ-ONLY baseline `084d759487bfab6e111549c9b5469711ac5fc13e`.
