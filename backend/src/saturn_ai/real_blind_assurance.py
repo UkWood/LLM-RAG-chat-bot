@@ -84,7 +84,11 @@ def real_dataset_contract(dataset, *, open_calibration_bytes: bytes):
                  (not _text(case.negative_reason, 1200) or
                   len(case.negative_reason.strip()) < 15)) or
                 (case.expected_status == "answered" and
-                 (not case.required or case.negative_reason is not None))):
+                 (not case.required or case.negative_reason is not None)) or
+                (case.expected_status == "needs_support" and
+                 any(r.kind in ("field", "relation", "document")
+                     for r in case.required)) or
+                (case.category == "conflict" and len(case.required) < 2)):
             refuse("real_blind_category_or_gold")
     # Gold is already independently source-bound by Stage 5E validate_gold.
     # Also reject exact or whitespace/punctuation/case-equivalent open questions.
