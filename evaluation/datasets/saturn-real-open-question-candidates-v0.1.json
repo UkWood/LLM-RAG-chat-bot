@@ -1,0 +1,287 @@
+{
+  "document_type": "OPEN_REAL_QUESTION_CANDIDATES_NOT_GOLD",
+  "status": "UNVALIDATED_NOT_FOR_SCORING",
+  "schema_version": "candidate-only/0.1",
+  "source_repository": "UkWood/Saturn-Main-Site",
+  "source_commit": "084d759487bfab6e111549c9b5469711ac5fc13e",
+  "author": "Coding Session B — candidate list, NOT independent technical gold",
+  "selected_sample_reference": "backend/src/saturn_ai/real_corpus_stand.py",
+  "review_requirements": [
+    "Resolve every source field against actual pinned real Knowledge Snapshot, verify typed source pointers, units, qualifiers, and citations",
+    "Have Saturn company engineer review positive and negative expectations independently",
+    "Adapt 25–40 reviewed items into separately versioned Stage 5E real_sample gold only after real snapshot exists",
+    "Do not use these candidates as blind, as runtime prompt tuning gold, or as proof of quality"
+  ],
+  "items": [
+    {
+      "candidate_id": "OC01",
+      "source_path": "src/content/products/bkd-pk-rf-2.md",
+      "source_field_path": "mass_kg",
+      "question": "БКД-ПК-RF.2: mass_kg?",
+      "kind": "potential_positive",
+      "verified_source_pointer": null,
+      "expert_review": "REQUIRED"
+    },
+    {
+      "candidate_id": "OC02",
+      "source_path": "src/content/products/bkd-pk-rf-2.md",
+      "source_field_path": "temperature_c.min",
+      "question": "БКД-ПК-RF.2: temperature_c.min?",
+      "kind": "potential_positive",
+      "verified_source_pointer": null,
+      "expert_review": "REQUIRED"
+    },
+    {
+      "candidate_id": "OC03",
+      "source_path": "src/content/products/bkd-pk-rf-2.md",
+      "source_field_path": "temperature_c.max",
+      "question": "БКД-ПК-RF.2: temperature_c.max?",
+      "kind": "potential_positive",
+      "verified_source_pointer": null,
+      "expert_review": "REQUIRED"
+    },
+    {
+      "candidate_id": "OC04",
+      "source_path": "src/content/products/bkd-pk-rf-2.md",
+      "source_field_path": "dimensions_mm[0]",
+      "question": "БКД-ПК-RF.2: dimensions_mm[0]?",
+      "kind": "potential_positive",
+      "verified_source_pointer": null,
+      "expert_review": "REQUIRED"
+    },
+    {
+      "candidate_id": "OC05",
+      "source_path": "src/content/products/bkd-pk-rf-2.md",
+      "source_field_path": "dimensions_mm[1]",
+      "question": "БКД-ПК-RF.2: dimensions_mm[1]?",
+      "kind": "potential_positive",
+      "verified_source_pointer": null,
+      "expert_review": "REQUIRED"
+    },
+    {
+      "candidate_id": "OC06",
+      "source_path": "src/content/products/bkd-pk-rf-2.md",
+      "source_field_path": "dimensions_mm[2]",
+      "question": "БКД-ПК-RF.2: dimensions_mm[2]?",
+      "kind": "potential_positive",
+      "verified_source_pointer": null,
+      "expert_review": "REQUIRED"
+    },
+    {
+      "candidate_id": "OC07",
+      "source_path": "src/content/products/bkd-pk-rf-2.md",
+      "source_field_path": "lifetime_years",
+      "question": "БКД-ПК-RF.2: lifetime_years?",
+      "kind": "potential_positive",
+      "verified_source_pointer": null,
+      "expert_review": "REQUIRED"
+    },
+    {
+      "candidate_id": "OC08",
+      "source_path": "src/content/products/bkd-pk-rf-2.md",
+      "source_field_path": "interfaces[0]",
+      "question": "БКД-ПК-RF.2: interfaces[0]?",
+      "kind": "potential_positive",
+      "verified_source_pointer": null,
+      "expert_review": "REQUIRED"
+    },
+    {
+      "candidate_id": "OC09",
+      "source_path": "src/content/products/bkd-pk-rf-2.md",
+      "source_field_path": "interfaces[1]",
+      "question": "БКД-ПК-RF.2: interfaces[1]?",
+      "kind": "potential_positive",
+      "verified_source_pointer": null,
+      "expert_review": "REQUIRED"
+    },
+    {
+      "candidate_id": "OC10",
+      "source_path": "src/content/products/bkd-pk-rf-2.md",
+      "source_field_path": "power",
+      "question": "БКД-ПК-RF.2: power?",
+      "kind": "potential_positive",
+      "verified_source_pointer": null,
+      "expert_review": "REQUIRED"
+    },
+    {
+      "candidate_id": "OC11",
+      "source_path": "src/content/products/bkd-ups.md",
+      "source_field_path": "ip",
+      "question": "БКД-UPS: ip?",
+      "kind": "potential_positive",
+      "verified_source_pointer": null,
+      "expert_review": "REQUIRED"
+    },
+    {
+      "candidate_id": "OC12",
+      "source_path": "src/content/products/bkd-ups.md",
+      "source_field_path": "temperature_c.min",
+      "question": "БКД-UPS: temperature_c.min?",
+      "kind": "potential_positive",
+      "verified_source_pointer": null,
+      "expert_review": "REQUIRED"
+    },
+    {
+      "candidate_id": "OC13",
+      "source_path": "src/content/products/bkd-ups.md",
+      "source_field_path": "temperature_c.max",
+      "question": "БКД-UPS: temperature_c.max?",
+      "kind": "potential_positive",
+      "verified_source_pointer": null,
+      "expert_review": "REQUIRED"
+    },
+    {
+      "candidate_id": "OC14",
+      "source_path": "src/content/products/bkd-ups.md",
+      "source_field_path": "mass_kg",
+      "question": "БКД-UPS: mass_kg?",
+      "kind": "potential_positive",
+      "verified_source_pointer": null,
+      "expert_review": "REQUIRED"
+    },
+    {
+      "candidate_id": "OC15",
+      "source_path": "src/content/products/bkd-ups.md",
+      "source_field_path": "dimensions_mm[0]",
+      "question": "БКД-UPS: dimensions_mm[0]?",
+      "kind": "potential_positive",
+      "verified_source_pointer": null,
+      "expert_review": "REQUIRED"
+    },
+    {
+      "candidate_id": "OC16",
+      "source_path": "src/content/products/bkd-ups.md",
+      "source_field_path": "dimensions_mm[1]",
+      "question": "БКД-UPS: dimensions_mm[1]?",
+      "kind": "potential_positive",
+      "verified_source_pointer": null,
+      "expert_review": "REQUIRED"
+    },
+    {
+      "candidate_id": "OC17",
+      "source_path": "src/content/products/bkd-ups.md",
+      "source_field_path": "dimensions_mm[2]",
+      "question": "БКД-UPS: dimensions_mm[2]?",
+      "kind": "potential_positive",
+      "verified_source_pointer": null,
+      "expert_review": "REQUIRED"
+    },
+    {
+      "candidate_id": "OC18",
+      "source_path": "src/content/products/bkd-ups.md",
+      "source_field_path": "lifetime_years",
+      "question": "БКД-UPS: lifetime_years?",
+      "kind": "potential_positive",
+      "verified_source_pointer": null,
+      "expert_review": "REQUIRED"
+    },
+    {
+      "candidate_id": "OC19",
+      "source_path": "src/content/products/bkd-ups.md",
+      "source_field_path": "power",
+      "question": "БКД-UPS: power?",
+      "kind": "potential_positive",
+      "verified_source_pointer": null,
+      "expert_review": "REQUIRED"
+    },
+    {
+      "candidate_id": "OC20",
+      "source_path": "src/content/products/bkd-ups.md",
+      "source_field_path": "specs[0].value",
+      "question": "БКД-UPS: specs[0].value?",
+      "kind": "potential_positive",
+      "verified_source_pointer": null,
+      "expert_review": "REQUIRED"
+    },
+    {
+      "candidate_id": "OC21",
+      "source_path": "src/content/products/server-lanmon.md",
+      "source_field_path": "protocols[0]",
+      "question": "СЕРВЕР LANMON: protocols[0]?",
+      "kind": "potential_positive",
+      "verified_source_pointer": null,
+      "expert_review": "REQUIRED"
+    },
+    {
+      "candidate_id": "OC22",
+      "source_path": "src/content/products/server-lanmon.md",
+      "source_field_path": "specs[0].value",
+      "question": "СЕРВЕР LANMON: specs[0].value?",
+      "kind": "potential_positive",
+      "verified_source_pointer": null,
+      "expert_review": "REQUIRED"
+    },
+    {
+      "candidate_id": "OC23",
+      "source_path": "src/content/products/server-lanmon.md",
+      "source_field_path": "specs[1].value",
+      "question": "СЕРВЕР LANMON: specs[1].value?",
+      "kind": "potential_positive",
+      "verified_source_pointer": null,
+      "expert_review": "REQUIRED"
+    },
+    {
+      "candidate_id": "OC24",
+      "source_path": "src/content/products/server-lanmon.md",
+      "source_field_path": "specs[2].value",
+      "question": "СЕРВЕР LANMON: specs[2].value?",
+      "kind": "potential_positive",
+      "verified_source_pointer": null,
+      "expert_review": "REQUIRED"
+    },
+    {
+      "candidate_id": "OC25",
+      "source_path": "src/content/products/bkd-pk-rf-2.md",
+      "source_field_path": null,
+      "question": "БКД-ПК-RF.2: nonexistent_field?",
+      "kind": "potential_missing_field",
+      "verified_source_pointer": null,
+      "expert_review": "REQUIRED"
+    },
+    {
+      "candidate_id": "OC26",
+      "source_path": "src/content/products/bkd-ups.md",
+      "source_field_path": null,
+      "question": "БКД-UPS: nonexistent_engineering_parameter?",
+      "kind": "potential_missing_field",
+      "verified_source_pointer": null,
+      "expert_review": "REQUIRED"
+    },
+    {
+      "candidate_id": "OC27",
+      "source_path": "src/content/products/server-lanmon.md",
+      "source_field_path": null,
+      "question": "СЕРВЕР LANMON: nonexistent_kernel?",
+      "kind": "potential_missing_field",
+      "verified_source_pointer": null,
+      "expert_review": "REQUIRED"
+    },
+    {
+      "candidate_id": "OC28",
+      "source_path": "src/content/products/bkd-pk-rf-2.md",
+      "source_field_path": null,
+      "question": "Совместим ли БКД-ПК-RF.2 со всеми устройствами Ethernet?",
+      "kind": "potential_unsupported_inference",
+      "verified_source_pointer": null,
+      "expert_review": "REQUIRED"
+    },
+    {
+      "candidate_id": "OC29",
+      "source_path": "src/content/products/bkd-ups.md",
+      "source_field_path": null,
+      "question": "Можно ли гарантировать работу БКД-UPS при любой температуре?",
+      "kind": "potential_unsupported_inference",
+      "verified_source_pointer": null,
+      "expert_review": "REQUIRED"
+    },
+    {
+      "candidate_id": "OC30",
+      "source_path": "src/content/products/server-lanmon.md",
+      "source_field_path": null,
+      "question": "Какая лучшая архитектура сети для LanMon?",
+      "kind": "potential_open_ended",
+      "verified_source_pointer": null,
+      "expert_review": "REQUIRED"
+    }
+  ]
+}
