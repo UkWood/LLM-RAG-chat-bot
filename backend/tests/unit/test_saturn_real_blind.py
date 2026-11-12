@@ -298,6 +298,7 @@ class FullSyntheticBlindLifecycleTests(unittest.TestCase):
                 report_path=cls.report_path, receipts_dir=cls.receipts_dir,
                 attestation=cls.env["attestation"],
                 open_calibration_bytes=cls.env["open_bytes"],
+                open_calibration_review=cls.env["open_review"],
                 model_file=cls.env["model_file"],
                 tokenizer_file=cls.env["tokenizer_file"], code_revision=CODE,
             )
@@ -330,7 +331,9 @@ class FullSyntheticBlindLifecycleTests(unittest.TestCase):
                 self.report_path.read_bytes(),
                 dataset_bytes=self.env["blind_bytes"],
                 snapshot=self.env["stand"].snapshot,
-                open_calibration_bytes=self.env["open_bytes"])
+                open_dataset=validate_gold(
+                    self.env["open_bytes"], self.env["stand"].snapshot,
+                    split="real_sample"))
 
     def test_CR05_T05_T06_T07_T09_modified_outcome_citations_totals_or_case_missing(self):
         ds = dataset(self.env)
