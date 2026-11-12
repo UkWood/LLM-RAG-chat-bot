@@ -1,4 +1,5 @@
 """Offline boundary and adversarial tests; fake HTTP replies are NOT model runs."""
+from dataclasses import replace
 import json
 from unittest.mock import patch
 import unittest
@@ -10,6 +11,7 @@ from saturn_ai.grounding.saturn_claim_contracts import (
 from saturn_ai.grounding.saturn_local_provider import (
     SaturnLocalClaimProvider, SaturnLocalModelConfig, LocalModelError,
 )
+from saturn_ai.ingestion.saturn_contracts import canonical_json
 from saturn_ai.grounding.saturn_generation import SaturnClaimVerificationService
 from saturn_ai.grounding.saturn_answer_assembly import SaturnAnswerAssemblyService
 from saturn_ai.evaluation.saturn_fixture import fixture_snapshot
@@ -124,6 +126,158 @@ class LocalProviderContractTests(unittest.TestCase):
                 result = assembly.assemble(session=session, context=context)
         self.assertEqual(result.status, "error")
         self.assertEqual(len(result.citations), 0)
+
+
+
+class PromptPayloadContractTests(unittest.TestCase):
+    """Prompt and transport regressions; mocked HTTP is NOT real LLM inference."""
+
+    @staticmethod
+    def _wire(request=None, claims=()):
+        received = []
+        def stub(config, payload):
+            received.append(json.loads(payload))
+            return completion(list(claims))
+        with patch("saturn_ai.grounding.saturn_local_provider._post_loopback", stub):
+            result = SaturnLocalClaimProvider(CONFIG).generate(
+                request if request is not None else sample_request())
+        return received[0], result
+
+    def test_field_value_system_prompt_defines_complete_canonical_object(self):
+        wire, _ = self._wire()
+        system = wire["messages"][0]["content"]
+        self.assertEqual(wire["messages"][0]["role"], "system")
+        self.assertIn("asserted_payload MUST be a string", system)
+        self.assertIn("serialized JSON object, NOT an object nested in claims", system)
+        self.assertIn(
+            "entity_id, fact_id, field_path, qualifiers_json, raw_value_json, "
+            "source_revision_id, unit", system)
+        for phrase in ("canonical_json", "lexicographically sorted keys",
+                       "separators=(',', ':')", "ensure_ascii=False",
+                       "no whitespace outside strings", "ordinary JSON string escaping",
+                       "no NaN/Infinity", "Escape the inner JSON quotes"):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, system)
+        self.assertIn("no extra or missing keys", system)
+        self.assertIn("at most one claim per need", system)
+
+    def test_relation_and_exact_quote_system_prompt(self):
+        wire, _ = self._wire()
+        system = wire["messages"][0]["content"]
+        self.assertIn(
+            "relation_id, subject_entity_id, predicate, "
+            "object_entity_id, source_revision_id, source_field_path", system)
+        for phrase in ("passage_quote", "verbatim continuous substring",
+                       "supplied source_text", "no interpretation or paraphrase",
+                       "never convert a quote into a structured technical fact",
+                       "Match need_id and evidence_id"):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, system)
+
+    def test_nested_json_strings_null_numbers_and_unicode_transmitted_unchanged(self):
+        cases = (
+            (canonical_json("RS-485"), None, None),
+            (canonical_json(12.5), None, "kg"),
+            (canonical_json(None), canonical_json({"limit": None}), None),
+            (canonical_json({"text": "Тест", "escape": "line\\nnext"}),
+             canonical_json({"offset": 0.75, "note": "α β"}), "°C"),
+        )
+        for raw, qualifiers, unit in cases:
+            with self.subTest(raw=raw, qualifiers=qualifiers, unit=unit):
+                req = sample_request()
+                evidence = replace(req.evidence[0], raw_value_json=raw,
+                                   qualifiers_json=qualifiers, unit=unit)
+                req = replace(req, evidence=(evidence,))
+                expected = canonical_json({
+                    "entity_id": evidence.entity_id,
+                    "fact_id": evidence.fact_id,
+                    "field_path": evidence.field_path,
+                    "qualifiers_json": qualifiers,
+                    "raw_value_json": raw,
+                    "source_revision_id": evidence.source_revision_id,
+                    "unit": unit,
+                })
+                item = {
+                    "need_id": evidence.need_id, "evidence_id": evidence.evidence_id,
+                    "claim_kind": "field_value", "asserted_payload": expected,
+                }
+                wire, output = self._wire(req, (item,))
+                sent = json.loads(wire["messages"][1]["content"])["evidence"][0]
+                self.assertEqual(sent["raw_value_json"], raw)
+                self.assertEqual(sent["qualifiers_json"], qualifiers)
+                self.assertEqual(sent["unit"], unit)
+                self.assertEqual(output, (SaturnClaimDraft(**item),))
+                self.assertEqual(output[0].asserted_payload, expected)
+                self.assertEqual(json.loads(expected)["raw_value_json"], raw)
+
+    def test_relation_source_fields_transmitted_without_substitution(self):
+        req = sample_request()
+        need = SaturnGenerationNeed(
+            "need", "relation", "subject", None, "systems", "object")
+        evidence = replace(
+            req.evidence[0], evidence_type="relation", entity_id="subject",
+            fact_id=None, field_path=None, raw_value_json=None,
+            relation_id="relation-id", subject_entity_id="subject",
+            predicate="systems", object_entity_id="object",
+            source_field_path="relations.systems", source_revision_id="revision")
+        req = replace(req, needs=(need,), evidence=(evidence,))
+        expected = canonical_json({
+            "relation_id": evidence.relation_id,
+            "subject_entity_id": evidence.subject_entity_id,
+            "predicate": evidence.predicate,
+            "object_entity_id": evidence.object_entity_id,
+            "source_revision_id": evidence.source_revision_id,
+            "source_field_path": evidence.source_field_path,
+        })
+        item = {"need_id": "need", "evidence_id": "evidence",
+                "claim_kind": "relation", "asserted_payload": expected}
+        wire, output = self._wire(req, (item,))
+        sent = json.loads(wire["messages"][1]["content"])["evidence"][0]
+        for name in ("relation_id", "subject_entity_id", "predicate",
+                     "object_entity_id", "source_revision_id", "source_field_path"):
+            self.assertEqual(sent[name], getattr(evidence, name))
+        self.assertEqual(output[0].asserted_payload, expected)
+        self.assertEqual(set(json.loads(expected)), {
+            "relation_id", "subject_entity_id", "predicate", "object_entity_id",
+            "source_revision_id", "source_field_path"})
+
+    def test_wrong_canonical_value_with_valid_ids_is_still_rejected(self):
+        snapshot = fixture_snapshot()
+        service = SaturnRetrievalService()
+        service.publish(build_saturn_retrieval_bundle(snapshot))
+        provider = SaturnLocalClaimProvider(CONFIG)
+        verifier = SaturnClaimVerificationService(provider=provider)
+        observed = []
+
+        def wrong_value(config, payload):
+            user = json.loads(json.loads(payload)["messages"][1]["content"])
+            evidence = next(e for e in user["evidence"]
+                            if e["evidence_type"] == "site_field")
+            observed.append(evidence)
+            canonical = {
+                name: evidence[name] for name in (
+                    "entity_id", "fact_id", "field_path", "qualifiers_json",
+                    "raw_value_json", "source_revision_id", "unit")
+            }
+            canonical["raw_value_json"] = canonical_json("forged value")
+            return completion([{
+                "need_id": evidence["need_id"],
+                "evidence_id": evidence["evidence_id"],
+                "claim_kind": "field_value",
+                "asserted_payload": canonical_json(canonical),
+            }])
+
+        with patch("saturn_ai.grounding.saturn_local_provider._post_loopback",
+                   side_effect=wrong_value):
+            with service.open_answer_session() as session:
+                context = session.build_context(
+                    "Device X: interface?", mode="lexical", top_k=10)
+                result = verifier.verify(session=session, context=context)
+        self.assertEqual(len(observed), 1)
+        self.assertEqual(result.verified_claims, ())
+        self.assertEqual([x.reason_code for x in result.rejected_claims],
+                         ["claim_value_mismatch"])
+        self.assertEqual(result.verification_state, "incomplete")
 
 
 class TokenUsageIsolationTests(unittest.TestCase):
