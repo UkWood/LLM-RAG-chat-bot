@@ -152,6 +152,9 @@ class SaturnLocalClaimProvider:
         self.last_usage = None
 
     def generate(self, request: SaturnGenerationRequest) -> tuple[SaturnClaimDraft, ...]:
+        # Metrics describe *this* invocation only. A later failure or a
+        # successful response without valid usage must never reuse prior data.
+        self.last_usage = None
         if type(request) is not SaturnGenerationRequest:
             raise LocalModelError("request_contract")
         # The Stage 5C application builds this already-bounded request from
@@ -225,12 +228,15 @@ class SaturnLocalClaimProvider:
                 raise LocalModelError("draft_schema")
             output.append(SaturnClaimDraft(**item))
         usage = reply.get("usage")
-        if type(usage) is dict:
-            self.last_usage = {
-                key: value for key, value in usage.items()
-                if key in ("prompt_tokens", "completion_tokens", "total_tokens")
-                and type(value) is int and value >= 0
-            }
+        # A partially invalid usage object is *unmeasured*, not a set of
+        # zeros or a partial value copied into the performance report.
+        if (type(usage) is dict and usage and
+                all(key in ("prompt_tokens", "completion_tokens", "total_tokens")
+                    and type(value) is int and value >= 0
+                    for key, value in usage.items()) and
+                any(key in usage for key in (
+                    "prompt_tokens", "completion_tokens", "total_tokens"))):
+            self.last_usage = dict(usage)
         self.successful_requests += 1
         self.latencies_ms.append(round((perf_counter() - started) * 1000, 3))
         return tuple(output)
