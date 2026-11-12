@@ -501,5 +501,47 @@ SaturnClaimVerificationService still rejects forged claims.
 These conditions are NOT resolved by successful GitHub CI. No source repository
 write, cloud inference, Stage 6 implementation or merge is authorized.
 
-**Exact-head CI verification:** to be completed and recorded only after final
-commit (do not reuse workflow IDs from earlier SHA).
+### Measured correction test evidence
+
+**Exact code head:** `3d1a3a1ac04028b0e86820e584d2035fdb7de0ff`.
+
+- [PR CI #43211669314](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/43211669314): **COMPLETED SUCCESS**; four jobs PASS.
+- [Push CI #43211660141](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/43211660141): **COMPLETED SUCCESS**; four jobs PASS.
+- `offline-checks`: **806 tests, OK (11 skipped)**, including new CR06 and
+  CR07 adversarial tests, CR05 controlled 40-case test and previous CR01–05
+  regressions. The auxiliary project check also reported 5 tests PASS.
+- `onnx-contracts`, `saturn-calibration`,
+  `saturn-evaluator-targeted`: PASS.
+
+This documentation update creates a later SHA, so the authoritative final PR
+head must be checked again after it. These runs are evidence for their
+**exact code head**, not a claim of final docs-commit CI or real-source quality.
+
+### Minimal development environment for genuine measurements
+
+**5F:** Python + exact locked `backend/requirements.lock`, read-only
+`SATURN_GITHUB_TOKEN` and `SATURN_GITHUB_OBJECT_FORMAT=sha1`, outbound
+GitHub API access, controlled HTTPS access to `www.mnppsaturn.ru/ftp`,
+explicit experimental PDF worker opt-in, resource limits and a secure local
+report directory. A full pinned source revision and every PDF
+bytes/page/parser SHA and diagnostic must be recorded before claiming PASS.
+
+**5G:** a human-reviewed 25–40-question source-backed
+`real_sample` dataset bound to the actual Stage 5F snapshot, plus
+the separate `APPROVED_REAL_OPEN_CALIBRATION` expert review record.
+The existing 30 candidate questions do NOT qualify.
+
+**5I:** an installed local OpenAI-compatible model server binding only to
+`127.0.0.1` or `::1` at `/v1/chat/completions`, explicit allowed model ID,
+approved licensed weights/quantization, measured model and tokenizer SHA-256,
+GPU/CPU/RAM and versioned runtime config, no cloud fallback, recorded
+p50/p95 inference latencies and memory usage. Caller-declared model SHA does
+not prove runtime-loaded weights; independent runtime configuration check
+remains an external prerequisite.
+
+**5H:** only after approved open calibration, verified model/corpus/runtime
+freeze, independently authored and reviewed blind gold and Session A's
+pre-START acceptance of thresholds. Never author a blind set in Coding B.
+
+**Experimental status remains 5F BLOCKED_BY_ENVIRONMENT, 5G NOT_RUN,
+5H NOT_RUN, 5I BLOCKED_BY_ENVIRONMENT; Stage 5 NOT_ACCEPTED.**
