@@ -37,6 +37,7 @@ def check(env, **kwargs):
         env["freeze"], stand=env["stand"], model=env["model"],
         code_revision=CODE, attestation=env["attestation"],
         open_calibration_bytes=env["open_bytes"],
+        open_calibration_review=env["open_review"],
         model_file=env["model_file"],
         tokenizer_file=env["tokenizer_file"], **kwargs,
     )
@@ -102,6 +103,7 @@ class RealFreezeAndDatasetTests(unittest.TestCase):
                         changed, stand=env["stand"], model=env["model"],
                         code_revision=CODE, attestation=env["attestation"],
                         open_calibration_bytes=env["open_bytes"],
+                        open_calibration_review=env["open_review"],
                         model_file=env["model_file"],
                         tokenizer_file=env["tokenizer_file"])
 
@@ -124,6 +126,7 @@ class RealFreezeAndDatasetTests(unittest.TestCase):
                 env["freeze"], stand=env["stand"], model=env["model"],
                 code_revision=CODE, attestation=tampered,
                 open_calibration_bytes=env["open_bytes"],
+                open_calibration_review=env["open_review"],
                 model_file=env["model_file"], tokenizer_file=env["tokenizer_file"])
 
     def test_CR04_T04_changed_artifact_bytes_or_freeze_block_start(self):
@@ -139,12 +142,14 @@ class RealFreezeAndDatasetTests(unittest.TestCase):
                 mutated, stand=env["stand"], model=env["model"],
                 code_revision=CODE, attestation=env["attestation"],
                 open_calibration_bytes=env["open_bytes"],
+                open_calibration_review=env["open_review"],
                 model_file=env["model_file"], tokenizer_file=env["tokenizer_file"])
 
     def test_CR03_T01_24_positive_16_supported_negative(self):
         env = self.env
         gold = dataset(env)
-        real_dataset_contract(gold, open_calibration_bytes=env["open_bytes"])
+        real_dataset_contract(gold, open_dataset=validate_gold(
+                env["open_bytes"], env["stand"].snapshot, split="real_sample"))
 
     def test_CR03_T02_23_positive_17_negative_or_partial_rejected(self):
         env = self.env
@@ -155,7 +160,9 @@ class RealFreezeAndDatasetTests(unittest.TestCase):
         raw["cases"][0]["required"] = []
         with self.assertRaises(BlindIntegrityError):
             real_dataset_contract(dataset(env, raw),
-                                  open_calibration_bytes=env["open_bytes"])
+                                  open_dataset=validate_gold(
+                                      env["open_bytes"], env["stand"].snapshot,
+                                      split="real_sample"))
         raw = json.loads(json.dumps(env["gold"]))
         for item in raw["cases"][24:]:
             item["expected_status"] = "partial"
@@ -164,7 +171,9 @@ class RealFreezeAndDatasetTests(unittest.TestCase):
             item["negative_reason"] = "Synthetic partial source support for this query."
         with self.assertRaises(BlindIntegrityError):
             real_dataset_contract(dataset(env, raw),
-                                  open_calibration_bytes=env["open_bytes"])
+                                  open_dataset=validate_gold(
+                                      env["open_bytes"], env["stand"].snapshot,
+                                      split="real_sample"))
 
     def test_CR03_T03_negative_reason_bad_category_and_open_duplicate(self):
         env = self.env
@@ -172,18 +181,24 @@ class RealFreezeAndDatasetTests(unittest.TestCase):
         raw["cases"][24]["negative_reason"] = "x"
         with self.assertRaises(BlindIntegrityError):
             real_dataset_contract(dataset(env, raw),
-                                  open_calibration_bytes=env["open_bytes"])
+                                  open_dataset=validate_gold(
+                                      env["open_bytes"], env["stand"].snapshot,
+                                      split="real_sample"))
         raw = json.loads(json.dumps(env["gold"]))
         raw["cases"][24]["category"] = "arbitrary_label"
         with self.assertRaises(BlindIntegrityError):
             real_dataset_contract(dataset(env, raw),
-                                  open_calibration_bytes=env["open_bytes"])
+                                  open_dataset=validate_gold(
+                                      env["open_bytes"], env["stand"].snapshot,
+                                      split="real_sample"))
         raw = json.loads(json.dumps(env["gold"]))
         raw["cases"][24]["question"] = json.loads(
             env["open_bytes"])["cases"][0]["question"]
         with self.assertRaises(BlindIntegrityError):
             real_dataset_contract(dataset(env, raw),
-                                  open_calibration_bytes=env["open_bytes"])
+                                  open_dataset=validate_gold(
+                                      env["open_bytes"], env["stand"].snapshot,
+                                      split="real_sample"))
 
     def test_CR03_T04_invalid_pointer_duplicate_id_or_sha_rejected(self):
         env = self.env
@@ -202,6 +217,7 @@ class RealFreezeAndDatasetTests(unittest.TestCase):
                 mutated, stand=env["stand"], model=env["model"],
                 code_revision=CODE, attestation=env["attestation"],
                 open_calibration_bytes=env["open_bytes"],
+                open_calibration_review=env["open_review"],
                 model_file=env["model_file"], tokenizer_file=env["tokenizer_file"])
 
 
@@ -370,6 +386,7 @@ class FullSyntheticBlindLifecycleTests(unittest.TestCase):
                     report_path=report, receipts_dir=receipts,
                     attestation=self.env["attestation"],
                     open_calibration_bytes=self.env["open_bytes"],
+                    open_calibration_review=self.env["open_review"],
                     model_file=self.env["model_file"],
                     tokenizer_file=self.env["tokenizer_file"],
                     code_revision=CODE,
