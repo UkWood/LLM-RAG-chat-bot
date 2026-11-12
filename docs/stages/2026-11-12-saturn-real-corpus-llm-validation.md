@@ -545,3 +545,12 @@ pre-START acceptance of thresholds. Never author a blind set in Coding B.
 
 **Experimental status remains 5F BLOCKED_BY_ENVIRONMENT, 5G NOT_RUN,
 5H NOT_RUN, 5I BLOCKED_BY_ENVIRONMENT; Stage 5 NOT_ACCEPTED.**
+
+### Second correction code-head verification (after the T11 positive-path guard)
+
+- **Verified code head:** `4665bccf1b23f15ab96ff3365f9e2d01725b0128`.
+- [PR run #43212645397](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/43212645397): **COMPLETED SUCCESS**, all four jobs PASS.
+- [Push run #43212635893](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/43212635893): **COMPLETED SUCCESS**, all four jobs PASS.
+- Full offline suite: **806 tests, OK (11 skipped)**; five additional project tests PASS. This run includes CR06-T11's positive assertion that 40-case blind gold is opened **after** the START receipt exists.
+- No real PDFs or local model inference occurred; these are synthetic/offline engineering results, not Stage 5 quality certification.
+- This documentation-only commit is later than the code head and must receive its **own exact-head CI** before the PR can be submitted again to Session A. Authoritative final head and workflow IDs are recorded in PR #32 after that check.

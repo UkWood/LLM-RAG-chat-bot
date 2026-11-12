@@ -1,6 +1,6 @@
 ## CURRENT — Stage 5F–5I PR #32, CR-06/CR-07 second review correction (12 Nov 2026)
 
-**Engineering work:** CR-06 reviewed/pinned open gold preflight and CR-07 per-request token measurement correction committed in the existing `feat/saturn-real-corpus-llm-validation-v0.1` branch. Review baseline `4223d0e88596140482c778fef956c8efef91d8b1`. Hist. Stage5E scorer/frozen datasets/reports untouched; CR01–05 preserved. Final exact-head CI and independent Session A review still required. **Stage 5 NOT_ACCEPTED.**
+**Engineering work:** CR-06 reviewed/pinned open gold preflight and CR-07 per-request token measurement correction committed in the existing `feat/saturn-real-corpus-llm-validation-v0.1` branch. Review baseline `4223d0e88596140482c778fef956c8efef91d8b1`. Hist. Stage5E scorer/frozen datasets/reports untouched; CR01–05 preserved. Code-head CI PASS at 4665bccf1b23f15ab96ff3365f9e2d01725b0128 (806 offline tests OK, 11 skipped; 4/4 jobs PASS in PR #43212645397 and Push #43212635893). Final documentation-only commit requires exact-head CI, then independent Session A review. **Stage 5 NOT_ACCEPTED.**
 
 - CR-06: Stage 5E source-backed `real_sample` open dataset validation before blind START, 25–40 cases, no synthetic/candidate tags, independent external engineering approval bound into real blind freeze revision 0.1.1, post-START duplicates against same validated open dataset.
 - CR-07: last_usage reset every local provider call; missing/invalid/error is `None`, not stale metrics or fabricated zeros.

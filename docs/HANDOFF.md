@@ -6,7 +6,7 @@ Same existing PR #32 and branch `feat/saturn-real-corpus-llm-validation-v0.1`. *
 
 **CR-07**: `last_usage` resets before every local-provider request; invalid/missing token data stays `None`, including after failed invocation; success/latency counters and independent Stage5C verification unchanged.
 
-**Synthetic tests**: CR06-T01…T14 and CR07-T01…T06, plus untouched CR01–05 regression suite. Exact-head CI required; no test proves real source/model quality.
+**Synthetic tests**: CR06-T01…T14 and CR07-T01…T06, plus untouched CR01–05 regression suite. Code-head CI PASS at 4665bccf1b23f15ab96ff3365f9e2d01725b0128 (806 backend tests OK, 11 skipped, all 4 jobs PASS in PR #43212645397 and Push #43212635893); the final documentation-only SHA still requires exact-head CI. No test proves real source/model quality.
 
 **Real gates**: 5F BLOCKED_BY_ENVIRONMENT (no required token/PDF worker); 5G NOT_RUN (30 candidates are not expert gold); 5H NOT_RUN (independent gold absent); 5I BLOCKED_BY_ENVIRONMENT (no local model/runtime). Stage 5 NOT_ACCEPTED.
 
