@@ -240,6 +240,22 @@ class ThresholdScorecardTests(unittest.TestCase):
         changed[0].source_unsupported_claim_count = 1
         self.assertEqual(self.score(changed)["criteria"]["unsupported_claims"]["result"], "NOT_MET")
 
+    def test_CR02_T05_false_positive_missing_fact_and_technical_error(self):
+        for status in ("answered", "error"):
+            with self.subTest(status=status):
+                changed = list(self.rows)
+                changed[24] = SimpleNamespace(**vars(changed[24]))
+                changed[24].actual_status = status
+                changed[24].fully_correct = False
+                if status == "answered":
+                    changed[24].answer_assertion_count = 1
+                    self.assertEqual(
+                        self.score(changed)["criteria"][
+                            "false_positive_missing_facts"]["result"],
+                        "NOT_MET",
+                    )
+                self.assertEqual(self.score(changed)["overall"], "NOT_MET")
+
     def test_CR02_T04_unmeasured_retrieval_not_successful(self):
         changed = list(self.rows)
         changed[0] = SimpleNamespace(**vars(changed[0]))
