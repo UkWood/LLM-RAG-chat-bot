@@ -94,13 +94,19 @@ def prepare_controlled(directory):
     # contract so Stage 5E validates its real_sample pointers without altering
     # historical synthetic calibration artifacts. NEVER report as real data.
     open_payload = json.loads(calibration_gold_bytes(snap))
-    open_payload["dataset_id"] = "controlled-open-contract-fixture-v1"
+    open_payload["dataset_id"] = "controlled-open-source-review-v1"
     open_payload["author"] = "Test-source engineering drafter"
     open_payload["reviewer"] = "Separate test-source reviewer"
     open_payload["split"] = "real_sample"
     for case in open_payload["cases"]:
         case["split"] = "real_sample"
         case["tags"] = [case["category"]]
+        # Stage 5E's historical C16 owner compatibility is specifically
+        # keyed to the original dataset ID. New gold must state owner itself.
+        if case["case_id"] == "C16":
+            owners = [e.entity_id for e in snap.entities if e.title == "Device X"]
+            assert len(owners) == 1
+            case["required"][0]["owner_entity_id"] = owners[0]
     from saturn_ai.evaluation.saturn_answer_dataset import serialize_gold
     open_bytes = serialize_gold(open_payload)
     existing_questions = {
