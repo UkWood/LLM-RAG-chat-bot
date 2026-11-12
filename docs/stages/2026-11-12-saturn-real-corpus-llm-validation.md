@@ -218,3 +218,154 @@ model run or independent blind report is available.
 
 **Current release gate:** `IMPLEMENTATION IN PROGRESS — EXPERIMENTAL
 VALIDATION NOT RUN`. Nothing in this report authorizes merge.
+
+
+## Independent Acceptance Review Corrections — CR-01…CR-05
+
+**Review baseline:** `7eda73849b814a296182346f4238ce920ed082db`.
+**Execution:** same branch / same PR #32, no merge. All new tests are
+controlled synthetic tests unless explicitly identified as a real run.
+Historical Stage 5E frozen gold, scorer, rubric and reports remain untouched.
+
+### CR-01 — BLOCKER: one generation/verification for an evaluated answer
+
+- **Root cause:** `_run_question` called `verifier.verify()` separately and
+  then `assembly.assemble()`, which already performed verification. With a
+  stateful LLM the diagnostic trace could reflect different claims from the
+  published answer.
+- **Files:** `grounding/saturn_answer_assembly.py`,
+  `evaluation/saturn_grounding.py`,
+  `backend/tests/unit/test_saturn_single_generation.py`.
+- **Fix:** Stage 5D retains its public `assemble()` answer contract and
+  exposes a private `_assemble_diagnostics()` that returns the final answer,
+  SAME-path Stage 5B assessment and SAME-path Stage 5C verified result.
+  Evaluator uses this return and never independently calls Stage 5C.
+  Provider drafts still pass the original snapshot-pinned independent verifier
+  and two final Stage 5D policy checks; the evaluator cannot submit drafts.
+- **Tests:** CR01-T01–T06 cover stateful one-call provider, trace-to-final
+  statement identities, error fail-closed, pinned IDs and concurrent publication;
+  CR01-T07 requires the unchanged legacy Stage 5E suite.
+- **Residual:** Stage 5B is the accepted bounded grammar; no unapproved
+  natural-language semantics change.
+
+### CR-02 — IMPORTANT: deterministic frozen blind threshold scorecard
+
+- **Root cause:** blind runner wrote `quality_target_met=null` without
+  evaluating the frozen 24/16/zero-error requirements.
+- **Files:** `real_blind_assurance.py`, `real_blind.py`,
+  `backend/tests/unit/test_saturn_real_blind.py`.
+- **Fix:** six deterministically computed criteria: 24/24 positive
+  fully-correct, 16/16 negative fully-correct, zero unsupported technical
+  claims, zero invalid citations, zero positive assertions for missing facts,
+  and explicit required-retrieval-measurement completeness. Each criterion
+  reports numerator, denominator, required value, actual result, MET /
+  NOT_MET / NOT_APPLICABLE and a reason for non-applicability. No applicable
+  measurement may be replaced with a favorable zero. The aggregate
+  `quality_target_met` is Boolean and is recomputed from per-case gold/outcomes
+  during completion. Frozen threshold changes invalidate identity.
+- **Tests:** full synthetic MET, one positive error, one negative error,
+  unsupported claim, citation error, unavailable retrieval, tampered scorecard
+  or summary. **Quality target does not authorize production**:
+  `production_readiness` remains `false`.
+
+### CR-03 — IMPORTANT: exact blind composition and open-gold independence
+
+- **Root cause:** old check counted anything not `answered` as negative,
+  including partial and technical error.
+- **Files:** `real_blind_assurance.py`, `real_blind.py`,
+  `backend/tests/unit/test_saturn_real_blind.py`.
+- **Fix:** only 24 answerable + 16 explicitly classified `needs_support`
+  or `clarification` are permitted; mapped category/status whitelist and
+  substantive negative rationale are mandatory. `partial` and `error`
+  are excluded from negative gold. Exact source pointers are validated by
+  unchanged Stage 5E `validate_gold`; positive structured source evidence
+  cannot be relabeled as missing support. A `conflict` label requires
+  multiple gold sources. Case IDs and normalized questions must be unique.
+  Frozen open-calibration bytes SHA are checked pre-START; after START
+  mechanical duplicate blind/open questions are rejected.
+- **Tests:** correct 24/16, 23/17, partial-only negatives, short reason,
+  unknown category, duplicate case, false pointer and frozen dataset hash.
+- **Residual:** no automatic procedure proves semantic independence or the
+  engineering validity of negative labels. Expert independent review
+  remains a mandatory gate.
+
+### CR-04 — IMPORTANT: source and model/config identity gate
+
+- **Root cause:** caller-declared weight SHA, tokenizer/prompt strings and
+  model ID were not enough to identify the actual experimental model.
+- **Files:** `real_blind_assurance.py`, `real_blind.py`,
+  `backend/tests/unit/real_blind_testkit.py`,
+  `backend/tests/unit/test_saturn_real_blind.py`.
+- **Fix:** independent immutable identity manifest includes model ID,
+  revision, quantization, physically hashed model artifact,
+  tokenizer name/revision/physically hashed file, actual Stage 5I prompt SHA,
+  exact provider adapter revision, exact generation parameters, context
+  window, runtime config digest, runtime name/version and hardware identity.
+  A separately provided independent reviewer attestation is digest-bound
+  into the freeze, with explicit `EXTERNALLY_VERIFIED` status and
+  `runtime_attestation=false`. Before START, local files are physically
+  SHA-256 hashed and compared to the frozen manifest. Absent reviewer
+  attestation, changed file, changed prompt/template, model ID, tokenizer,
+  generation parameter or freeze identity aborts.
+- **Tests:** matched frozen identities and attestation; forged/swapped
+  model, digest, tokenizer revision, prompt, params, reviewer or artifact.
+- **Residual:** an OpenAI-compatible endpoint does NOT prove that its
+  running server loaded the tested artifact. No `RUNTIME_VERIFIED` claim
+  is made; independent reviewer must additionally document runtime binding
+  and operational procedures. The retained provider's response model field
+  is checked, but is not cryptographic attestation.
+
+### CR-05 — IMPORTANT: full synthetic adversarial real-blind lifecycle
+
+- **Root cause:** earlier tests covered START and freeze fragments only.
+- **Files:** `real_blind.py`, `real_blind_assurance.py`,
+  `backend/tests/unit/real_blind_testkit.py`,
+  `backend/tests/unit/test_saturn_real_blind.py`.
+- **Fix/tests:** synthetic fixture, fake local HTTP response and synthetic
+  model-file bytes exercise Freeze → pre-START checks → durable exclusive
+  START → 40 labeled cases → original 5E scorer → recalculated scorecard →
+  report validation → durable COMPLETE SHA receipt; re-use and tamper cases
+  cover CR05-T01–T14: duplicate START/COMPLETE, bad dataset → FAILED, altered
+  outcome/citations/metrics/report bytes, missing case, changed runtime identity,
+  technical errors, unmeasured retrieval, and re-used experiment ID.
+- **Critical qualification:** passing these tests proves integrity contracts
+  only; synthetic code-created gold is NOT an independent blind, and the
+  fake completion never counts as real LLM inference.
+
+### Correct independent blind invocation
+
+Exact model and tokenizer files MUST be examined and checked by an independent
+reviewer. The independent attestation and already-approved OPEN calibration
+are inputs available before START; blind question/gold bytes are read only
+AFTER durable START. This is an example of configuration, **not an executed run**:
+
+```bash
+PYTHONPATH=backend/src python -m saturn_ai.real_blind \
+  --freeze /secure/real-blind-freeze.json \
+  --independent-gold /secure/real-blind-gold.json \
+  --independent-attestation /secure/reviewer-model-attestation.json \
+  --open-calibration-gold /secure/real-open-calibration.json \
+  --model-artifact-file /secure/models/approved-weights.bin \
+  --tokenizer-artifact-file /secure/models/approved-tokenizer.json \
+  --report /secure/real-blind-report.json \
+  --receipts-dir /secure/real-blind-receipts \
+  --allow-real-network --allow-development-pdf-worker \
+  --allow-local-inference \
+  --local-endpoint http://127.0.0.1:11434/v1/chat/completions \
+  --local-model-id FROZEN_LOCAL_MODEL \
+  --local-model-sha256 ACTUALLY_MEASURED_WEIGHT_SHA256
+```
+
+### Real experimental gates and environment check (12 Nov 2026)
+
+| Gate | State | Evidence | Next dependency |
+|---|---|---|---|
+| 5F real pinned website + linked PDF ingestion | **BLOCKED_BY_ENVIRONMENT** | Available current session has neither `SATURN_GITHUB_TOKEN` nor required `SATURN_GITHUB_OBJECT_FORMAT=sha1`; no genuine PDF download, SHA or pages measured | Provide read-only GitHub token and permitted HTTPS site access in controlled development host, then run documented 5F stand |
+| 5G open real calibration | **NOT_RUN** | [30 source-page question candidates](../../evaluation/datasets/saturn-real-open-question-candidates-v0.1.json), **NOT gold**; no corpus/pointers or actual answers | Successful 5F snapshot + professional validation of 25–40 question/gold pairs, then run evaluator |
+| 5I actual local inference | **BLOCKED_BY_ENVIRONMENT** | No `ollama`/`llama-server`/`llama-cli`, no configured local model artifact/attestation, and usual loopback port 11434 not reachable. Availability of an unrelated TCP port is not model verification | Select/install licensed local weights/runtime and attest identity, benchmark real inference |
+| 5H independent real blind | **NOT_RUN** | Versioned code and controlled tests only; no blind gold supplied and model not frozen | Expert-authored blind dataset; complete 5F/5G/5I and Session A freeze/threshold approval BEFORE any START |
+
+No engineering calibration, real model performance or independent blind result is
+inferred from GitHub CI or synthetic tests. `production_readiness=false`.
+The decision on a new natural-Russian question planner (Stage 5B extension)
+requires a separate versioned Session A architecture approval.
