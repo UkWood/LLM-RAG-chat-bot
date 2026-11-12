@@ -161,6 +161,7 @@ class RealFreezeAndDatasetTests(unittest.TestCase):
             item["expected_status"] = "partial"
             item["category"] = "multi_need"
             item["required"] = [raw["cases"][0]["required"][0]]
+            item["negative_reason"] = "Synthetic partial source support for this query."
         with self.assertRaises(BlindIntegrityError):
             real_dataset_contract(dataset(env, raw),
                                   open_calibration_bytes=env["open_bytes"])
@@ -195,7 +196,7 @@ class RealFreezeAndDatasetTests(unittest.TestCase):
         with self.assertRaises(GoldValidationError):
             dataset(env, raw)
         mutated = dict(env["freeze"])
-        mutated["dataset_sha256"] = "0"*64
+        mutated["dataset_sha256"] = "invalid"
         with self.assertRaises(BlindIntegrityError):
             validate_real_freeze(
                 mutated, stand=env["stand"], model=env["model"],
