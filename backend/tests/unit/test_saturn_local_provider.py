@@ -126,5 +126,127 @@ class LocalProviderContractTests(unittest.TestCase):
         self.assertEqual(len(result.citations), 0)
 
 
+class TokenUsageIsolationTests(unittest.TestCase):
+    """CR-07: mocked responses are NOT real LLM inference measurements."""
+
+    @staticmethod
+    def reply(usage_marker=None, *, include_usage=True):
+        result = {
+            "model": CONFIG.model_id,
+            "choices": [{"finish_reason": "stop",
+                         "message": {"content": json.dumps({"claims": []})}}],
+        }
+        if include_usage:
+            result["usage"] = usage_marker
+        return json.dumps(result).encode("utf-8")
+
+    def test_CR07_T01_successful_response_has_its_own_usage(self):
+        provider = SaturnLocalClaimProvider(CONFIG)
+        with patch("saturn_ai.grounding.saturn_local_provider._post_loopback",
+                   return_value=self.reply({
+                       "prompt_tokens": 7, "completion_tokens": 4,
+                       "total_tokens": 11})):
+            self.assertEqual(provider.generate(sample_request()), ())
+        self.assertEqual(provider.last_usage, {
+            "prompt_tokens": 7, "completion_tokens": 4, "total_tokens": 11})
+        self.assertEqual(provider.successful_requests, 1)
+        self.assertEqual(len(provider.latencies_ms), 1)
+
+    def test_CR07_T02_prior_usage_cleared_when_next_reply_omits_usage(self):
+        provider = SaturnLocalClaimProvider(CONFIG)
+        with patch("saturn_ai.grounding.saturn_local_provider._post_loopback",
+                   side_effect=[
+                       self.reply({"prompt_tokens": 7, "total_tokens": 7}),
+                       self.reply(include_usage=False)]):
+            provider.generate(sample_request())
+            self.assertIsNotNone(provider.last_usage)
+            provider.generate(sample_request())
+        self.assertIsNone(provider.last_usage)
+        self.assertEqual(provider.successful_requests, 2)
+        self.assertEqual(len(provider.latencies_ms), 2)
+
+    def test_CR07_T03_invalid_or_partial_usage_is_unmeasured(self):
+        invalid = (
+            {"prompt_tokens": -1},
+            {"prompt_tokens": True},
+            {"prompt_tokens": "7"},
+            {"prompt_tokens": 4, "total_tokens": -4},
+            {"unknown": 2},
+            {},
+            [], 0, None,
+        )
+        for value in invalid:
+            with self.subTest(value=value):
+                provider = SaturnLocalClaimProvider(CONFIG)
+                with patch("saturn_ai.grounding.saturn_local_provider._post_loopback",
+                           side_effect=[
+                               self.reply({"prompt_tokens": 5}),
+                               self.reply(value)]):
+                    provider.generate(sample_request())
+                    provider.generate(sample_request())
+                self.assertIsNone(provider.last_usage)
+                self.assertEqual(provider.successful_requests, 2)
+
+    def test_CR07_T04_failure_after_success_does_not_retain_usage(self):
+        provider = SaturnLocalClaimProvider(CONFIG)
+        with patch("saturn_ai.grounding.saturn_local_provider._post_loopback",
+                   side_effect=[
+                       self.reply({"prompt_tokens": 13}),
+                       LocalModelError("unavailable")]):
+            provider.generate(sample_request())
+            self.assertEqual(provider.last_usage, {"prompt_tokens": 13})
+            with self.assertRaises(LocalModelError):
+                provider.generate(sample_request())
+        self.assertIsNone(provider.last_usage)
+        self.assertEqual(provider.successful_requests, 1)
+        self.assertEqual(len(provider.latencies_ms), 1)
+
+    def test_CR07_T05_latency_and_success_count_only_valid_responses(self):
+        provider = SaturnLocalClaimProvider(CONFIG)
+        with patch("saturn_ai.grounding.saturn_local_provider._post_loopback",
+                   side_effect=[
+                       self.reply({"prompt_tokens": 2}),
+                       self.reply(include_usage=False),
+                       self.reply({"prompt_tokens": -1}),
+                       b"{malformed"]):
+            for _ in range(3):
+                provider.generate(sample_request())
+            with self.assertRaises(LocalModelError):
+                provider.generate(sample_request())
+        self.assertEqual(provider.successful_requests, 3)
+        self.assertEqual(len(provider.latencies_ms), 3)
+        self.assertTrue(all(type(ms) is float and ms >= 0
+                            for ms in provider.latencies_ms))
+        self.assertIsNone(provider.last_usage)
+
+    def test_CR07_T06_unchanged_backend_verifier_rejects_forged_claim(self):
+        snapshot = fixture_snapshot()
+        service = SaturnRetrievalService()
+        service.publish(build_saturn_retrieval_bundle(snapshot))
+        provider = SaturnLocalClaimProvider(CONFIG)
+        verifier = SaturnClaimVerificationService(provider=provider)
+        assembly = SaturnAnswerAssemblyService(verifier=verifier)
+        forged = {
+            "need_id": "forged_need", "evidence_id": "forged_evidence",
+            "claim_kind": "field_value", "asserted_payload": "fake",
+        }
+        with patch("saturn_ai.grounding.saturn_local_provider._post_loopback",
+                   return_value=json.dumps({
+                       "model": CONFIG.model_id,
+                       "choices": [{
+                           "finish_reason": "stop",
+                           "message": {"content": json.dumps({"claims": [forged]})},
+                       }],
+                       "usage": {"total_tokens": 20},
+                   }).encode("utf-8")):
+            with service.open_answer_session() as session:
+                context = session.build_context(
+                    "Device X: interface?", mode="lexical", top_k=10)
+                result = assembly.assemble(session=session, context=context)
+        self.assertNotEqual(result.status, "answered")
+        self.assertEqual(result.citations, ())
+        self.assertEqual(provider.last_usage, {"total_tokens": 20})
+
+
 if __name__ == "__main__":
     unittest.main()
