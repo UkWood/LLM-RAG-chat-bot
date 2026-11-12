@@ -1,3 +1,18 @@
+## CURRENT — PR #32 independent review correction pass (12 Nov 2026)
+
+**Status:** CHANGES REQUESTED addressed in feature branch, pending exact-head full CI and independent re-review. One existing [PR #32](https://github.com/UkWood/LLM-RAG-chat-bot/pull/32); NO merge; NO Stage 6. Original review SHA `7eda73849b814a296182346f4238ce920ed082db`. The source repo `UkWood/Saturn-Main-Site` remains READ-ONLY at `084d759487bfab6e111549c9b5469711ac5fc13e`.
+
+- CR-01: same Stage 5D execution now yields answer + diagnostic verification and Stage 5B assessment; independent Stage 5C verifier retained; no second provider generation.
+- CR-02: versioned scorecard recomputed and checked against original gold/outcome metrics, separate experimental quality vs `production_readiness=false`.
+- CR-03: whitelist positive/negative/ambiguous composition 24/16, source and category checks, duplicate open-question rejection. Partial cannot count as negative.
+- CR-04: local file digests + independent reviewer model/config attestation pre-START, no runtime model proof inferred.
+- CR-05: synthetic 40-case full START/scoring/report/COMPLETE and adversarial integrity tests; not genuine independent blind.
+- **5F**: BLOCKED_BY_ENVIRONMENT — missing token; **5G**: NOT_RUN — 30 unvalidated source-backed question *candidates*, not gold; **5H**: NOT_RUN — independent author gold and prior calibration absent; **5I**: BLOCKED_BY_ENVIRONMENT — no local LLM weights/runtime.
+- Stage 4A–5E frozen artifacts unchanged. No Stage5B natural-language semantics extension or Stage6.
+- [Correction methodology and reproduction details](stages/2026-11-12-saturn-real-corpus-llm-validation.md). CI status to be updated after final exact head; do not claim PASS from canceled/intermediate runs.
+
+---
+
 ## CURRENT — Consolidated Stage 5F–5I PR #32 (12 November 2026)
 
 **Status:** DRAFT / IMPLEMENTATION IN PROGRESS, **NOT ACCEPTED**. Baseline AI main `84d783331cc755e688a7f8637be13c297c07f43e`; site main `084d759487bfab6e111549c9b5469711ac5fc13e` (READ-ONLY). Single branch `feat/saturn-real-corpus-llm-validation-v0.1`, single [PR #32](https://github.com/UkWood/LLM-RAG-chat-bot/pull/32); no merge.
