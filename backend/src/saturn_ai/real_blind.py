@@ -35,6 +35,11 @@ from .ingestion.github_snapshot_provider import GitHubSnapshotProvider
 from .ingestion.saturn_contracts import canonical_json
 from .real_corpus_stand import prepare_real_stand
 from .retrieval.saturn_channel import SaturnRetrievalService
+from .real_blind_assurance import (
+    real_dataset_contract, threshold_scorecard, validate_model_identity,
+    validate_independent_attestation, check_local_artifact_bytes,
+    verify_completed_report,
+)
 
 
 REAL_BLIND_REVISION = "saturn-independent-real-blind/0.1.0"
@@ -81,6 +86,8 @@ def _identity(freeze, *, code_revision, snapshot, bundle, model):
         "provider_config", "provider_config_sha256", "model_weights_verification",
         "tokenizer_revision", "prompt_revision", "scorer_revision",
         "rubric_revision", "thresholds", "config_fingerprint",
+        "model_identity", "model_identity_sha256",
+        "independent_attestation_sha256", "open_calibration_sha256",
     }
     if set(freeze) != expected:
         _fail("real_freeze_schema")
@@ -99,6 +106,15 @@ def _identity(freeze, *, code_revision, snapshot, bundle, model):
             freeze["provider_config_sha256"] != canonical_digest(
                 _model_config_details(model))):
         _fail("real_freeze_mismatch")
+    if (freeze["model_identity_sha256"] !=
+            validate_model_identity(freeze["model_identity"], model) or
+            freeze["tokenizer_revision"] !=
+            freeze["model_identity"]["tokenizer_revision"] or
+            freeze["prompt_revision"] !=
+            freeze["model_identity"]["prompt_template_sha256"] or
+            not _SHA64.fullmatch(freeze["independent_attestation_sha256"]) or
+            not _SHA64.fullmatch(freeze["open_calibration_sha256"])):
+        _fail("real_freeze_model_identity")
     if (type(freeze["experiment_id"]) is not str
             or not 1 <= len(freeze["experiment_id"]) <= 100
             or any(not (c.isascii() and (c.isalnum() or c in "_-"))
@@ -139,14 +155,21 @@ def _identity(freeze, *, code_revision, snapshot, bundle, model):
         "scorer_revision": EVALUATOR_REVISION,
         "rubric_revision": RUBRIC_REVISION,
         "thresholds": _THRESHOLDS,
+        "model_identity_sha256": freeze["model_identity_sha256"],
+        "independent_attestation_sha256": freeze["independent_attestation_sha256"],
+        "open_calibration_sha256": freeze["open_calibration_sha256"],
     })
     if freeze["config_fingerprint"] != computed:
         _fail("real_freeze_config_fingerprint")
     return freeze
 
 
-def validate_real_freeze(freeze, *, stand, model, code_revision=None):
-    """Pre-START check, reads freeze only; never opens independent gold."""
+def validate_real_freeze(freeze, *, stand, model, code_revision=None,
+                         attestation=None, open_calibration_bytes=None,
+                         model_file=None, tokenizer_file=None):
+    """Pre-START check: source, open calibration, independent attestation,
+    and actual local artifact hashes; NEVER opens independent blind gold.
+    """
     if code_revision is None:
         code_revision = _code_revision()
     _identity(freeze, code_revision=code_revision, snapshot=stand.snapshot,
@@ -157,6 +180,20 @@ def validate_real_freeze(freeze, *, stand, model, code_revision=None):
             freeze["source_tree"] != manifest["source_tree"] or
             freeze["source_manifest_sha256"] != canonical_digest(manifest)):
         _fail("real_freeze_manifest_mismatch")
+    if (type(open_calibration_bytes) is not bytes or
+            sha256(open_calibration_bytes).hexdigest() !=
+            freeze["open_calibration_sha256"]):
+        _fail("open_calibration_hash_mismatch")
+    if (validate_independent_attestation(
+            attestation, freeze["model_identity"],
+            independent_author=freeze["dataset_author"]) !=
+            freeze["independent_attestation_sha256"]):
+        _fail("independent_attestation_hash_mismatch")
+    if model_file is None or tokenizer_file is None:
+        _fail("measured_local_artifacts_required")
+    check_local_artifact_bytes(
+        freeze["model_identity"], model_file=model_file,
+        tokenizer_file=tokenizer_file)
     return freeze
 
 
@@ -167,6 +204,7 @@ def _validate_real_report(report, freeze, dataset):
         "runtime", "snapshot", "dataset", "configuration", "metrics",
         "breakdown", "cases", "failed_case_ids", "quality_target_met",
         "independent_blind_evaluation", "production_readiness",
+        "threshold_scorecard",
     }
     if (type(report) is not dict or set(report) != report_keys or
             report["report_kind"] != "saturn_grounding_evaluation" or
@@ -174,7 +212,7 @@ def _validate_real_report(report, freeze, dataset):
             report["experiment_id"] != freeze["experiment_id"] or
             report["profile"] != REAL_BLIND_PROFILE or
             report["independent_blind_evaluation"] != "RUN" or
-            report["quality_target_met"] is not None or
+            type(report["quality_target_met"]) is not bool or
             report["production_readiness"] is not False):
         _fail("real_report_schema")
     runtime = report["runtime"]
@@ -225,12 +263,19 @@ def _validate_real_report(report, freeze, dataset):
             report["failed_case_ids"] != [x.case_id for x in outcomes
                                          if not x.fully_correct]):
         _fail("real_report_metrics")
+    computed_scorecard = threshold_scorecard(
+        outcomes, gold_cases=dataset.cases, thresholds=freeze["thresholds"])
+    if (report["threshold_scorecard"] != computed_scorecard or
+            report["quality_target_met"] !=
+            computed_scorecard["quality_target_met"]):
+        _fail("real_report_threshold_integrity")
 
 
 class RealBlindRun(BlindRun):
     """Reuses original durable START / fail; versioned real-only completion."""
 
-    def complete(self, report_data, *, dataset_bytes=None, snapshot=None):
+    def complete(self, report_data, *, dataset_bytes=None, snapshot=None,
+                 open_calibration_bytes=None):
         if not self.started or not self.start_path.is_file():
             _fail("missing_start")
         if any(path.exists() for path in (
@@ -257,9 +302,9 @@ class RealBlindRun(BlindRun):
             dataset = validate_gold(dataset_bytes, snapshot, split="real_sample")
         except (GoldValidationError, ValueError, TypeError):
             _fail("real_gold_provenance")
-        positives = [c for c in dataset.cases if c.expected_status == "answered"]
-        if (len(positives) != 24 or len(dataset.cases) - len(positives) != 16
-                or dataset.dataset_id != self.freeze["dataset_id"]
+        real_dataset_contract(
+            dataset, open_calibration_bytes=open_calibration_bytes)
+        if (dataset.dataset_id != self.freeze["dataset_id"]
                 or dataset.author != self.freeze["dataset_author"]
                 or dataset.reviewer != self.freeze["dataset_reviewer"]
                 or [c.case_id for c in dataset.cases] !=
@@ -277,15 +322,21 @@ class RealBlindRun(BlindRun):
             "report_sha256": persisted_sha,
             "freeze_hash": canonical_digest(self.freeze),
         })
+        verify_completed_report(
+            report_path=self.report_path, complete_path=self.complete_path,
+            expected_freeze_sha256=canonical_digest(self.freeze))
 
 
 def run_real_blind(*, stand, model, freeze, dataset_path, report_path,
-                   receipts_dir, code_revision=None):
+                   receipts_dir, attestation, open_calibration_bytes,
+                   model_file, tokenizer_file, code_revision=None):
     """One-shot experiment: START first, dataset bytes/gold ONLY afterwards."""
     if code_revision is None:
         code_revision = _code_revision()
     validate_real_freeze(
-        freeze, stand=stand, model=model, code_revision=code_revision)
+        freeze, stand=stand, model=model, code_revision=code_revision,
+        attestation=attestation, open_calibration_bytes=open_calibration_bytes,
+        model_file=model_file, tokenizer_file=tokenizer_file)
     blind = RealBlindRun(
         freeze=freeze, receipts_dir=receipts_dir, report_path=report_path)
     blind.start()
@@ -294,6 +345,8 @@ def run_real_blind(*, stand, model, freeze, dataset_path, report_path,
         if sha256(dataset_bytes).hexdigest() != freeze["dataset_sha256"]:
             _fail("real_dataset_sha_mismatch")
         dataset = validate_gold(dataset_bytes, stand.snapshot, split="real_sample")
+        real_dataset_contract(
+            dataset, open_calibration_bytes=open_calibration_bytes)
         if (dataset.dataset_id != freeze["dataset_id"] or
                 dataset.author != freeze["dataset_author"] or
                 dataset.reviewer != freeze["dataset_reviewer"] or
@@ -323,8 +376,13 @@ def run_real_blind(*, stand, model, freeze, dataset_path, report_path,
             evaluation_profile=REAL_BLIND_PROFILE,
             experiment_id=freeze["experiment_id"],
         )
+        scorecard = threshold_scorecard(
+            outcomes, gold_cases=dataset.cases, thresholds=freeze["thresholds"])
+        report["threshold_scorecard"] = scorecard
+        report["quality_target_met"] = scorecard["quality_target_met"]
         blind.complete(report_bytes(report), dataset_bytes=dataset_bytes,
-                       snapshot=stand.snapshot)
+                       snapshot=stand.snapshot,
+                       open_calibration_bytes=open_calibration_bytes)
         return report
     except Exception as exc:
         blind.fail(exc.code if isinstance(exc, BlindIntegrityError)
@@ -344,6 +402,10 @@ def main(argv=None):
     parser.add_argument("--local-endpoint", required=True)
     parser.add_argument("--local-model-id", required=True)
     parser.add_argument("--local-model-sha256", required=True)
+    parser.add_argument("--independent-attestation", type=Path, required=True)
+    parser.add_argument("--open-calibration-gold", type=Path, required=True)
+    parser.add_argument("--model-artifact-file", type=Path, required=True)
+    parser.add_argument("--tokenizer-artifact-file", type=Path, required=True)
     args = parser.parse_args(argv)
     if not all((args.allow_real_network, args.allow_development_pdf_worker,
                 args.allow_local_inference)):
@@ -359,12 +421,18 @@ def main(argv=None):
         stand=stand, model=model, freeze=freeze,
         dataset_path=args.independent_gold,
         report_path=args.report, receipts_dir=args.receipts_dir,
+        attestation=json.loads(args.independent_attestation.read_text(encoding="utf-8")),
+        open_calibration_bytes=args.open_calibration_gold.read_bytes(),
+        model_file=args.model_artifact_file,
+        tokenizer_file=args.tokenizer_artifact_file,
     )
     print(canonical_json({
         "experiment_id": freeze["experiment_id"],
         "report_sha256": sha256(args.report.read_bytes()).hexdigest(),
         "independent_blind_evaluation": "RUN",
         "metrics": report["metrics"],
+        "threshold_scorecard": report["threshold_scorecard"],
+        "quality_target_met": report["quality_target_met"],
         "failed_case_ids": report["failed_case_ids"],
         "production_readiness": False,
     }))
