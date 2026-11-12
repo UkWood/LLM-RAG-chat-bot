@@ -345,6 +345,7 @@ PYTHONPATH=backend/src python -m saturn_ai.real_blind \
   --independent-gold /secure/real-blind-gold.json \
   --independent-attestation /secure/reviewer-model-attestation.json \
   --open-calibration-gold /secure/real-open-calibration.json \
+  --open-calibration-review /secure/approved-open-calibration-review.json \
   --model-artifact-file /secure/models/approved-weights.bin \
   --tokenizer-artifact-file /secure/models/approved-tokenizer.json \
   --report /secure/real-blind-report.json \
@@ -390,3 +391,115 @@ assertion for any later head. Obtain new exact-head CI before review.
 
 **Measured engineering contract PASS ≠ actual experiment PASS.**
 The gated statuses 5F, 5G, 5H, 5I remain as recorded above.
+
+
+## Second Independent Acceptance Review Corrections — CR-06 / CR-07
+
+**Session A review baseline:** `4223d0e88596140482c778fef956c8efef91d8b1`.  
+**Review result:** CHANGES REQUESTED — CR-06 BLOCKER, CR-07 IMPORTANT.  
+**Working scope:** same PR #32, same existing branch. CR-01…CR-05,
+Stage 4A–5E frozen artifacts/scorer and the independent Stage 5C verifier are
+not altered.
+
+### CR-06 — BLOCKER: approved open real-source calibration before blind START
+
+**Root cause:** `real_dataset_contract` accepted an arbitrary JSON array of
+question strings, even for `synthetic_calibration`. Hash equality validated
+only file bytes, not split, source-backed gold or expert review.
+
+**Correction:**
+
+- `real_blind_assurance.validate_open_real_calibration` validates the raw
+  *complete* open dataset using the existing independent
+  `evaluation.saturn_answer_dataset.validate_gold(..., split="real_sample")`
+  against the pinned real Knowledge Snapshot. Enforces matching
+  `snapshot_id`, `corpus_hash`, SHA-256, unique case IDs/questions, Stage 5E
+  valid source-backed positive requirements and supported negative reasons.
+  Requires 25–40 nonempty, correctly shaped questions and a mix of positive
+  and negative/ambiguous cases. Rejects synthetic/candidate/fixture/test-only
+  labeled gold and Coding Session B authorship.
+- An externally authored `APPROVED_REAL_OPEN_CALIBRATION` human technical
+  review record is required. Its digest is a new
+  `open_calibration_review_sha256` field in the real-blind freeze and config
+  fingerprint. Review record binds reviewer, role, date, stated verification
+  procedure, author, every reviewed case ID, dataset digest and pinned source
+  manifest/snapshot/corpus identities. This is an **external human claim**
+  checked for completeness and identity consistency; it is not automatically
+  proof that a person really performed an expert review.
+- `validate_real_freeze` performs the strict check **before** constructing
+  durable START, then passes one validated `SaturnGoldDataset` instance into
+  the blind run and completion validator. Blind gold bytes are still read
+  only *after* START. Overlap checks compare every normalized question from
+  that pinned, validated open dataset — never loose caller strings, and open
+  expected answers never enter the blind runtime.
+- Versioned real-only freeze revision becomes
+  `saturn-independent-real-blind/0.1.1` due to the new required digest.
+  No existing real blind was executed; historical Stage 5E synthetic freeze,
+  dataset and reports remain unchanged. Existing CR-01…CR-05 safeguards
+  continue to apply.
+
+**Files:** `backend/src/saturn_ai/real_blind_assurance.py`,
+`backend/src/saturn_ai/real_blind.py`,
+`backend/tests/unit/real_blind_testkit.py`,
+`backend/tests/unit/test_saturn_real_blind.py`,
+`backend/tests/unit/test_saturn_real_open_preflight.py`.
+
+**Tests:** CR06-T01–T11, T13 and additional independent-review checks in
+`test_saturn_real_open_preflight.py`; CR06-T12 is the existing full
+40-case **synthetic** lifecycle in `test_saturn_real_blind.py`. Only the
+unit-test source fixtures simulate a reviewer; they are not approved real
+gold, and no synthetic result is reported as model quality.
+
+**Remaining external dependency:** an engineer must author/approve the real
+25–40-case open dataset and signed-off human review record against real
+evidence. The code cannot independently certify human technical expertise.
+
+**Required extra CLI input:**
+```bash
+--open-calibration-review /secure/approved-open-calibration-review.json
+```
+
+An approved review record has exactly:
+`schema_version=1`, `decision="APPROVED_REAL_OPEN_CALIBRATION"`,
+`dataset_sha256`, `dataset_id`, `snapshot_id`, `corpus_hash`,
+`source_manifest_sha256`, `case_count`, `reviewed_case_ids`,
+`author`, `reviewer`, `reviewer_role`, `reviewed_at_utc`
+and `verification_procedure`. Each field must be supplied by the
+independent reviewer. Do not create an invented approval record for use
+in production. The review digest must be included in the frozen experiment.
+
+### CR-07 — IMPORTANT: stale per-request token usage
+
+**Root cause:** `SaturnLocalClaimProvider.generate` updated `last_usage`
+only when the response included a usage dict. Missing, malformed or failed
+responses could leave successful prior-token counts visible.
+
+**Correction:** reset `last_usage=None` at the beginning of every request;
+accept only a nonempty usage dict whose keys are among the three
+documented token counters and whose values are nonnegative exact integers
+(no booleans, strings or partial invalid fields). Absence/invalidity remains
+`None`, **never zero**. Existing successful request counts, latency recording,
+localhost transport and independent verification are unchanged.
+
+**Files:** `backend/src/saturn_ai/grounding/saturn_local_provider.py`,
+`backend/tests/unit/test_saturn_local_provider.py`.
+
+**Tests:** CR07-T01 valid usage; T02 usage then omitted usage; T03 invalid
+negative/bool/string/empty/malformed usage; T04 successful request then
+provider failure; T05 latency/success counter unchanged; T06 independent
+SaturnClaimVerificationService still rejects forged claims.
+
+### Real experimental gates after corrections
+
+| Stage | Status | Actual measured evidence | External action needed |
+|---|---|---|---|
+| 5F | **BLOCKED_BY_ENVIRONMENT** | No actual PDF bytes/hash/pages or real snapshot measured; current runtime has no `SATURN_GITHUB_TOKEN` or `SATURN_GITHUB_OBJECT_FORMAT` | Administrator: read-only GitHub source token, allowed HTTPS access and approved development PDF worker |
+| 5G | **NOT_RUN** | 30 unvalidated open real-source question candidates only, no expert-certified source pointers or measured results | Saturn technical specialist: source-backed 25–40 gold and review record following successful 5F |
+| 5H | **NOT_RUN** | Only synthetic test harness; no independently authored hidden gold or finalized code/model/corpus freeze | Session A: expert-author blind gold, approve thresholds and freeze after real open calibration and local inference |
+| 5I | **BLOCKED_BY_ENVIRONMENT** | No genuine model inference; no local model binary/weights; loopback `127.0.0.1:11434` unavailable | Administrator: approved licensed model/runtime, artifact SHA, tokenizer, RAM/GPU/CPU benchmark; Session A must approve architecture delta before changing Stage 5B natural-language semantics |
+
+These conditions are NOT resolved by successful GitHub CI. No source repository
+write, cloud inference, Stage 6 implementation or merge is authorized.
+
+**Exact-head CI verification:** to be completed and recorded only after final
+commit (do not reuse workflow IDs from earlier SHA).
