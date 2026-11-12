@@ -1,3 +1,19 @@
+## CURRENT — PR #32 Second Acceptance Correction CR-06/CR-07 (12 Nov 2026)
+
+Same existing PR #32 and branch `feat/saturn-real-corpus-llm-validation-v0.1`. **Session A reviewed `4223d0e88596140482c778fef956c8efef91d8b1`**, identified CR-06 BLOCKER and CR-07 IMPORTANT. Both are implemented as new corrections; independent repeat review remains necessary. NO merge, no Stage 6. Saturn-Main-Site remains READ-ONLY.
+
+**CR-06**: real blind now requires pre-START Stage 5E `validate_gold(..., split="real_sample")` on 25–40 question, source-backed, pinned real-open calibration data plus a dataset/source-bound *independent external technical review* record. Synthetic/candidate labels and unreviewed open data fail closed; added `open_calibration_review_sha256` to real blind freeze `saturn-independent-real-blind/0.1.1`. A single validated open dataset instance powers post-START duplicate checking; closed blind gold remains unread until durable START. External review claim is required and identity-bound, but not automatically certified by code.
+
+**CR-07**: `last_usage` resets before every local-provider request; invalid/missing token data stays `None`, including after failed invocation; success/latency counters and independent Stage5C verification unchanged.
+
+**Synthetic tests**: CR06-T01…T14 and CR07-T01…T06, plus untouched CR01–05 regression suite. Exact-head CI required; no test proves real source/model quality.
+
+**Real gates**: 5F BLOCKED_BY_ENVIRONMENT (no required token/PDF worker); 5G NOT_RUN (30 candidates are not expert gold); 5H NOT_RUN (independent gold absent); 5I BLOCKED_BY_ENVIRONMENT (no local model/runtime). Stage 5 NOT_ACCEPTED.
+
+Full report: [Stage 5F–5I corrections](stages/2026-11-12-saturn-real-corpus-llm-validation.md). Never merge PR #32 before Session A Acceptance Review and owner authorization.
+
+---
+
 ## CURRENT — PR #32 Acceptance Review CR-01…CR-05 corrections (12 Nov 2026)
 
 **Same branch** `feat/saturn-real-corpus-llm-validation-v0.1`, **same PR #32**, no merge. Review baseline `7eda73849b814a296182346f4238ce920ed082db`; current branch has later corrections awaiting final CI/re-review. No Stage 6; source-site `UkWood/Saturn-Main-Site` remains READ-ONLY at `084d759487bfab6e111549c9b5469711ac5fc13e`.
