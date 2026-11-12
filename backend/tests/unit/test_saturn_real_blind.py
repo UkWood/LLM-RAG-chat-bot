@@ -290,8 +290,23 @@ class FullSyntheticBlindLifecycleTests(unittest.TestCase):
         cls.env = prepare_controlled(cls.directory.name)
         cls.receipts_dir = Path(cls.directory.name) / "receipts"
         cls.report_path = Path(cls.directory.name) / "report.json"
-        with patch("saturn_ai.grounding.saturn_local_provider._post_loopback",
-                   side_effect=fake_empty_completion):
+        cls.blind_read_after_durable_start = False
+        original_read = Path.read_bytes
+
+        def assert_blind_read_after_start(path):
+            # Positive-path CR06-T11: not only fail before START on invalid
+            # open gold, but prove the successful 40-case harness has written
+            # the START receipt before opening its private blind gold bytes.
+            if path == cls.env["blind_path"]:
+                start = list(cls.receipts_dir.glob("*.START.json"))
+                if len(start) != 1 or not start[0].is_file():
+                    raise AssertionError("blind gold read before durable START")
+                cls.blind_read_after_durable_start = True
+            return original_read(path)
+
+        with patch.object(Path, "read_bytes", assert_blind_read_after_start), patch(
+                "saturn_ai.grounding.saturn_local_provider._post_loopback",
+                side_effect=fake_empty_completion):
             cls.report = run_real_blind(
                 stand=cls.env["stand"], model=cls.env["model"],
                 freeze=cls.env["freeze"], dataset_path=cls.env["blind_path"],
@@ -309,6 +324,7 @@ class FullSyntheticBlindLifecycleTests(unittest.TestCase):
         cls.directory.cleanup()
 
     def test_CR05_T01_full_synthetic_40_case_lifecycle(self):
+        self.assertTrue(self.blind_read_after_durable_start)
         self.assertEqual(self.report["metrics"]["case_count"], 40)
         self.assertEqual(self.report["independent_blind_evaluation"], "RUN")
         self.assertEqual(self.report["production_readiness"], False)
