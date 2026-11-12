@@ -112,7 +112,7 @@ class StrictOpenCalibrationPreflightTests(unittest.TestCase):
 
     def test_CR06_T10_open_and_blind_duplicate_detected(self):
         env = self.env
-        source = json.loads(env["gold"])
+        source = json.loads(json.dumps(env["gold"]))
         source["cases"][0]["question"] = json.loads(env["open_bytes"])["cases"][0]["question"]
         blind = validate_gold(serialize_gold(source), env["stand"].snapshot,
                               split="real_sample")
