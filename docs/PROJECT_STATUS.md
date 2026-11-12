@@ -1,3 +1,17 @@
+## CURRENT — Stage 5F–5I PR #32, CR-06/CR-07 second review correction (12 Nov 2026)
+
+**Engineering work:** CR-06 reviewed/pinned open gold preflight and CR-07 per-request token measurement correction committed in the existing `feat/saturn-real-corpus-llm-validation-v0.1` branch. Review baseline `4223d0e88596140482c778fef956c8efef91d8b1`. Hist. Stage5E scorer/frozen datasets/reports untouched; CR01–05 preserved. Final exact-head CI and independent Session A review still required. **Stage 5 NOT_ACCEPTED.**
+
+- CR-06: Stage 5E source-backed `real_sample` open dataset validation before blind START, 25–40 cases, no synthetic/candidate tags, independent external engineering approval bound into real blind freeze revision 0.1.1, post-START duplicates against same validated open dataset.
+- CR-07: last_usage reset every local provider call; missing/invalid/error is `None`, not stale metrics or fabricated zeros.
+- Tests: CR06-T01…T14 including 40-case synthetic lifecycle; CR07-T01…T06; historical regressions must pass.
+- **5F** BLOCKED_BY_ENVIRONMENT — no real PDF/hash/page extraction. **5G** NOT_RUN — 30 open candidates not expert gold. **5H** NOT_RUN — no independently authored blind gold. **5I** BLOCKED_BY_ENVIRONMENT — no local model or genuine inference. Do not claim experimental PASS based on synthetic CI.
+- Site repo `UkWood/Saturn-Main-Site` remains READ-ONLY. No Stage6 or merge.
+
+Read [full corrections/evidence report](stages/2026-11-12-saturn-real-corpus-llm-validation.md).
+
+---
+
 ## CURRENT — PR #32 independent review correction pass (12 Nov 2026)
 
 **Status:** CHANGES REQUESTED addressed in feature branch, pending exact-head full CI and independent re-review. One existing [PR #32](https://github.com/UkWood/LLM-RAG-chat-bot/pull/32); NO merge; NO Stage 6. Original review SHA `7eda73849b814a296182346f4238ce920ed082db`. The source repo `UkWood/Saturn-Main-Site` remains READ-ONLY at `084d759487bfab6e111549c9b5469711ac5fc13e`.
