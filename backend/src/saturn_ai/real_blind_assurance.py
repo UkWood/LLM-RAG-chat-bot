@@ -10,7 +10,9 @@ from hashlib import sha256
 import re
 from pathlib import Path
 
-from .evaluation.saturn_answer_dataset import validate_gold
+from .evaluation.saturn_answer_dataset import (
+    SaturnGoldDataset, GoldValidationError, validate_gold,
+)
 from .evaluation.saturn_answer_freeze import BlindIntegrityError, canonical_digest
 from .grounding.saturn_local_provider import (
     SaturnLocalModelConfig, LOCAL_PROVIDER_REVISION, _SYSTEM,
@@ -65,10 +67,89 @@ def source_question_key(value):
     return " ".join(value.casefold().split()).rstrip("?! .")
 
 
-def real_dataset_contract(dataset, *, open_calibration_bytes: bytes):
-    """Strict blind composition; never uses Stage 5B as a gold oracle."""
-    if type(open_calibration_bytes) is not bytes or not open_calibration_bytes:
-        refuse("open_calibration_required")
+_UNTRUSTED_DATASET_LABEL = re.compile(
+    r"(?<![a-z])(?:synthetic|candidate|fixture|test[-_ ]only|mock|fake)(?![a-z])",
+    re.IGNORECASE,
+)
+_OPEN_REVIEW_FIELDS = frozenset({
+    "schema_version", "decision", "dataset_sha256", "dataset_id",
+    "snapshot_id", "corpus_hash", "source_manifest_sha256",
+    "case_count", "reviewed_case_ids", "author", "reviewer",
+    "reviewer_role", "reviewed_at_utc", "verification_procedure",
+})
+
+
+def validate_open_real_calibration(
+        raw_bytes: bytes, snapshot, *,
+        expected_sha256: str, review: dict,
+        source_manifest_sha256: str) -> SaturnGoldDataset:
+    """Real open gold preflight, BEFORE blind START; never reads blind gold.
+
+    Uses the unchanged Stage 5E validator against the exact pinned source
+    snapshot. An external human review attestation is REQUIRED but cannot
+    itself prove the reviewer's technical competence or that review occurred.
+    """
+    if (type(raw_bytes) is not bytes or not _sha(expected_sha256) or
+            sha256(raw_bytes).hexdigest() != expected_sha256):
+        refuse("open_calibration_hash_mismatch")
+    try:
+        dataset = validate_gold(raw_bytes, snapshot, split="real_sample")
+    except (GoldValidationError, TypeError, ValueError):
+        refuse("open_calibration_gold_invalid")
+    if (dataset.sha256 != expected_sha256 or
+            dataset.snapshot_id != snapshot.snapshot_id or
+            dataset.corpus_hash != snapshot.manifest.corpus_hash or
+            dataset.split != "real_sample" or
+            not 25 <= len(dataset.cases) <= 40):
+        refuse("open_calibration_profile_or_size")
+    # A useful open baseline needs real source-backed positive expectations
+    # and negative/ambiguous questions to measure false support, not just IDs.
+    if (not any(c.expected_status == "answered" and c.required
+                for c in dataset.cases) or
+            not any(c.expected_status in ("needs_support", "clarification", "partial")
+                    for c in dataset.cases)):
+        refuse("open_calibration_composition")
+    labels = [dataset.dataset_id, dataset.author, dataset.reviewer]
+    for case in dataset.cases:
+        labels.extend((case.category, *case.tags))
+    if (any(_UNTRUSTED_DATASET_LABEL.search(label) for label in labels) or
+            dataset.author == dataset.reviewer or
+            "coding session b" in dataset.author.casefold() or
+            "coding session b" in dataset.reviewer.casefold()):
+        refuse("open_calibration_not_real")
+    if type(review) is not dict or set(review) != _OPEN_REVIEW_FIELDS:
+        refuse("open_calibration_expert_review_required")
+    if (type(review["schema_version"]) is not int or review["schema_version"] != 1 or
+            review["decision"] != "APPROVED_REAL_OPEN_CALIBRATION" or
+            review["dataset_sha256"] != dataset.sha256 or
+            review["dataset_id"] != dataset.dataset_id or
+            review["snapshot_id"] != dataset.snapshot_id or
+            review["corpus_hash"] != dataset.corpus_hash or
+            review["source_manifest_sha256"] != source_manifest_sha256 or
+            type(review["case_count"]) is not int or
+            review["case_count"] != len(dataset.cases) or
+            type(review["reviewed_case_ids"]) is not list or
+            review["reviewed_case_ids"] != [c.case_id for c in dataset.cases] or
+            review["author"] != dataset.author or
+            review["reviewer"] != dataset.reviewer or
+            not _text(review["reviewer_role"], 256) or
+            not _text(review["reviewed_at_utc"], 64) or
+            not _text(review["verification_procedure"], 2048) or
+            len(review["verification_procedure"].strip()) < 40):
+        refuse("open_calibration_expert_review_mismatch")
+    # Attestation is a manually verified, frozen dependency. This checks the
+    # exact stated review record, not an automated approval or signature.
+    return dataset
+
+
+def real_dataset_contract(dataset, *, open_dataset: SaturnGoldDataset):
+    """Strict blind composition using a previously validated pinned OPEN gold."""
+    if (type(open_dataset) is not SaturnGoldDataset or
+            open_dataset.split != "real_sample" or
+            not 25 <= len(open_dataset.cases) <= 40 or
+            open_dataset.snapshot_id != dataset.snapshot_id or
+            open_dataset.corpus_hash != dataset.corpus_hash):
+        refuse("validated_open_calibration_required")
     if len(dataset.cases) != 40:
         refuse("real_blind_case_count")
     positive = sum(c.expected_status == "answered" for c in dataset.cases)
@@ -90,22 +171,10 @@ def real_dataset_contract(dataset, *, open_calibration_bytes: bytes):
                      for r in case.required)) or
                 (case.category == "conflict" and len(case.required) < 2)):
             refuse("real_blind_category_or_gold")
-    # Gold is already independently source-bound by Stage 5E validate_gold.
-    # Also reject exact or whitespace/punctuation/case-equivalent open questions.
-    from .evaluation.saturn_answer_dataset import GoldValidationError
-    try:
-        import json
-        raw = json.loads(open_calibration_bytes.decode("utf-8"))
-        if (type(raw) is not dict or type(raw.get("cases")) is not list or
-                raw.get("split") not in ("real_sample", "synthetic_calibration")):
-            refuse("invalid_open_dataset")
-        open_questions = [row["question"] for row in raw["cases"]]
-        if any(type(q) is not str for q in open_questions):
-            refuse("invalid_open_dataset")
-    except (UnicodeError, ValueError, TypeError, KeyError):
-        refuse("invalid_open_dataset")
+    # Full, validated OPEN dataset only. No raw JSON reparse, no unchecked
+    # alternate question array and no open expected answers enter the runtime.
     overlap = {source_question_key(c.question) for c in dataset.cases} & {
-        source_question_key(q) for q in open_questions}
+        source_question_key(c.question) for c in open_dataset.cases}
     if overlap:
         refuse("blind_open_question_duplicate")
     if len({source_question_key(c.question) for c in dataset.cases}) != 40:
