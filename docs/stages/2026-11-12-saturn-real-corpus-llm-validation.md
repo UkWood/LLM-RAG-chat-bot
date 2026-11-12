@@ -369,3 +369,24 @@ No engineering calibration, real model performance or independent blind result i
 inferred from GitHub CI or synthetic tests. `production_readiness=false`.
 The decision on a new natural-Russian question planner (Stage 5B extension)
 requires a separate versioned Session A architecture approval.
+
+
+### Measured GitHub CI baseline of correction set
+
+On exact correction commit `8952d4984e4948c93c3f2590bfcd16e5548cce2a`:
+
+- [PR workflow 43171805814](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/43171805814): COMPLETED SUCCESS, four jobs PASS.
+- [Push workflow 43171801744](https://github.com/UkWood/LLM-RAG-chat-bot/actions/runs/43171801744): COMPLETED SUCCESS, four jobs PASS.
+- `offline-checks`: **787 Python backend tests PASS, 11 skipped**;
+  the project checks also reported five tests PASS.
+- `saturn-evaluator-targeted`, `saturn-calibration`,
+  `onnx-contracts`: SUCCESS.
+- CR-01 stateful tests and CR-02–05 adversarial/40-case synthetic
+  lifecycle were included in the 787-test offline run.
+
+Subsequent test/documentation commits change the head. Therefore
+the above CI run is historical evidence at its exact SHA, not a PASS
+assertion for any later head. Obtain new exact-head CI before review.
+
+**Measured engineering contract PASS ≠ actual experiment PASS.**
+The gated statuses 5F, 5G, 5H, 5I remain as recorded above.
