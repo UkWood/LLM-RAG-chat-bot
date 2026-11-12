@@ -90,10 +90,41 @@ def prepare_controlled(directory):
             "declared fake tokenizer and prompt digest without contacting any model.",
         "runtime_attestation": False,
     }
-    open_bytes = calibration_gold_bytes(snap)
+    # SYNTHETIC source-backed unit fixture, transformed into the real_sample
+    # contract so Stage 5E validates its real_sample pointers without altering
+    # historical synthetic calibration artifacts. NEVER report as real data.
+    open_payload = json.loads(calibration_gold_bytes(snap))
+    open_payload["dataset_id"] = "controlled-open-contract-fixture-v1"
+    open_payload["author"] = "Test-source engineering drafter"
+    open_payload["reviewer"] = "Separate test-source reviewer"
+    open_payload["split"] = "real_sample"
+    for case in open_payload["cases"]:
+        case["split"] = "real_sample"
+        case["tags"] = [case["category"]]
+    from saturn_ai.evaluation.saturn_answer_dataset import serialize_gold
+    open_bytes = serialize_gold(open_payload)
     existing_questions = {
         source_question_key(c["question"])
-        for c in json.loads(open_bytes)["cases"]
+        for c in open_payload["cases"]
+    }
+    # The fictional reviewer/attestation are only for isolated contract tests.
+    # The real CLI requires independently signed-off source-based gold.
+    open_review = {
+        "schema_version": 1, "decision": "APPROVED_REAL_OPEN_CALIBRATION",
+        "dataset_sha256": sha256(open_bytes).hexdigest(),
+        "dataset_id": open_payload["dataset_id"],
+        "snapshot_id": snap.snapshot_id,
+        "corpus_hash": snap.manifest.corpus_hash,
+        "source_manifest_sha256": canonical_digest(manifest),
+        "case_count": len(open_payload["cases"]),
+        "reviewed_case_ids": [case["case_id"] for case in open_payload["cases"]],
+        "author": open_payload["author"], "reviewer": open_payload["reviewer"],
+        "reviewer_role": "Independent fictional reviewer for a unit test",
+        "reviewed_at_utc": "2026-11-12T00:00:00Z",
+        "verification_procedure": (
+            "UNIT TEST ONLY: checked synthetic source pointer identities "
+            "against the in-memory test snapshot, no Saturn expert involved."
+        ),
     }
     entities = {x.entity_id: x for x in snap.entities}
     pointer_by_fact = {
@@ -175,6 +206,7 @@ def prepare_controlled(directory):
         "model_identity_sha256": canonical_digest(identity),
         "independent_attestation_sha256": canonical_digest(attestation),
         "open_calibration_sha256": sha256(open_bytes).hexdigest(),
+        "open_calibration_review_sha256": canonical_digest(open_review),
     }
     freeze["config_fingerprint"] = canonical_digest({
         "profile": REAL_BLIND_REVISION, "code_revision": CODE,
@@ -187,12 +219,14 @@ def prepare_controlled(directory):
         "model_identity_sha256": freeze["model_identity_sha256"],
         "independent_attestation_sha256": freeze["independent_attestation_sha256"],
         "open_calibration_sha256": freeze["open_calibration_sha256"],
+        "open_calibration_review_sha256": freeze["open_calibration_review_sha256"],
     })
     blind_path = Path(directory) / "synthetic-blind-gold.json"
     blind_path.write_bytes(blind_bytes)
     return {
         "stand": stand, "model": model, "freeze": freeze,
         "attestation": attestation, "open_bytes": open_bytes,
+        "open_review": open_review,
         "blind_bytes": blind_bytes, "gold": gold, "blind_path": blind_path,
         "model_file": model_file, "tokenizer_file": tokenizer_file,
     }
