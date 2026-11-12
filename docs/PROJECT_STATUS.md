@@ -1,3 +1,20 @@
+## CURRENT — PR #32, experimental Stage 5F–5I evidence attempt (12 Nov 2026)
+
+**Engineering ACCEPTED** CR-01…CR-07 baseline `b1b10813dd26680d95bdded74964adfb53a442cf`. Existing PR #32 remains OPEN/UNMERGED; website remains READ-ONLY.
+
+**Measured partial real evidence:** 10/10 pinned Markdown source files independently checked against private site's exact git-tree blob SHA-1, with computed content SHA-256, declared four linked PDF URLs; see [real source-only partial inventory](../evaluation/experiments/2026-11-12-stage5f-pinned-source-inventory-partial.json). NOT a full Stage 5F ingestion manifest.
+
+| Stage | Experiment status | Missing evidence |
+|---|---|---|
+| 5F | **BLOCKED_BY_ENVIRONMENT** | No exportable private-site read token, DNS to source/PDF host, actual PDF bytes/worker page count, Knowledge Snapshot, retrieval and two answer traces |
+| 5G | **NOT_RUN** | 25–40 expert-reviewed real gold, independent attestation, measured open calibration and defect register |
+| 5I | **BLOCKED_BY_ENVIRONMENT** | Approved local model+tokenizer revision/hashes, running loopback inference server, real claims/latency/token/resource metrics |
+| 5H | **NOT_RUN** | Preapproved real open calibration, model/runtime freeze and independent hidden gold; no blind START attempted |
+
+**Stage 5 NOT_ACCEPTED**. [Controlled host runbook and human gates](stages/2026-11-12-stage5f-5i-real-execution-handoff.md). No merge, Stage 6, cloud model or accepted-code rewrites.
+
+---
+
 ## CURRENT — Stage 5F–5I PR #32, CR-06/CR-07 second review correction (12 Nov 2026)
 
 **Engineering work:** CR-06 reviewed/pinned open gold preflight and CR-07 per-request token measurement correction committed in the existing `feat/saturn-real-corpus-llm-validation-v0.1` branch. Review baseline `4223d0e88596140482c778fef956c8efef91d8b1`. Hist. Stage5E scorer/frozen datasets/reports untouched; CR01–05 preserved. Code-head CI PASS at 4665bccf1b23f15ab96ff3365f9e2d01725b0128 (806 offline tests OK, 11 skipped; 4/4 jobs PASS in PR #43212645397 and Push #43212635893). Final documentation-only commit requires exact-head CI, then independent Session A review. **Stage 5 NOT_ACCEPTED.**

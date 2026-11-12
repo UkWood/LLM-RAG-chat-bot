@@ -1,3 +1,17 @@
+## CURRENT — Stage 5F–5I experimental execution attempt (12 Nov 2026)
+
+**Engineering baseline accepted:** PR #32 code `b1b10813dd26680d95bdded74964adfb53a442cf`, CR-01…CR-07. **No accepted core mechanism changed.** Source site `UkWood/Saturn-Main-Site` remains STRICT READ-ONLY.
+
+**Real partial evidence:** GitHub pinned private source commit `084d759487bfab6e111549c9b5469711ac5fc13e`, root tree `a5297822bf3a5e071b10cc1dca553481c1b84d47`; 1119 untruncated entries, all ten selected real Markdown contents independently SHA-1/SHA-256 checked (10/10 exact blob-match), four selected PDF URLs declared in source. [Source-only manifest](../evaluation/experiments/2026-11-12-stage5f-pinned-source-inventory-partial.json). **This does NOT prove any PDF bytes/worker pages, snapshot or RAG answers.**
+
+**BLOCKED:** local execution environment lacks exportable read-only private site token, required object-format config, DNS to GitHub/PDF host, locally installed model/runtime. No real model, gold, independent attestation or blind. Status **5F BLOCKED_BY_ENVIRONMENT, 5G NOT_RUN, 5I BLOCKED_BY_ENVIRONMENT, 5H NOT_RUN; Stage 5 NOT_ACCEPTED.**
+
+**Responsibilities/actions:** administrator must provision controlled machine with private site read-only token, DNS/TLS, bounded development PDF worker and approved local model; Saturn engineer must author/validate 25–40 real gold cases and independent approval; Session A must approve model/runtime/freeze and provide independent blind *after* open calibration. See [reproducible real-execution handoff](stages/2026-11-12-stage5f-5i-real-execution-handoff.md) and [stage report](stages/2026-11-12-saturn-real-corpus-llm-validation.md).
+
+No merge, Stage 6, fake model results or unauthorized source/site writes.
+
+---
+
 ## CURRENT — PR #32 Second Acceptance Correction CR-06/CR-07 (12 Nov 2026)
 
 Same existing PR #32 and branch `feat/saturn-real-corpus-llm-validation-v0.1`. **Session A reviewed `4223d0e88596140482c778fef956c8efef91d8b1`**, identified CR-06 BLOCKER and CR-07 IMPORTANT. Both are implemented as new corrections; independent repeat review remains necessary. NO merge, no Stage 6. Saturn-Main-Site remains READ-ONLY.

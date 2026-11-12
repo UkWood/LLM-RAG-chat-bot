@@ -554,3 +554,47 @@ pre-START acceptance of thresholds. Never author a blind set in Coding B.
 - Full offline suite: **806 tests, OK (11 skipped)**; five additional project tests PASS. This run includes CR06-T11's positive assertion that 40-case blind gold is opened **after** the START receipt exists.
 - No real PDFs or local model inference occurred; these are synthetic/offline engineering results, not Stage 5 quality certification.
 - This documentation-only commit is later than the code head and must receive its **own exact-head CI** before the PR can be submitted again to Session A. Authoritative final head and workflow IDs are recorded in PR #32 after that check.
+
+
+## Experimental execution attempt — 12 November 2026 (after CR-01…CR-07 acceptance)
+
+**This is genuine, limited SOURCE provenance evidence, NOT a full 5F integration.** The linked GitHub repository API resolved private Saturn source commit
+`084d759487bfab6e111549c9b5469711ac5fc13e`, tree
+`a5297822bf3a5e071b10cc1dca553481c1b84d47`; 1119 entries,
+`truncated=false`. All 10 selected Markdown contents were fetched from
+the exact commit. Their UTF-8 raw bytes were independently rehashed:
+**10/10 computed Git blob SHA-1 match the declared Git blob IDs**, with
+computed SHA-256 and byte lengths. The selected four PDF links are
+explicitly declared in those source records.
+
+- [Source-only measured provenance manifest](../../evaluation/experiments/2026-11-12-stage5f-pinned-source-inventory-partial.json)
+  stores every observed path/blob SHA-1/bytes SHA-256, selected PDF
+  declaration, and NULL rather than invented missing PDF/Snapshot IDs.
+- [Experimental execution handoff](2026-11-12-stage5f-5i-real-execution-handoff.md)
+  documents the exact authorized commands, independent responsibilities,
+  proposed local model and acceptance dependencies.
+- An external public web/PDF viewer found provisional page-count hints
+  65 / 39 / 83 / 69. **Not from the project's PDF worker**; do not
+  treat these as physical pages of the frozen extraction or infer bytes SHA.
+- This runtime has **no `SATURN_GITHUB_TOKEN` or object-format env**;
+  cannot resolve `api.github.com` and `www.mnppsaturn.ru`; its
+  GitHub connector does not grant an exportable token for
+  `GitHubSnapshotProvider`. The Saturn source repo is private.
+  Neither `ollama`, `llama-server` nor `llama-cli` is installed and
+  `127.0.0.1:11434` has no usable local model service.
+- **5F BLOCKED_BY_ENVIRONMENT:** source Git subcheck independently
+  verified, but four real PDF downloads/extractions, PDF SHA-256,
+  physical pages, snapshot and answers/traces NOT RUN.
+- **5G NOT_RUN:** existing 30 cases are question candidates, not expert
+  source-backed gold. A Saturn technical reviewer and an independent
+  attestation are required; no open score.
+- **5I BLOCKED_BY_ENVIRONMENT:** Qwen3-4B-GGUF Q4_K_M / llama.cpp is
+  only a candidate for Session A/administrator approval; no fixed model
+  revision, verified artifact SHA, local inference or latency measured.
+- **5H NOT_RUN:** independent blind author/data/freeze absent. No durable
+  START permitted before 5F/5G/5I completion.
+
+All CR-01…CR-07 accepted engineering contracts are unchanged.
+**Stage 5 = NOT_ACCEPTED; production_readiness=false.** No merge, no
+Stage 6, no source-site modification, no cloud inference. Avoid
+presenting this partial inventory as final experimental acceptance.
