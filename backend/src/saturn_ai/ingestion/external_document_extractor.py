@@ -16,7 +16,7 @@ import sys
 from .external_document_transport import DocumentError, DocumentFetchPolicy, CODES
 
 
-PARSER_VERSION = "saturn-pdf-pypdf-6.10.0/0.1.0"
+PARSER_VERSION = "saturn-pdf-pypdf-6.10.0/0.2.0"
 
 
 @dataclass(frozen=True)
