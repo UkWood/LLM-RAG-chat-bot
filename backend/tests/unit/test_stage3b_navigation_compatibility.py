@@ -4,6 +4,7 @@ Execute with PYTHONPATH=backend/src python -m unittest ... (or standalone here).
 No network calls or original Saturn PDF fixtures are used.
 """
 from io import BytesIO
+import importlib.util
 import json
 import re
 from pathlib import Path
@@ -309,6 +310,77 @@ class Stage3BNN(unittest.TestCase):
         status, result = execute(pdf(pages=2), max_pages=1)
         self.assertEqual(status, 2)
         self.assertEqual(result, {"error":"page_limit"})
+
+
+class Stage3BValidatorBudgetBoundaries(unittest.TestCase):
+    """Direct production-validator gates, independent of pypdf PDF parsing.
+
+    The existing test_negative_indirection_hops is a separate real subprocess
+    regression: parser-level fail-closed is not treated as a validator budget hit.
+    """
+
+    @staticmethod
+    def _worker():
+        spec = importlib.util.spec_from_file_location("saturn_stage3b_worker_budget_test", WORKER)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+
+    @staticmethod
+    def _chain(length):
+        class SyntheticReader:
+            def __init__(self):
+                self.objects = {}
+
+            def get_object(self, ref):
+                return self.objects[ref.idnum]
+
+        reader = SyntheticReader()
+        refs = [IndirectObject(idx, 0, reader) for idx in range(1, length + 1)]
+        for i, ref in enumerate(refs):
+            reader.objects[ref.idnum] = refs[i + 1] if i + 1 < length else NameObject("/XYZ")
+        return reader, refs[0]
+
+    @staticmethod
+    def _validator(worker, reader):
+        # _resolve() and _name() do not use reader.pages; isolate precisely
+        # these real validator methods, not an emulated budget implementation.
+        validator = worker._InertNavigation.__new__(worker._InertNavigation)
+        validator.reader = reader
+        validator.seen = 0
+        return validator
+
+    def test_budget_exact_four_indirect_hops_is_allowed(self):
+        worker = self._worker()
+        reader, first = self._chain(4)
+        validator = self._validator(worker, reader)
+        validator._name(first, "/XYZ", 0)
+        self.assertEqual(validator.seen, 5)  # Initial reference + four hops.
+
+    def test_budget_fifth_indirect_hop_rejected_by_validator(self):
+        worker = self._worker()
+        reader, first = self._chain(5)
+        validator = self._validator(worker, reader)
+        with self.assertRaises(worker.WorkerRejection) as ctx:
+            validator._name(first, "/XYZ", 0)
+        self.assertEqual(str(ctx.exception), "resource_limit")
+        self.assertEqual(validator.seen, 5)
+
+    def test_budget_exact_depth_six_is_allowed(self):
+        worker = self._worker()
+        validator = self._validator(worker, object())
+        validator._name(NameObject("/XYZ"), "/XYZ", 6)
+        self.assertEqual(validator.seen, 1)
+
+    def test_budget_depth_seven_rejected_by_validator(self):
+        worker = self._worker()
+        validator = self._validator(worker, object())
+        with self.assertRaises(worker.WorkerRejection) as ctx:
+            validator._name(NameObject("/XYZ"), "/XYZ", 7)
+        # The approved worker uses invalid_pdf for over-depth, not
+        # resource_limit; this is intentionally asserted, not concealed.
+        self.assertEqual(str(ctx.exception), "invalid_pdf")
+        self.assertEqual(validator.seen, 0)
 
 
 class Stage3BExternalAdapterContract(unittest.TestCase):

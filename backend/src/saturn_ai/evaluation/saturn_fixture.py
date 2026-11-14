@@ -67,7 +67,8 @@ def fixture_snapshot(*, site_commit=FIXTURE_SITE_COMMIT):
         catalog, DocumentFetchPolicy(
             allowed_hosts=("www.mnppsaturn.ru",),
             allowed_path_prefixes=("/ftp", "/public", "/photos"),
-        ), transport=_FixtureTransport(), extractor=_FixtureExtractor())
+        ), transport=_FixtureTransport(), extractor=_FixtureExtractor(),
+        parser_version="saturn-pdf-pypdf-6.10.0/0.1.0")
     return build_saturn_knowledge_snapshot(site, catalog, external)
 
 
