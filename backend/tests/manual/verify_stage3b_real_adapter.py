@@ -47,6 +47,8 @@ EXPECTED = {
     "sldks-1": ("f1436a93285cad9a201b6b387ed64a606ad2768cfc7ee70627c188411e9ce61f", 83),
     "lanmon-server": ("fedd8b6a3de63efb9ff29de8d62b3cf98dea05d7ce189a68100a3ced096e70bf", 69),
 }
+SOURCE_COMMIT = "084d759487bfab6e111549c9b5469711ac5fc13e"
+SOURCE_TREE = "a5297822bf3a5e071b10cc1dca553481c1b84d47"
 MAX_SOURCE_FILES = 2000
 MAX_SOURCE_FILE_BYTES = 2_000_000
 MAX_PDF_BYTES = 16 * 1024 * 1024
@@ -75,15 +77,15 @@ def _selected_source(path):
 
 
 def _snapshot_from_git(repo, commit):
-    if not SHA.fullmatch(commit):
-        raise ValueError("A fully pinned 40-character site commit is required")
+    if commit != SOURCE_COMMIT or not SHA.fullmatch(commit):
+        raise ValueError("Only the architecturally pinned Saturn-Main-Site commit is accepted")
     repo = Path(repo).resolve(strict=True)
     resolved = _git(repo, "rev-parse", "--verify", commit + "^{commit}").decode().strip()
     if resolved != commit:
         raise ValueError("Source commit did not resolve to the exact pin")
     tree = _git(repo, "rev-parse", "--verify", commit + "^{tree}").decode().strip()
-    if not SHA.fullmatch(tree):
-        raise ValueError("Invalid pinned Git tree SHA")
+    if tree != SOURCE_TREE or not SHA.fullmatch(tree):
+        raise ValueError("Pinned source tree does not match architecturally approved SHA")
     entries = _git(repo, "ls-tree", "-r", "-z", commit)
     selected = {}
     selected_count = 0
