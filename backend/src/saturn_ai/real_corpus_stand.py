@@ -22,14 +22,15 @@ from .grounding.saturn_local_provider import SaturnLocalClaimProvider, SaturnLoc
 from .grounding.saturn_generation import SaturnClaimVerificationService
 from .grounding.saturn_sufficiency_gate import SaturnQuestionGate
 from .ingestion.external_document_adapter import adapt_external_documents
-from .ingestion.external_document_extractor import SubprocessPdfExtractor
+from .ingestion.external_document_extractor import PARSER_VERSION, SubprocessPdfExtractor
 from .ingestion.external_document_transport import DocumentFetchPolicy
 from .ingestion.github_snapshot_provider import GitHubSnapshotProvider
 from .ingestion.saturn_site_adapter import PinnedSiteSnapshot, adapt_snapshot
 from .ingestion.schema_evolution import is_route_source_path
 from .ingestion.support_catalog_adapter import SupportCatalogResult, adapt_support_catalog
 from .retrieval.saturn_channel import SaturnRetrievalService, build_saturn_retrieval_bundle
-from .saturn_knowledge_snapshot import build_saturn_knowledge_snapshot
+from .saturn_knowledge_contracts import SaturnSnapshotManager, define_scoped_experiment
+from .saturn_knowledge_snapshot import build_scoped_saturn_knowledge_snapshot
 
 
 STAND_VERSION = "saturn-real-integration-stand/0.1.0"
@@ -154,7 +155,13 @@ def prepare_real_stand(*, provider: GitHubSnapshotProvider,
     site = adapt_snapshot(pinned)
     if not site.ready_for_promotion:
         raise RealCorpusIntegrityError("site_adapter_not_ready")
-    catalog = select_pdf_catalog(adapt_support_catalog(site))
+    full_catalog = adapt_support_catalog(site)
+    if not full_catalog.ready_for_promotion:
+        raise RealCorpusIntegrityError("source_support_catalog_not_ready")
+    catalog = select_pdf_catalog(full_catalog)
+    scope = define_scoped_experiment(site, catalog.pdf_candidates)
+    if len(scope.selected_document_ids) != len(PDF_PATHS):
+        raise RealCorpusIntegrityError("selected_pdf_scope_incomplete")
     external = adapt_external_documents(
         catalog, real_pdf_policy(),
         extractor=SubprocessPdfExtractor(enable_development_worker=True),
@@ -165,9 +172,16 @@ def prepare_real_stand(*, provider: GitHubSnapshotProvider,
         diagnostics = sorted({item.code for item in external.diagnostics})
         raise RealCorpusIntegrityError(
             "real_pdf_ingestion_incomplete:" + ",".join(diagnostics))
-    snapshot = build_saturn_knowledge_snapshot(site, catalog, external)
+    if (external.parser_version != PARSER_VERSION or
+            len(external.statuses) != len(scope.selected_document_ids) or
+            any(status.status != "extracted" for status in external.statuses)):
+        raise RealCorpusIntegrityError("scoped_pdf_extraction_incomplete")
+    snapshot = build_scoped_saturn_knowledge_snapshot(site, catalog, external, scope=scope)
+    SaturnSnapshotManager().activate(snapshot)  # independently replay exact scope
     bundle = build_saturn_retrieval_bundle(snapshot)
     bundle.validate()
+    if bundle.scope_mode != "scoped_experiment" or bundle.scope_digest != scope.scope_digest:
+        raise RealCorpusIntegrityError("scoped_retrieval_identity_mismatch")
     pdf_by_document = {rev.document_id: rev for rev in external.revisions}
     manifest = {
         "stand_version": STAND_VERSION,
@@ -176,6 +190,17 @@ def prepare_real_stand(*, provider: GitHubSnapshotProvider,
         "source_tree": pinned.tree_sha,
         "selected_content_paths": list(CONTENT_PATHS),
         "selected_pdf_paths": list(PDF_PATHS),
+        "scope_mode": scope.mode,
+        "scope_digest": scope.scope_digest,
+        "scope_selection_version": scope.selection_version,
+        "full_source_catalog_document_count": len(full_catalog.documents),
+        "full_source_catalog_pdf_candidate_count": len(full_catalog.pdf_candidates),
+        "selected_pdf_count": len(scope.selected_document_ids),
+        "selected_pdf_document_ids": list(scope.selected_document_ids),
+        "selected_pdf_urls": list(scope.selected_pdf_urls),
+        "excluded_pdf_count": len(full_catalog.pdf_candidates) - len(scope.selected_document_ids),
+        "scoped_extraction_ready": external.ready_for_promotion,
+        "full_corpus_extraction_ready": False,
         "selected_files": [
             {"path": file.path, "git_blob_sha1": file.blob_sha,
              "content_sha256": file.content_sha256}
@@ -197,6 +222,8 @@ def prepare_real_stand(*, provider: GitHubSnapshotProvider,
         "corpus_hash": snapshot.manifest.corpus_hash,
         "snapshot_id": snapshot.snapshot_id,
         "retrieval_bundle_id": bundle.manifest.bundle_id,
+        "retrieval_scope_mode": bundle.scope_mode,
+        "retrieval_scope_digest": bundle.scope_digest,
         "counts": dict(snapshot.manifest.counts),
         "pdf_statuses": [
             {"document_id": s.document_id, "status": s.status}

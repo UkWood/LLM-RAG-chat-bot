@@ -69,6 +69,76 @@ class SaturnSnapshotManifest:
     snapshot_id: str
 
 
+SCOPED_SELECTION_VERSION = "saturn-scoped-selection/0.1.0"
+
+
+@dataclass(frozen=True)
+class SaturnScopedExperiment:
+    """Immutable opt-in scope sourced from one pinned Site Content Package.
+
+    The digest is a selection identity, NOT a proof that the documents belong
+    to the source. Independent full-catalog reconstruction supplies that proof.
+    """
+    mode: str
+    source_commit: str
+    source_tree: str
+    selected_document_ids: tuple[str, ...]
+    selected_pdf_urls: tuple[str, ...]
+    selection_version: str
+    scope_digest: str
+
+    def __post_init__(self):
+        from re import fullmatch
+        if (self.mode != "scoped_experiment" or
+                self.selection_version != SCOPED_SELECTION_VERSION or
+                type(self.source_commit) is not str or
+                not fullmatch(r"[0-9a-f]{40}", self.source_commit) or
+                type(self.source_tree) is not str or
+                not fullmatch(r"[0-9a-f]{40}", self.source_tree)):
+            raise ValueError("Invalid scoped experiment identity")
+        for values in (self.selected_document_ids, self.selected_pdf_urls):
+            if (type(values) is not tuple or not values or
+                    any(type(v) is not str or not v for v in values) or
+                    tuple(sorted(set(values))) != values):
+                raise ValueError("Scope entries must be nonempty, unique, sorted strings")
+        if len(self.selected_document_ids) != len(self.selected_pdf_urls):
+            raise ValueError("Scope document IDs / URL cardinality mismatch")
+        if self.scope_digest != stable_id("saturn-scoped-selection-v1", self.payload()):
+            raise ValueError("Scoped selection digest mismatch")
+
+    def payload(self):
+        return {
+            "mode": self.mode,
+            "source_commit": self.source_commit,
+            "source_tree": self.source_tree,
+            "selected_document_ids": list(self.selected_document_ids),
+            "selected_pdf_urls": list(self.selected_pdf_urls),
+            "selection_version": self.selection_version,
+        }
+
+
+def define_scoped_experiment(site: SiteContentPackage, candidates) -> SaturnScopedExperiment:
+    """Declare an experimental PDF subset; source membership is checked later."""
+    if not isinstance(site, SiteContentPackage):
+        raise TypeError("Pinned site package required")
+    entries = tuple(candidates)
+    ids = tuple(sorted(x.document_id for x in entries))
+    urls = tuple(sorted(x.resolved_url for x in entries))
+    payload = {
+        "mode": "scoped_experiment",
+        "source_commit": site.manifest.commit_sha,
+        "source_tree": site.manifest.tree_sha,
+        "selected_document_ids": list(ids),
+        "selected_pdf_urls": list(urls),
+        "selection_version": SCOPED_SELECTION_VERSION,
+    }
+    return SaturnScopedExperiment(
+        payload["mode"], payload["source_commit"], payload["source_tree"],
+        ids, urls, SCOPED_SELECTION_VERSION,
+        stable_id("saturn-scoped-selection-v1", payload),
+    )
+
+
 @dataclass(frozen=True)
 class SnapshotValidationSources:
     """Immutable builder inputs retained for structural activation replay.
@@ -80,6 +150,7 @@ class SnapshotValidationSources:
     site: SiteContentPackage
     catalog: SupportCatalogResult
     external: ExternalDocumentResult
+    scope: SaturnScopedExperiment | None = None
 
 
 @dataclass(frozen=True)
@@ -104,6 +175,7 @@ class SaturnKnowledgeSnapshot:
     readiness_gates: tuple[bool, bool, bool]
     manifest: SaturnSnapshotManifest
     validation_sources: SnapshotValidationSources = field(compare=False, repr=False)
+    scope: SaturnScopedExperiment | None = None
 
     @property
     def snapshot_id(self) -> str:
@@ -172,11 +244,27 @@ def verify_snapshot_seal(snapshot: SaturnKnowledgeSnapshot) -> bool:
         manifest = snapshot.manifest
         if not isinstance(manifest, SaturnSnapshotManifest):
             return False
-        if stable_id("saturn-unified-corpus-v1", snapshot_content(snapshot)) != manifest.corpus_hash:
+        if snapshot.scope is None:
+            corpus = stable_id("saturn-unified-corpus-v1", snapshot_content(snapshot))
+        elif isinstance(snapshot.scope, SaturnScopedExperiment):
+            snapshot.scope.__post_init__()
+            corpus = stable_id("saturn-scoped-corpus-v1", {
+                "mode": snapshot.scope.mode, "scope_digest": snapshot.scope.scope_digest,
+                "content": snapshot_content(snapshot),
+            })
+        else:
+            return False
+        if corpus != manifest.corpus_hash:
             return False
         unsigned = {key: value for key, value in asdict(manifest).items()
                     if key != "snapshot_id"}
-        return manifest.snapshot_id == stable_id("saturn-unified-snapshot-v1", unsigned)
+        if snapshot.scope is None:
+            identity = stable_id("saturn-unified-snapshot-v1", unsigned)
+        else:
+            identity = stable_id("saturn-scoped-snapshot-v1", {
+                "scope": asdict(snapshot.scope), "manifest": unsigned,
+            })
+        return manifest.snapshot_id == identity
     except (TypeError, ValueError, AttributeError):
         return False
 
@@ -208,7 +296,7 @@ class SaturnSnapshotManager:
         inputs = candidate.validation_sources
         try:
             fresh = stage_saturn_knowledge_snapshot(
-                inputs.site, inputs.catalog, inputs.external)
+                inputs.site, inputs.catalog, inputs.external, scope=inputs.scope)
             if (not fresh.ready_for_promotion or fresh.candidate != candidate):
                 raise SnapshotBuildError((
                     SnapshotIssue("activation_structure_mismatch", "candidate"),))

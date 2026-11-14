@@ -503,6 +503,15 @@ class SaturnRetrievalBundle:
         # Read-only mapping; no shared mutable dict escapes into a published bundle.
         object.__setattr__(self, "aliases", MappingProxyType(_dictionary_aliases(snapshot)))
 
+    @property
+    def scope_mode(self):
+        """Explicit experimental marker, without changing legacy manifests."""
+        return self.snapshot.scope.mode if self.snapshot.scope is not None else None
+
+    @property
+    def scope_digest(self):
+        return self.snapshot.scope.scope_digest if self.snapshot.scope is not None else None
+
     def validate(self):
         if not isinstance(self.snapshot, SaturnKnowledgeSnapshot):
             raise ValueError("Retrieval snapshot invalid")
