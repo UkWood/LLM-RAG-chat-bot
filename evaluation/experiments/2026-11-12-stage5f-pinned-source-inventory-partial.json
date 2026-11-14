@@ -1,0 +1,175 @@
+{
+  "schema": "saturn-stage5f-source-only-inventory/0.1",
+  "created_date_utc": "2026-11-12",
+  "status": "PARTIAL_SOURCE_PROVENANCE_ONLY_NOT_STAGE_5F_PASS",
+  "evidence_source": "Connected read-only GitHub repository API, exact pinned commit and tree",
+  "source_repository": "UkWood/Saturn-Main-Site",
+  "source_repository_visibility": "private",
+  "source_commit": "084d759487bfab6e111549c9b5469711ac5fc13e",
+  "source_tree": "a5297822bf3a5e071b10cc1dca553481c1b84d47",
+  "tree_entries": 1119,
+  "tree_truncated": false,
+  "required_config_paths_present": [
+    "astro.config.mjs",
+    "src/content.config.ts"
+  ],
+  "source_files": [
+    {
+      "path": "src/content/groups/easdkiu.md",
+      "size_bytes": 169,
+      "git_blob_sha1": "a447b05fdb72737dca195ac7bd072636a33c0249",
+      "content_sha256": "2f7a35c6279ab79798eba9da290fe9323ef131aaf8880a06704f7db0b4559e28",
+      "git_blob_sha1_recomputed_matches_tree": true,
+      "method": "sha1(git blob header + exact UTF-8 bytes); sha256(exact UTF-8 bytes)"
+    },
+    {
+      "path": "src/content/groups/newel.md",
+      "size_bytes": 110,
+      "git_blob_sha1": "fc5c237b7460d1f197893a353c155002ff440c26",
+      "content_sha256": "f1737e70e110493103d454c170488a7087c8eae6a3f4b168b78586ead6c2c41f",
+      "git_blob_sha1_recomputed_matches_tree": true,
+      "method": "sha1(git blob header + exact UTF-8 bytes); sha256(exact UTF-8 bytes)"
+    },
+    {
+      "path": "src/content/groups/programmnoe-obespechenie.md",
+      "size_bytes": 213,
+      "git_blob_sha1": "e326cd43e21b114c17c372eeb3817d47166b1f6c",
+      "content_sha256": "6538c2fd8d9c94a8c508f884049f6bd4166d589aeae84a716835e0d44400d5a7",
+      "git_blob_sha1_recomputed_matches_tree": true,
+      "method": "sha1(git blob header + exact UTF-8 bytes); sha256(exact UTF-8 bytes)"
+    },
+    {
+      "path": "src/content/products/bkd-pk-rf-2.md",
+      "size_bytes": 8544,
+      "git_blob_sha1": "86afcfe8be3be4e5022f0baf43143f64a2a9f7a0",
+      "content_sha256": "26a8480446e5533600c0373055377c33f06760fd1cbf5a00929877594b850738",
+      "git_blob_sha1_recomputed_matches_tree": true,
+      "method": "sha1(git blob header + exact UTF-8 bytes); sha256(exact UTF-8 bytes)"
+    },
+    {
+      "path": "src/content/products/bkd-ups.md",
+      "size_bytes": 13246,
+      "git_blob_sha1": "86c126df822c54f69325b22e65e6c0e5520f1d54",
+      "content_sha256": "2188c1721d689ca66a9bacbe489486d115f38ab9e826a7358eb0a9c606777143",
+      "git_blob_sha1_recomputed_matches_tree": true,
+      "method": "sha1(git blob header + exact UTF-8 bytes); sha256(exact UTF-8 bytes)"
+    },
+    {
+      "path": "src/content/products/server-lanmon.md",
+      "size_bytes": 7440,
+      "git_blob_sha1": "516971ba9fc0f4a71f151ba90e1d16c88a306251",
+      "content_sha256": "ef27b86b83fbf8d892b69d92e2f6f56ad0f12d0898f8417271838601986911c9",
+      "git_blob_sha1_recomputed_matches_tree": true,
+      "method": "sha1(git blob header + exact UTF-8 bytes); sha256(exact UTF-8 bytes)"
+    },
+    {
+      "path": "src/content/systems/informatsionno-izmeritelnaya-sistema-easdkiu.md",
+      "size_bytes": 22897,
+      "git_blob_sha1": "59693f83fb8387468d3dfe6f9642f8e143b3f3b7",
+      "content_sha256": "20b2b7903d40170f39b493e6d4fc2904fef085695c0ab7102d521ba151d79792",
+      "git_blob_sha1_recomputed_matches_tree": true,
+      "method": "sha1(git blob header + exact UTF-8 bytes); sha256(exact UTF-8 bytes)"
+    },
+    {
+      "path": "src/content/systems/newel.md",
+      "size_bytes": 86,
+      "git_blob_sha1": "caf4e60c8a62841bfe3e2529f4e7a398ee3ce78c",
+      "content_sha256": "524ebfc07563af2e1063d234c6af8cb4d1f7c9bd30a23919109ae037cd6c9b4a",
+      "git_blob_sha1_recomputed_matches_tree": true,
+      "method": "sha1(git blob header + exact UTF-8 bytes); sha256(exact UTF-8 bytes)"
+    },
+    {
+      "path": "src/content/systems/programmnoe-obespechenie.md",
+      "size_bytes": 20654,
+      "git_blob_sha1": "6327f9189372dd7ac6f6711c058139a8f1dfd487",
+      "content_sha256": "f298f1575878bc54b25bdf58971eadf7df562a8b2fb2745616379167bda34d5e",
+      "git_blob_sha1_recomputed_matches_tree": true,
+      "method": "sha1(git blob header + exact UTF-8 bytes); sha256(exact UTF-8 bytes)"
+    },
+    {
+      "path": "src/content/systems/sistema-liftovogo-dispetcherskogo-kontrolya-sldks-1.md",
+      "size_bytes": 17255,
+      "git_blob_sha1": "42ed9f4a12a78dc4e91db91123c5ae20f9b3dca1",
+      "content_sha256": "e059fe8eebc540b78b89dd0b0bd8ec276fd2ecfa9c896da86f300b8f214928c9",
+      "git_blob_sha1_recomputed_matches_tree": true,
+      "method": "sha1(git blob header + exact UTF-8 bytes); sha256(exact UTF-8 bytes)"
+    }
+  ],
+  "pdf_declarations": [
+    {
+      "declared_by": "src/content/products/bkd-pk-rf-2.md",
+      "source_declared_path": "/ftp/public/doc/bkd-pk-rf2/re%20BKD-PK-RF2.pdf",
+      "original_url": "https://www.mnppsaturn.ru/ftp/public/doc/bkd-pk-rf2/re%20BKD-PK-RF2.pdf",
+      "external_pdf_viewer_page_count_hint_only": 65,
+      "pdf_bytes_sha256": null,
+      "pdf_bytes_received": null,
+      "development_extractor_physical_page_count": null,
+      "parser_version": null,
+      "stage5f_extraction_status": "NOT_RUN"
+    },
+    {
+      "declared_by": "src/content/products/bkd-ups.md",
+      "source_declared_path": "/ftp/public/doc/bkd-ups/re%20bkd-UPS3.pdf",
+      "original_url": "https://www.mnppsaturn.ru/ftp/public/doc/bkd-ups/re%20bkd-UPS3.pdf",
+      "external_pdf_viewer_page_count_hint_only": 39,
+      "pdf_bytes_sha256": null,
+      "pdf_bytes_received": null,
+      "development_extractor_physical_page_count": null,
+      "parser_version": null,
+      "stage5f_extraction_status": "NOT_RUN"
+    },
+    {
+      "declared_by": "src/content/systems/sistema-liftovogo-dispetcherskogo-kontrolya-sldks-1.md",
+      "source_declared_path": "/ftp/public/doc/sldks/re%20SLDKS-1%20p1(3).pdf",
+      "original_url": "https://www.mnppsaturn.ru/ftp/public/doc/sldks/re%20SLDKS-1%20p1(3).pdf",
+      "external_pdf_viewer_page_count_hint_only": 83,
+      "pdf_bytes_sha256": null,
+      "pdf_bytes_received": null,
+      "development_extractor_physical_page_count": null,
+      "parser_version": null,
+      "stage5f_extraction_status": "NOT_RUN"
+    },
+    {
+      "declared_by": "src/content/products/server-lanmon.md",
+      "source_declared_path": "/ftp/public/soft/lmserver/user%20manual%20%20LMS.pdf",
+      "original_url": "https://www.mnppsaturn.ru/ftp/public/soft/lmserver/user%20manual%20%20LMS.pdf",
+      "external_pdf_viewer_page_count_hint_only": 69,
+      "pdf_bytes_sha256": null,
+      "pdf_bytes_received": null,
+      "development_extractor_physical_page_count": null,
+      "parser_version": null,
+      "stage5f_extraction_status": "NOT_RUN"
+    }
+  ],
+  "measurements": {
+    "all_10_markdown_files_pinned_and_rehashed": true,
+    "selected_4_pdf_links_exist_in_pinned_markdown": true,
+    "actual_pdf_download_and_extraction": false,
+    "complete_ingestion_diagnostics": null,
+    "snapshot_id": null,
+    "corpus_hash": null,
+    "retrieval_bundle_id": null,
+    "positive_answer_and_trace": null,
+    "missing_field_answer_and_trace": null
+  },
+  "environment": {
+    "SATURN_GITHUB_TOKEN": "UNSET",
+    "SATURN_GITHUB_OBJECT_FORMAT": "UNSET",
+    "local_dns_resolution": "FAILED_for_api.github.com_and_www.mnppsaturn.ru",
+    "pdf_extractor_invoked": false,
+    "local_inference_server_127_0_0_1_11434": "UNREACHABLE",
+    "local_llama_runtime": "NOT_INSTALLED"
+  },
+  "limitations": [
+    "External PDF viewer page counts are observations outside Stage 5F worker; may be cached or stale. They do not prove exact PDF bytes, parser revision, or physical page count of project extraction.",
+    "Private site repository is accessible to linked GitHub connector, but connector credentials cannot be exported to local Python GitHubSnapshotProvider.",
+    "An AI-repository GitHub Actions GITHUB_TOKEN does not imply read access to the different private Saturn-Main-Site repository.",
+    "Environment cannot resolve public DNS; no genuine live Python PDF ingestion or model inference occurred.",
+    "No secrets or original PDF bytes are stored in this manifest."
+  ],
+  "stage5f": "BLOCKED_BY_ENVIRONMENT",
+  "stage5g": "NOT_RUN",
+  "stage5h": "NOT_RUN",
+  "stage5i": "BLOCKED_BY_ENVIRONMENT",
+  "production_readiness": false
+}

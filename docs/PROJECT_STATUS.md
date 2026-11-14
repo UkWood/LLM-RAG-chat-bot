@@ -1,3 +1,63 @@
+## CURRENT — PR #32, experimental Stage 5F–5I evidence attempt (12 Nov 2026)
+
+**Engineering ACCEPTED** CR-01…CR-07 baseline `b1b10813dd26680d95bdded74964adfb53a442cf`. Existing PR #32 remains OPEN/UNMERGED; website remains READ-ONLY.
+
+**Measured partial real evidence:** 10/10 pinned Markdown source files independently checked against private site's exact git-tree blob SHA-1, with computed content SHA-256, declared four linked PDF URLs; see [real source-only partial inventory](../evaluation/experiments/2026-11-12-stage5f-pinned-source-inventory-partial.json). NOT a full Stage 5F ingestion manifest.
+
+| Stage | Experiment status | Missing evidence |
+|---|---|---|
+| 5F | **BLOCKED_BY_ENVIRONMENT** | No exportable private-site read token, DNS to source/PDF host, actual PDF bytes/worker page count, Knowledge Snapshot, retrieval and two answer traces |
+| 5G | **NOT_RUN** | 25–40 expert-reviewed real gold, independent attestation, measured open calibration and defect register |
+| 5I | **BLOCKED_BY_ENVIRONMENT** | Approved local model+tokenizer revision/hashes, running loopback inference server, real claims/latency/token/resource metrics |
+| 5H | **NOT_RUN** | Preapproved real open calibration, model/runtime freeze and independent hidden gold; no blind START attempted |
+
+**Stage 5 NOT_ACCEPTED**. [Controlled host runbook and human gates](stages/2026-11-12-stage5f-5i-real-execution-handoff.md). No merge, Stage 6, cloud model or accepted-code rewrites.
+
+---
+
+## CURRENT — Stage 5F–5I PR #32, CR-06/CR-07 second review correction (12 Nov 2026)
+
+**Engineering work:** CR-06 reviewed/pinned open gold preflight and CR-07 per-request token measurement correction committed in the existing `feat/saturn-real-corpus-llm-validation-v0.1` branch. Review baseline `4223d0e88596140482c778fef956c8efef91d8b1`. Hist. Stage5E scorer/frozen datasets/reports untouched; CR01–05 preserved. Code-head CI PASS at 4665bccf1b23f15ab96ff3365f9e2d01725b0128 (806 offline tests OK, 11 skipped; 4/4 jobs PASS in PR #43212645397 and Push #43212635893). Final documentation-only commit requires exact-head CI, then independent Session A review. **Stage 5 NOT_ACCEPTED.**
+
+- CR-06: Stage 5E source-backed `real_sample` open dataset validation before blind START, 25–40 cases, no synthetic/candidate tags, independent external engineering approval bound into real blind freeze revision 0.1.1, post-START duplicates against same validated open dataset.
+- CR-07: last_usage reset every local provider call; missing/invalid/error is `None`, not stale metrics or fabricated zeros.
+- Tests: CR06-T01…T14 including 40-case synthetic lifecycle; CR07-T01…T06; historical regressions must pass.
+- **5F** BLOCKED_BY_ENVIRONMENT — no real PDF/hash/page extraction. **5G** NOT_RUN — 30 open candidates not expert gold. **5H** NOT_RUN — no independently authored blind gold. **5I** BLOCKED_BY_ENVIRONMENT — no local model or genuine inference. Do not claim experimental PASS based on synthetic CI.
+- Site repo `UkWood/Saturn-Main-Site` remains READ-ONLY. No Stage6 or merge.
+
+Read [full corrections/evidence report](stages/2026-11-12-saturn-real-corpus-llm-validation.md).
+
+---
+
+## CURRENT — PR #32 independent review correction pass (12 Nov 2026)
+
+**Status:** CHANGES REQUESTED addressed in feature branch, pending exact-head full CI and independent re-review. One existing [PR #32](https://github.com/UkWood/LLM-RAG-chat-bot/pull/32); NO merge; NO Stage 6. Original review SHA `7eda73849b814a296182346f4238ce920ed082db`. The source repo `UkWood/Saturn-Main-Site` remains READ-ONLY at `084d759487bfab6e111549c9b5469711ac5fc13e`.
+
+- CR-01: same Stage 5D execution now yields answer + diagnostic verification and Stage 5B assessment; independent Stage 5C verifier retained; no second provider generation.
+- CR-02: versioned scorecard recomputed and checked against original gold/outcome metrics, separate experimental quality vs `production_readiness=false`.
+- CR-03: whitelist positive/negative/ambiguous composition 24/16, source and category checks, duplicate open-question rejection. Partial cannot count as negative.
+- CR-04: local file digests + independent reviewer model/config attestation pre-START, no runtime model proof inferred.
+- CR-05: synthetic 40-case full START/scoring/report/COMPLETE and adversarial integrity tests; not genuine independent blind.
+- **5F**: BLOCKED_BY_ENVIRONMENT — missing token; **5G**: NOT_RUN — 30 unvalidated source-backed question *candidates*, not gold; **5H**: NOT_RUN — independent author gold and prior calibration absent; **5I**: BLOCKED_BY_ENVIRONMENT — no local LLM weights/runtime.
+- Stage 4A–5E frozen artifacts unchanged. No Stage5B natural-language semantics extension or Stage6.
+- [Correction methodology and reproduction details](stages/2026-11-12-saturn-real-corpus-llm-validation.md). CI status to be updated after final exact head; do not claim PASS from canceled/intermediate runs.
+
+---
+
+## CURRENT — Consolidated Stage 5F–5I PR #32 (12 November 2026)
+
+**Status:** DRAFT / IMPLEMENTATION IN PROGRESS, **NOT ACCEPTED**. Baseline AI main `84d783331cc755e688a7f8637be13c297c07f43e`; site main `084d759487bfab6e111549c9b5469711ac5fc13e` (READ-ONLY). Single branch `feat/saturn-real-corpus-llm-validation-v0.1`, single [PR #32](https://github.com/UkWood/LLM-RAG-chat-bot/pull/32); no merge.
+
+- Stage 5F: partial engineering implementation — pinned experimental site/PDF sample and existing production-like RAG CLI; **real PDF ingestion/snapshot/query not measured yet**.
+- Stage 5G: real open calibration **runner implemented**, real gold/25–40 cases/metrics **NOT_RUN**.
+- Stage 5H: separate real blind freeze/one-shot runner and validation **implemented as candidate**; independent source-backed blind dataset and actual measured run **NOT_RUN**.
+- Stage 5I: local loopback-only provider and Stage 5C exact-class allowlist implemented with offline/mocked tests. **Real inference NOT_RUN**, model quality **NOT_ESTABLISHED**. Existing Stage 5B free-form limitations remain.
+- Exact-head CI and independent Acceptance Review are required. None of the new unit tests constitute real-site or real-LLM evidence.
+- Stage 5E synthetic historical frozen artifacts unchanged. No Stage 6, production or cloud egress.
+- [Live implementation report and reproduction commands](stages/2026-11-12-saturn-real-corpus-llm-validation.md).
+
+---
+
 ## PR #31 — Stage 5E consolidated correction state (11 November 2026)
 
 - Session A requested 2 BLOCKER + 3 IMPORTANT; Session B corrected in existing `feat/saturn-grounding-evaluation-v0.1` / PR #31, no merge. Need/owner source scope, blind complete-time provenance, extractive substring, session-pinned diagnostics and separate error/claim metrics are addressed. Independent final acceptance review remains pending.

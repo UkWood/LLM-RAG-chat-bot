@@ -16,6 +16,7 @@ from .saturn_knowledge_contracts import (
     BUILDER_VERSION, DocumentMatch, EvidencePointer, SaturnKnowledgeSnapshot,
     SaturnSnapshotBuildResult, SaturnSnapshotManifest, SnapshotBuildError,
     SnapshotIssue, SaturnSnapshotManager, SnapshotValidationSources,
+    SaturnScopedExperiment,
     snapshot_content, sorted_canonical,
     verify_snapshot_seal,
 )
@@ -130,10 +131,12 @@ def stage_saturn_knowledge_snapshot(
     site: SiteContentPackage,
     catalog: SupportCatalogResult,
     external: ExternalDocumentResult,
+    *,
+    scope: SaturnScopedExperiment | None = None,
 ) -> SaturnSnapshotBuildResult:
     """Validate first; stage useful diagnostics without overriding readiness."""
     try:
-        validation = validate_saturn_snapshot_inputs(site, catalog, external)
+        validation = validate_saturn_snapshot_inputs(site, catalog, external, scope=scope)
     except (TypeError, ValueError, AttributeError, KeyError, IndexError) as exc:
         return SaturnSnapshotBuildResult(None, (
             SnapshotIssue("invalid_adapter_structure", type(exc).__name__),))
@@ -265,14 +268,26 @@ def stage_saturn_knowledge_snapshot(
         dictionaries, documents, occurrences, associations,
         pdf_revisions, statuses, pdf_diagnostics,
         evidence, pointers, matches, issues, gates, manifest,
-        SnapshotValidationSources(site, catalog, external),
+        SnapshotValidationSources(site, catalog, external, scope),
+        scope,
     )
-    manifest = replace(manifest, corpus_hash=stable_id(
-        "saturn-unified-corpus-v1", snapshot_content(snapshot)))
+    if scope is None:
+        corpus_hash = stable_id("saturn-unified-corpus-v1", snapshot_content(snapshot))
+    else:
+        corpus_hash = stable_id("saturn-scoped-corpus-v1", {
+            "mode": scope.mode, "scope_digest": scope.scope_digest,
+            "content": snapshot_content(snapshot),
+        })
+    manifest = replace(manifest, corpus_hash=corpus_hash)
     unsigned = {key: value for key, value in asdict(manifest).items()
                 if key != "snapshot_id"}
-    manifest = replace(manifest, snapshot_id=stable_id(
-        "saturn-unified-snapshot-v1", unsigned))
+    if scope is None:
+        snapshot_id = stable_id("saturn-unified-snapshot-v1", unsigned)
+    else:
+        snapshot_id = stable_id("saturn-scoped-snapshot-v1", {
+            "scope": asdict(scope), "manifest": unsigned,
+        })
+    manifest = replace(manifest, snapshot_id=snapshot_id)
     snapshot = replace(snapshot, manifest=manifest)
     if not verify_snapshot_seal(snapshot):
         return SaturnSnapshotBuildResult(None, (
@@ -287,6 +302,27 @@ def build_saturn_knowledge_snapshot(
 ) -> SaturnKnowledgeSnapshot:
     """Strict public contract; partial/invalid inputs cannot produce active data."""
     staged = stage_saturn_knowledge_snapshot(site, catalog, external)
+    if not staged.ready_for_promotion:
+        raise SnapshotBuildError(staged.issues)
+    return staged.candidate
+
+
+def build_scoped_saturn_knowledge_snapshot(
+    site: SiteContentPackage,
+    catalog: SupportCatalogResult,
+    external: ExternalDocumentResult,
+    *,
+    scope: SaturnScopedExperiment,
+) -> SaturnKnowledgeSnapshot:
+    """Explicit experimental four-stage source-verified scoped builder.
+
+    Full-corpus build_saturn_knowledge_snapshot() remains unchanged.
+    Independent source replay reconstructs the full catalog and compares the
+    exact selected projection; a digest alone never authenticates provenance.
+    """
+    if not isinstance(scope, SaturnScopedExperiment):
+        raise SnapshotBuildError((SnapshotIssue("missing_scoped_contract", "scope"),))
+    staged = stage_saturn_knowledge_snapshot(site, catalog, external, scope=scope)
     if not staged.ready_for_promotion:
         raise SnapshotBuildError(staged.issues)
     return staged.candidate

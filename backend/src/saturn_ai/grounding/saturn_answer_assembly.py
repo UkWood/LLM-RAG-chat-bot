@@ -358,6 +358,21 @@ class SaturnAnswerAssemblyService:
 
     def assemble(self, *, session: SaturnAnswerSession,
                  context: SaturnEvidenceContext) -> SaturnAnswerResult:
+        """Public entrypoint retains the exact original answer contract."""
+        result, _, _ = self._assemble_once(session=session, context=context)
+        return result
+
+    def _assemble_diagnostics(self, *, session: SaturnAnswerSession,
+                              context: SaturnEvidenceContext):
+        """Internal Stage 5E trace of the SAME generation that produced the answer.
+
+        No caller-supplied claims, assessment or provider output can enter this
+        operation. The original verifier and final policy gate still run.
+        """
+        return self._assemble_once(session=session, context=context)
+
+    def _assemble_once(self, *, session: SaturnAnswerSession,
+                       context: SaturnEvidenceContext):
         if (not isinstance(session, SaturnAnswerSession) or
                 not isinstance(context, SaturnEvidenceContext)):
             _reject("context_identity_mismatch")
@@ -386,4 +401,4 @@ class SaturnAnswerAssemblyService:
             _published_policy(session._bundle.snapshot, result, policy)
             if revision != policy.revision:
                 _reject("policy_unavailable")
-            return replace(result, policy_revision=revision)
+            return replace(result, policy_revision=revision), assessment, verification

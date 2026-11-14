@@ -87,9 +87,12 @@ def _run_question(service, assembly, gate, verifier, question, profile):
                         tuple(d.match.document.document_id for d in retrieval.document_matches) !=
                         tuple(d.document_id for d in context.document_references)):
                     raise ValueError("pinned diagnostic context drift")
-                assessment = gate.assess(session=session, context=context)
-                verified = verifier.verify(session=session, context=context)
-                answer = assembly.assemble(session=session, context=context)
+                # Stage 5D calls 5C exactly once. Its internal diagnostic
+                # result is the same verified generation used for final answer.
+                # gate/verifier arguments are retained for v0.1 caller ABI,
+                # but MUST NOT be invoked independently here.
+                answer, assessment, verified = assembly._assemble_diagnostics(
+                    session=session, context=context)
                 if any((item.snapshot_id != context.snapshot_id or
                         item.bundle_id != context.bundle_id or
                         item.question_sha256 != context.question_sha256)

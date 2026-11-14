@@ -3,7 +3,7 @@
 No network, PDF parsing, source ingestion, source approvals, or legacy registry.
 Structural failure is distinct from an upstream readiness failure.
 """
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from hashlib import sha1, sha256
 import json
 import re
@@ -30,7 +30,7 @@ from .ingestion.external_document_adapter import (
     CachedPdfExtraction, DocumentAssociation, DocumentDiagnostic,
     DocumentStatus, ExternalDocumentResult,
 )
-from .saturn_knowledge_contracts import SnapshotIssue
+from .saturn_knowledge_contracts import SnapshotIssue, SaturnScopedExperiment
 
 # The adapter package carries raw content and dictionary bytes but not the
 # astro.config.mjs bytes. The source origin can therefore be checked for route
@@ -73,7 +73,7 @@ def _revision_id(rev: PdfRevision):
                      rev.bytes_sha256, rev.parser_version)
 
 
-def validate_saturn_snapshot_inputs(site, catalog, external) -> ValidationResult:
+def validate_saturn_snapshot_inputs(site, catalog, external, *, scope=None) -> ValidationResult:
     errors = []
 
     def issue(code, subject):
@@ -85,6 +85,14 @@ def validate_saturn_snapshot_inputs(site, catalog, external) -> ValidationResult
         issue("invalid_catalog_input", "catalog")
     if not isinstance(external, ExternalDocumentResult):
         issue("invalid_external_input", "external")
+    if scope is not None:
+        if not isinstance(scope, SaturnScopedExperiment):
+            issue("invalid_scoped_contract", "scope")
+        else:
+            try:
+                scope.__post_init__()  # robust to low-level attribute replacement
+            except (TypeError, ValueError, AttributeError):
+                issue("invalid_scoped_contract", "scope digest")
     if errors:
         return ValidationResult(tuple(errors), (), ())
 
@@ -123,6 +131,13 @@ def validate_saturn_snapshot_inputs(site, catalog, external) -> ValidationResult
         issue("untrusted_source", "manifest")
     if site.parser_version != manifest.parser_version:
         issue("site_parser_mismatch", "manifest")
+    if scope is not None:
+        if (scope.source_commit != manifest.commit_sha or
+                scope.source_tree != manifest.tree_sha):
+            issue("scope_source_identity_mismatch", "site commit/tree")
+        # Experimental Stage 5F must not silently reuse the old PDF parser.
+        if external.parser_version != "saturn-pdf-pypdf-6.10.0/0.3.0":
+            issue("scope_pdf_parser_version_mismatch", "external parser")
     if catalog.catalog_version not in (
             "saturn-support-catalog/0.2.0", "saturn-support-catalog/0.1.0"):
         issue("invalid_catalog_version", "catalog")
@@ -434,10 +449,37 @@ def validate_saturn_snapshot_inputs(site, catalog, external) -> ValidationResult
     # code/comment exclusions must match a fresh offline derivation from the
     # already checked site package. No second, weaker link parser is allowed.
     try:
-        derived_catalog = adapt_support_catalog(site, catalog_version=catalog.catalog_version)
+        # Always derive the FULL source catalog from verified original Markdown.
+        # Caller-supplied selected catalogs are NEVER a witness to themselves.
+        full_catalog = adapt_support_catalog(site, catalog_version=catalog.catalog_version)
     except (TypeError, ValueError, KeyError, AttributeError, RecursionError):
         issue("catalog_reconstruction_failed", "source package")
     else:
+        derived_catalog = full_catalog
+        if scope is not None:
+            if not full_catalog.ready_for_promotion:
+                issue("scope_full_source_not_ready", "source catalog")
+            selected_ids = set(scope.selected_document_ids)
+            expected_selected = tuple(candidate for candidate in full_catalog.pdf_candidates
+                                      if candidate.document_id in selected_ids)
+            if (len(expected_selected) != len(selected_ids) or
+                    tuple(sorted(candidate.resolved_url for candidate in expected_selected))
+                    != scope.selected_pdf_urls or
+                    len({candidate.resolved_url for candidate in expected_selected})
+                    != len(expected_selected)):
+                issue("scope_source_selection_mismatch", "PDF URLs/document IDs")
+            derived_catalog = replace(
+                full_catalog,
+                documents=tuple(doc for doc in full_catalog.documents
+                                if doc.document_id in selected_ids),
+                pdf_candidates=expected_selected,
+                occurrences=tuple(occ for occ in full_catalog.occurrences
+                                  if occ.document_id in selected_ids),
+            )
+            if (set(catalog.documents) != set(derived_catalog.documents) or
+                    set(catalog.pdf_candidates) != set(expected_selected) or
+                    set(catalog.occurrences) != set(derived_catalog.occurrences)):
+                issue("scope_source_projection_mismatch", "selected document provenance")
         if (catalog.occurrences != derived_catalog.occurrences and
                 sorted(catalog.occurrences, key=lambda x: x.source_locator) !=
                 sorted(derived_catalog.occurrences, key=lambda x: x.source_locator)):
