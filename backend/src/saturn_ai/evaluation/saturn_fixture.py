@@ -4,6 +4,7 @@ Reads existing checked-in TEST FIXTURE SOURCE BYTES (not unit.test_* helpers).
 No network, real devices or external PDF downloads. Additional fields/links
 are inserted IN MEMORY and do not modify historical fixture files.
 """
+from dataclasses import replace
 from hashlib import sha256
 from pathlib import Path
 
@@ -62,7 +63,10 @@ def fixture_snapshot(*, site_commit=FIXTURE_SITE_COMMIT):
         commit_sha=site_commit, tree_sha=FIXTURE_SITE_TREE,
         files=mapping)
     site = adapt_snapshot(pinned)
-    catalog = adapt_support_catalog(site)
+    # Frozen Stage 5E synthetic identity is bound to the historical catalog
+    # parser policy even when the production catalog version changes.
+    catalog = replace(adapt_support_catalog(site),
+                      catalog_version="saturn-support-catalog/0.1.0")
     external = adapt_external_documents(
         catalog, DocumentFetchPolicy(
             allowed_hosts=("www.mnppsaturn.ru",),

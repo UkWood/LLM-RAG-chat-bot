@@ -169,7 +169,15 @@ def _run(args):
             "pdf_parser_version":PARSER_VERSION,
             "site_ready_for_promotion":package.ready_for_promotion,
             "catalog_ready_for_promotion":catalog.ready_for_promotion,
+            "global_catalog_ready_for_promotion":catalog.ready_for_promotion,
+            "global_catalog_warning_count":sum(x.severity == "warning" for x in catalog.issues),
+            "global_catalog_error_count":catalog.error_count,
+            "global_catalog_issues":[{"severity":x.severity,"code":x.code,"path":x.path}
+                                     for x in catalog.issues],
+            "catalog_version":catalog.catalog_version,
             "catalog_candidate_count":len(catalog.pdf_candidates),
+            "scoped_extraction_ready":False,
+            "full_corpus_extraction_ready":False,
             "mode":"DISCOVERY" if args.discover else "EXTRACTION"}
     if args.discover:
         base.update({"catalog_candidates":_catalog_entries(catalog),
@@ -276,6 +284,7 @@ def _run(args):
     base.update({"overall":overall,"passed":passed,"expected":4,
                  "scoped_adapter_ready_for_promotion":adapter.ready_for_promotion,
                  "scoped_adapter_complete":adapter.complete,
+                 "scoped_extraction_ready":adapter.ready_for_promotion and adapter.complete and passed == 4,
                  "scoped_document_count":len(selected),
                  "full_catalog_was_not_extracted":len(catalog.pdf_candidates) != len(selected),
                  "transport_calls":len(transport.calls),

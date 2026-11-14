@@ -14,7 +14,7 @@ from .saturn_contracts import SupportDocument, stable_id
 from .saturn_site_adapter import SiteContentPackage, SiteParseIssue
 
 
-CATALOG_VERSION = "saturn-support-catalog/0.1.0"
+CATALOG_VERSION = "saturn-support-catalog/0.2.0"
 
 _DEFINITION = re.compile(r'^\s{0,3}\[([^\]\n]+)\]:\s*(?:<([^>\n]+)>|(\S+))')
 _HTML_TAG = re.compile(r"""<a(?=[\s/>])(?:(?:"[^"]*"|'[^']*'|[^'"<>])*)>""", re.I)
@@ -571,8 +571,11 @@ def adapt_support_catalog(package: SiteContentPackage) -> SupportCatalogResult:
                     f"{x.source_path}#{x.field_path}={getattr(x, key)!r}"
                     for x in linked if getattr(x, key) is not None
                 )
+                # Descriptive title/kind may differ by owner/context, while
+                # version/date can denote a different source revision.
                 problem(linked[0].source_path, "conflicting_document_metadata",
-                        f"{url}: {key} conflicts: {provenance}")
+                        f"{url}: {key} conflicts: {provenance}",
+                        severity="warning" if key in ("title", "kind") else "error")
             chosen[key] = values[0] if values else None
         # Source fields may omit metadata. Fallbacks are presentation labels,
         # not evidence claims (see occurrence.title / kind = None).
