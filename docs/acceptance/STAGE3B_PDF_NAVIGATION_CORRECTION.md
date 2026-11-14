@@ -1,37 +1,41 @@
-# Stage 3B — Strict Inert PDF Navigation Compatibility Correction
+# Stage 3B — Trusted Source Ingestion Compatibility
 
 Project: Saturn AI Technical Consultant (`UkWood/LLM-RAG-chat-bot`)
-Baseline: `84d783331cc755e688a7f8637be13c297c07f43e`
 Branch: `fix/stage3b-inert-pdf-navigation-compatibility`
-Status: **implementation candidate, independent Acceptance pending; no merge authorization**.
+Status: **implementation in Draft PR #33, independent real-corpus Acceptance pending; NO MERGE**.
 
-## Architectural input
+## Architecture decision (Session A, 2026-11-14)
 
-Session A accepted the separate real VA-01R value audit (2026-11-14): 3/3 `AUDITED`, 0 findings/errors, 187 physical pages, 215 `/Link` annotations, 213 `/Dest`, 2 `/URI`, 2 `/OpenAction`, all `/XYZ`. The value audit is the source for the *exact* allowlists below. The audit itself is not reproduced by synthetic fixtures.
+Trusted `Saturn-Main-Site` and official PDF bytes are authoritative *source material*. A PDF must not be rejected merely because of an unfamiliar `/Link`, `/Border`, `/BS`, `/OpenAction`, `/URI`, `/Names`, `/AA`, `/Outlines` or form annotation. The earlier A/B/C strict navigation allowlist was superseded.
 
-## Navigation validation
+PDF navigation is **not** a RAG input. `external_pdf_worker.py` no longer traverses, executes, validates or emits navigation/action dictionaries. It extracts only `pypdf` text from the actual physical pages using `PdfReader(BytesIO(raw), strict=True)`. Embedded JavaScript, Launch, remote GoTo, URI and other actions are neither executed nor converted to evidence, retrieval sources or citations. Unsupported document syntax that `pypdf` itself cannot decode still fails closed with a parser diagnostic.
 
-Only these **exact field sets** are accepted. Object type checks use pypdf's concrete types rather than Python numeric duck-typing:
+**Preserved protective controls:** the existing POSIX development subprocess, bounded PDF bytes, physical pages, per-page/total text, decoded per-page and total streams, CPU/RAM/wall-time, bounded parent stdout and child termination, encrypted-PDF rejection, and atomic no-partial-publication behavior. No navigation-specific annotation budget remains on the extraction path. The subprocess is **not a production OS sandbox**.
 
-- **A**: `/BS`, `/Dest`, `/F`, `/Rect`, `/StructParent`, `/Subtype`; subtype `/Link`; `/BS` exactly `{/W: NumberObject(0)}`; `/F` exactly `NumberObject(4)`; `/StructParent` `NumberObject` in `[0, 2147483647]`.
-- **B**: `/Border`, `/Dest`, `/Rect`, `/Subtype`, `/Type`; `/Type /Annot`, `/Subtype /Link`; `/Border` exactly `[NumberObject(0), NumberObject(0), NumberObject(0)]`.
-- **C**: `/A`, `/Border`, `/Rect`, `/Subtype`, `/Type`; identical type/subtype/border constraints; `/A` exactly `{/Type /Action, /S /URI, /URI TextStringObject}`; URI text max 2048 UTF-8 bytes, absolute `http(s)` URL with valid hostname, no credentials, fragment or control characters. URI is not dereferenced or emitted.
+### PDF revision and provenance
 
-`/Rect` is four finite numbers (NumberObject/FloatObject) with correct coordinate ordering. `/Dest` is only `[same-document indirect page reference, /XYZ, left, top, NumberObject(0)]`. `left` and `top` are null or finite numeric values in `[-1000000,1000000]`. `/OpenAction` is only this destination array. Page membership is validated against the same PdfReader's actual physical page indirect references without navigation. Unsupported keys/actions are rejected fail-closed. This does not introduce named destinations, outline extraction, remote GoTo, attachments, multimedia, or navigation-derived evidence.
+`PARSER_VERSION = "saturn-pdf-pypdf-6.10.0/0.3.0"`. The External Document Adapter keys immutable revision identity by original document ID, original URL, source-byte SHA-256 and parser version, so the `0.2.0` cache cannot masquerade as a `0.3.0` extraction. Physical page provenance is retained; no original PDF data or URLs are modified.
 
-Budgets, separate from and not increasing existing worker limits: 256 annotations/document; 64/page; 4096 navigation object visits; 4 consecutive indirect hops; depth 6; 16 dictionary keys; 64 array elements; 2048 URI bytes. Reject on limit violations. Worker continues to use `PdfReader(BytesIO(raw), strict=True)` with PDF/resource controls, and validates all navigation before extracting page text. POSIX subprocess isolation is **development-only, not an OS sandbox**.
+## Change B — Support Catalog metadata variants
 
-## Parser identity / cache
+`CATALOG_VERSION = "saturn-support-catalog/0.2.0"`.
 
-`PARSER_VERSION = "saturn-pdf-pypdf-6.10.0/0.2.0"` in `external_document_extractor.py`. The existing adapter's immutable revision key includes the parser version and source bytes SHA-256; a changed parser identity therefore requires a new extraction even when PDF bytes are identical. Synthetic adapter regression included; no change to hash algorithm, physical-page provenance, source URL or owner attribution.
+If one canonical document URL appears with different `title` or `kind` values across trusted pages, the catalog preserves **all original** `CatalogOccurrence` records and their source paths, field paths, owner associations, revisions and raw URLs. It emits `conflicting_document_metadata` with severity **warning**, not a blocking error. Presentation title/kind use a deterministic sorted selection, not an exclusive source claim.
 
-## Validation and acceptance matrix
+Ambiguous `version` and `date` remain **errors**; malformed URLs, missing source revisions/owners and invalid upstream structures remain blocking. No document ID, canonical URL or provenance algorithm is rewritten. The existing Stage 4B single-document search record includes all source-declared title/kind variants from `DocumentMatch.occurrences`; no duplicate PDF, document or synthetic evidence is created.
 
-- Local Python 3.13.5 / pypdf 5.9.0: Stage3B PN-01..10 and NN-01..24 plus additional subprocess scenarios. See `local-stage3b-navigation.log`. This is a *compatibility preflight* only.
-- **Still mandatory:** `PYTHONPATH=backend/src python -m unittest discover -s backend/tests -v` and `python scripts/verify_offline.py` under Python 3.12 and **locked** `pypdf==6.10.0`; External Document Adapter/transport/subprocess and Stage 4A–5E regressions; GitHub Actions SUCCESS on exact PR head.
-- **Still mandatory:** four original PDFs on the authorized Linux/WSL2 stand, verified against exact pinned bytes SHA-256, page counts 65/39/83/69, full standard Stage3B pipeline and provenance. `backend/tests/manual/verify_stage3b_real_pdfs.py` is a read-only worker-only preflight and **does not replace** the full pipeline proof or Session A review.
-- Stage 5F is explicitly deferred to PR #32 after this correction passes Acceptance, is authorized to merge, is merged to `main`, and is integrated there. No PR #32 changes are part of this correction.
+Stage 4A independently reconstructs and validates the declared catalog policy version. The historical synthetic Stage 5E fixture explicitly uses catalog `0.1.0` and PDF parser `0.1.0`, preserving old semantics and byte-for-byte frozen calibration identity; production defaults are `0.2.0` and `0.3.0`. No frozen calibration artifacts were changed.
 
-## Unresolved constraints
+## Verification
 
-The final acceptance gate cannot be claimed without on-stand bytes and pinned environment. Any unexpected real PDF navigation structure requires a new Session A decision; do not relax allowlists or budgets. No merge or Stage 6 is authorized.
+GitHub Actions under Python 3.12 / locked `pypdf==6.10.0` must pass `offline-checks`, `onnx-contracts`, `saturn-evaluator-targeted`, and `saturn-calibration` on the **exact final PR head**. The offline suite includes PDF compatibility cases (A/B/C, normal destinations, inert active actions, >64/page and >256/document annotations), resource/security rejection cases, document/owner/URL provenance, catalog title/kind/version/date conflict cases, Stage 4A/4B/5A–5E, and frozen calibration reproduction.
+
+## Real Linux/WSL2 acceptance (not yet demonstrated by CI)
+
+Run the read-only `backend/tests/manual/verify_stage3b_real_pdfs.py` against four independently SHA-verified original PDFs, expected physical pages 65/39/83/69. Then run `backend/tests/manual/verify_stage3b_real_adapter.py` with the actual Saturn-Main-Site pinned Git snapshot (commit `084d759487bfab6e111549c9b5469711ac5fc13e`, tree `a5297822bf3a5e071b10cc1dca553481c1b84d47`). The **unfiltered** catalog should report 229 PDF candidates, 11 known descriptive title/kind conflicts as warnings, and no errors, subject to any additional real diagnostics. Four-document extraction must use only exact real catalog URLs and locally SHA-verified original bytes through real `adapt_external_documents()` and the real subprocess extractor.
+
+Report **separately** global catalog readiness/issue counts, selected four-document adapter readiness and full-corpus extraction readiness. No scoped projection may delete or suppress catalog issues. An absent real document is `UNCOVERED`, never fabricated.
+
+The successful four-PDF acceptance does **not** prove extraction of the full 229-document corpus. Full Stage 5F belongs to experimental PR #32 **only after** independent Acceptance, explicit authorization and merge of this Stage 3B correction into main.
+
+**STRICTLY READ ONLY site and original PDFs. No PR #32 changes. No Merge. No Stage 6.**
