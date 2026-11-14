@@ -4,6 +4,7 @@ The source is a synthetic but genuine PinnedSiteSnapshot -> site adapter ->
 support catalog chain. Test cases are NOT real-corpus acceptance evidence.
 """
 from dataclasses import asdict, replace
+from hashlib import sha256
 from unittest.mock import patch
 import unittest
 
@@ -157,22 +158,32 @@ class CR08ScopedSourceContract(unittest.TestCase):
 
     def test_CR08_T08_missing_selected_occurrence_is_rejected(self):
         reduced = replace(self.chosen, occurrences=self.chosen.occurrences[:-1])
+        # A valid real adapter result is held fixed, then independent Stage 4A
+        # must reject the forged catalog without trusting the selection caller.
+        external = extraction(self.chosen)
         with self.assertRaises(SnapshotBuildError):
-            scoped_snapshot(self.site, reduced, self.scope)
+            build_scoped_saturn_knowledge_snapshot(
+                self.site, reduced, external, scope=self.scope)
 
     def test_CR08_T09_changed_owner_is_rejected(self):
         occ = self.chosen.occurrences[0]
         forged = replace(occ, owner_entity_id='saturn-owner-forged')
         reduced = replace(self.chosen, occurrences=(forged, *self.chosen.occurrences[1:]))
+        # A valid real adapter result is held fixed, then independent Stage 4A
+        # must reject the forged catalog without trusting the selection caller.
+        external = extraction(self.chosen)
         with self.assertRaises(SnapshotBuildError):
-            scoped_snapshot(self.site, reduced, self.scope)
+            build_scoped_saturn_knowledge_snapshot(
+                self.site, reduced, external, scope=self.scope)
 
     def test_CR08_T10_changed_source_revision_is_rejected(self):
         occ = self.chosen.occurrences[0]
         forged = replace(occ, source_revision_id='f'*64)
         changed = replace(self.chosen, occurrences=(forged, *self.chosen.occurrences[1:]))
+        external = extraction(self.chosen)
         with self.assertRaises(SnapshotBuildError):
-            scoped_snapshot(self.site, changed, self.scope)
+            build_scoped_saturn_knowledge_snapshot(
+                self.site, changed, external, scope=self.scope)
 
     def test_CR08_T11_changed_document_id_or_url_is_rejected(self):
         cand = self.chosen.pdf_candidates[0]
@@ -180,8 +191,10 @@ class CR08ScopedSourceContract(unittest.TestCase):
                        replace(cand, resolved_url='https://www.mnppsaturn.ru/ftp/forged.pdf')):
             with self.subTest(forged=forged):
                 modified = replace(self.chosen, pdf_candidates=(forged,))
+                external = extraction(self.chosen)
                 with self.assertRaises(SnapshotBuildError):
-                    scoped_snapshot(self.site, modified, self.scope)
+                    build_scoped_saturn_knowledge_snapshot(
+                        self.site, modified, external, scope=self.scope)
 
     def test_CR08_T12_scope_source_nonmember_is_rejected(self):
         forged = replace(self.chosen.pdf_candidates[0], document_id='saturn-doc:invented')
@@ -241,7 +254,11 @@ class CR08ScopedSourceContract(unittest.TestCase):
              patch('saturn_ai.real_corpus_stand.SubprocessPdfExtractor',
                    side_effect=lambda **kwargs: OfflineExtractor()), \
              patch('saturn_ai.real_corpus_stand.real_pdf_policy', side_effect=policy), \
-             patch('saturn_ai.real_corpus_stand.PDF_PATHS', ('/ftp/guide.pdf',)):
+             patch('saturn_ai.real_corpus_stand.adapt_external_documents',
+                   side_effect=lambda c, p, **kwargs: extraction(c)), \
+             patch('saturn_ai.real_corpus_stand.PDF_PATHS', ('/ftp/guide.pdf',)), \
+             patch('saturn_ai.real_corpus_stand.PINNED_PDF_REVISIONS',
+                   {'/ftp/guide.pdf': (sha256(PDF).hexdigest(), 2)}):
             stand = prepare_real_stand(provider=Provider(), enable_development_pdf_worker=True)
         self.assertTrue(stand.manifest['scoped_extraction_ready'])
         self.assertFalse(stand.manifest['full_corpus_extraction_ready'])

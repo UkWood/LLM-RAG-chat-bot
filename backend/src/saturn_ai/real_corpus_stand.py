@@ -59,6 +59,17 @@ PDF_PATHS = (
 )
 ESSENTIAL_FILES = frozenset(("astro.config.mjs", "src/content.config.ts"))
 
+# Audited real source PDF byte identities and physical page counts.
+# These are immutable acceptance pins, not data derived from evaluation gold.
+PINNED_PDF_REVISIONS = {
+    PDF_PATHS[0]: ("030303812b4bd8dfc7e82fcd3ad4ef8493526549c7c90d033ce25b4f8b2fe83a", 65),
+    PDF_PATHS[1]: ("aeca6a7d2ff3edcd872d35aaa455d2dfc3a4838dda1c58a1d6952309f248ceb3", 39),
+    PDF_PATHS[2]: ("f1436a93285cad9a201b6b387ed64a606ad2768cfc7ee70627c188411e9ce61f", 83),
+    PDF_PATHS[3]: ("fedd8b6a3de63efb9ff29de8d62b3cf98dea05d7ce189a68100a3ced096e70bf", 69),
+}
+
+
+
 
 class RealCorpusIntegrityError(RuntimeError):
     """A missing, changed or incomplete real-source experiment is not PASS."""
@@ -176,6 +187,19 @@ def prepare_real_stand(*, provider: GitHubSnapshotProvider,
             len(external.statuses) != len(scope.selected_document_ids) or
             any(status.status != "extracted" for status in external.statuses)):
         raise RealCorpusIntegrityError("scoped_pdf_extraction_incomplete")
+    # A successful parser run with changed bytes is NOT a real-source PASS.
+    # Require all four audited original-byte SHA-256 and physical page maps.
+    seen_paths = set()
+    for revision in external.revisions:
+        path = urlsplit(revision.url).path
+        expected = PINNED_PDF_REVISIONS.get(path)
+        if (expected is None or path in seen_paths or
+                revision.bytes_sha256 != expected[0] or
+                revision.page_count != expected[1]):
+            raise RealCorpusIntegrityError("pinned_source_pdf_revision_mismatch")
+        seen_paths.add(path)
+    if seen_paths != set(PDF_PATHS):
+        raise RealCorpusIntegrityError("pinned_source_pdf_revision_incomplete")
     snapshot = build_scoped_saturn_knowledge_snapshot(site, catalog, external, scope=scope)
     SaturnSnapshotManager().activate(snapshot)  # independently replay exact scope
     bundle = build_saturn_retrieval_bundle(snapshot)
