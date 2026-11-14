@@ -62,12 +62,16 @@ def fixture_snapshot(*, site_commit=FIXTURE_SITE_COMMIT):
         commit_sha=site_commit, tree_sha=FIXTURE_SITE_TREE,
         files=mapping)
     site = adapt_snapshot(pinned)
-    catalog = adapt_support_catalog(site)
+    # Frozen Stage 5E synthetic identity is bound to the historical catalog
+    # parser policy even when the production catalog version changes.
+    catalog = adapt_support_catalog(site,
+                                    catalog_version="saturn-support-catalog/0.1.0")
     external = adapt_external_documents(
         catalog, DocumentFetchPolicy(
             allowed_hosts=("www.mnppsaturn.ru",),
             allowed_path_prefixes=("/ftp", "/public", "/photos"),
-        ), transport=_FixtureTransport(), extractor=_FixtureExtractor())
+        ), transport=_FixtureTransport(), extractor=_FixtureExtractor(),
+        parser_version="saturn-pdf-pypdf-6.10.0/0.1.0")
     return build_saturn_knowledge_snapshot(site, catalog, external)
 
 

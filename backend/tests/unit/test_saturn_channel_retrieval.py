@@ -24,7 +24,7 @@ from saturn_ai.retrieval.saturn_channel import (
     SaturnOperationalPolicy, SaturnPolicyProvider, SaturnRetrievalService,
     build_saturn_retrieval_bundle, search_saturn, tokenize, _bm25,
     _check_channel, _candidate, SaturnBM25Index, SearchRecord,
-    TOKENIZER_VERSION, _make_manifest,
+    TOKENIZER_VERSION, _make_manifest, _document_records,
 )
 from saturn_ai.saturn_knowledge_snapshot import build_saturn_knowledge_snapshot
 from unit.test_saturn_knowledge_snapshot import (
@@ -167,6 +167,24 @@ class SaturnRetrievalTests(unittest.TestCase):
         self.assertFalse(any(c.evidence_type == "document_metadata"
                              for c in result.answer_evidence))
         self.assertFalse(result.answer_evidence)  # metadata search cannot masquerade as facts
+
+    def test_document_lookup_indexes_source_title_variants_without_duplicates(self):
+        first_name = "Manual Beta Interface"
+        second_name = "Alternative Installation Guide"
+        site, catalog, external = make_inputs({
+            PRODUCT: source(fields="documents:\n - " + doc(title=first_name) + "\n"),
+            SECOND: source("Second", fields="documents:\n - " +
+                           doc(title=second_name) + "\n"),
+        })
+        self.assertTrue(catalog.ready_for_promotion)
+        snapshot = build_saturn_knowledge_snapshot(site, catalog, external)
+        records = _document_records(snapshot)
+        self.assertEqual(len(records), 1)
+        self.assertEqual(records[0].match.document.document_id,
+                         catalog.documents[0].document_id)
+        self.assertIn(first_name, records[0].text)
+        self.assertIn(second_name, records[0].text)
+        self.assertEqual(records, _document_records(snapshot))
 
     def test_metadata_kind_version_and_owner_search(self):
         service = SaturnRetrievalService()

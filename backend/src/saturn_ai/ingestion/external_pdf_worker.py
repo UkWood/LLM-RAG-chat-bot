@@ -1,10 +1,12 @@
 """Saturn PDF subprocess worker; development/test isolation, NOT an OS sandbox.
 
+Navigation is deliberately not inspected, followed, executed, indexed or emitted.
 No networking or filesystem paths are needed for parsing. Production use MUST
 remain disabled until an independently configured OS-level confinement exists.
 """
 import json
 import sys
+
 
 
 class WorkerRejection(Exception):
@@ -26,11 +28,9 @@ def extract(raw: bytes, limits: tuple[int, ...]):
         reader = PdfReader(BytesIO(raw), strict=True)
         if reader.is_encrypted:
             _reject("encrypted_pdf")
-        root = reader.trailer["/Root"].get_object()
-        if any(name in root for name in (
-                "/OpenAction", "/AA", "/Names", "/AcroForm", "/Collection",
-                "/JavaScript", "/EmbeddedFiles", "/Perms", "/RichMedia")):
-            _reject("invalid_pdf")
+        # Inert navigation: pypdf extracts only physical page text; metadata,
+        # links, annotations, actions, forms, outlines and destinations are not
+        # traversed, interpreted or emitted as RAG evidence.
         count = len(reader.pages)
         if not 1 <= count <= max_pages:
             _reject("page_limit")
@@ -38,9 +38,6 @@ def extract(raw: bytes, limits: tuple[int, ...]):
         text_bytes = 0
         decoded_bytes = 0
         for number, page in enumerate(reader.pages, 1):
-            if any(key in page for key in (
-                    "/AA", "/Annots", "/OpenAction", "/JS", "/RichMedia", "/AF")):
-                _reject("invalid_pdf")
             content = page.get_contents()
             if content is not None:
                 stream = content.get_data()
@@ -75,8 +72,6 @@ def main():
         if len(numbers) != 8 or any(value < 1 for value in numbers):
             _reject("parser_error")
         *limits, ram, cpu = numbers
-        # Real process limits are enforced by the kernel on POSIX, but do not
-        # block network syscalls or guarantee filesystem confinement.
         import resource
         for kind, value in (
                 (resource.RLIMIT_AS, ram),

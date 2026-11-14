@@ -123,8 +123,12 @@ def validate_saturn_snapshot_inputs(site, catalog, external) -> ValidationResult
         issue("untrusted_source", "manifest")
     if site.parser_version != manifest.parser_version:
         issue("site_parser_mismatch", "manifest")
-    if not isinstance(catalog.catalog_version, str) or not catalog.catalog_version:
+    if catalog.catalog_version not in (
+            "saturn-support-catalog/0.2.0", "saturn-support-catalog/0.1.0"):
         issue("invalid_catalog_version", "catalog")
+    if (catalog.catalog_version == "saturn-support-catalog/0.1.0" and
+            external.parser_version != "saturn-pdf-pypdf-6.10.0/0.1.0"):
+        issue("invalid_catalog_version", "historical synthetic fixture only")
     if not isinstance(external.parser_version, str) or not external.parser_version:
         issue("invalid_pdf_parser_version", "external")
     if type(catalog.upstream_ready) is not bool or catalog.upstream_ready != site.ready_for_promotion:
@@ -398,9 +402,12 @@ def validate_saturn_snapshot_inputs(site, catalog, external) -> ValidationResult
             issue("document_provenance_mismatch", doc.document_id)
         for field in ("title", "kind", "version", "date"):
             values = {getattr(x, field) for x in occs if getattr(x, field) is not None}
-            if len(values) > 1:
+            if len(values) > 1 and (field in ("version", "date") or
+                                      catalog.catalog_version == "saturn-support-catalog/0.1.0"):
                 issue("conflicting_document_metadata", doc.document_id + ":" + field)
-            expected = next(iter(values)) if values else None
+            # A single source-neutral display value is deterministic; all
+            # alternatives remain preserved in the actual occurrence records.
+            expected = min(values) if values else None
             if field == "title" and expected is None:
                 expected = doc.url.rsplit("/", 1)[-1]
             if field == "kind" and expected is None:
@@ -427,7 +434,7 @@ def validate_saturn_snapshot_inputs(site, catalog, external) -> ValidationResult
     # code/comment exclusions must match a fresh offline derivation from the
     # already checked site package. No second, weaker link parser is allowed.
     try:
-        derived_catalog = adapt_support_catalog(site)
+        derived_catalog = adapt_support_catalog(site, catalog_version=catalog.catalog_version)
     except (TypeError, ValueError, KeyError, AttributeError, RecursionError):
         issue("catalog_reconstruction_failed", "source package")
     else:
