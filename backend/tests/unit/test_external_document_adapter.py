@@ -301,10 +301,12 @@ class ExternalWorkerTests(unittest.TestCase):
         partial = make_pdf(("page 1", ""))
         self.assertEqual(parser.extract(partial, policy()).pages, ((1, "page 1"), (2, "")))
 
-    def test_bad_active_encrypted_page_size_and_corrupt(self):
+    def test_bad_encrypted_page_size_and_corrupt_but_inert_navigation(self):
         parser = SubprocessPdfExtractor(enable_development_worker=True)
+        # Root /OpenAction is navigation metadata, not an executable RAG input.
+        self.assertEqual(parser.extract(make_pdf(("ok",), active=True), policy()).pages,
+                         ((1, "ok"),))
         cases = [
-            (make_pdf(("ok",), active=True), "invalid_pdf", policy()),
             (make_pdf(("ok",), encrypted=True), "encrypted_pdf", policy()),
             (PDF, "page_limit", replace(policy(), max_pages=1)),
             (b"%PDF-corrupt", "parser_error", policy()),
