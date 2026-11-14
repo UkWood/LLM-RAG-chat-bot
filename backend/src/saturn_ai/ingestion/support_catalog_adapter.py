@@ -14,7 +14,7 @@ from .saturn_contracts import SupportDocument, stable_id
 from .saturn_site_adapter import SiteContentPackage, SiteParseIssue
 
 
-CATALOG_VERSION = "saturn-support-catalog/0.1.0"
+CATALOG_VERSION = "saturn-support-catalog/0.2.0"
 
 _DEFINITION = re.compile(r'^\s{0,3}\[([^\]\n]+)\]:\s*(?:<([^>\n]+)>|(\S+))')
 _HTML_TAG = re.compile(r"""<a(?=[\s/>])(?:(?:"[^"]*"|'[^']*'|[^'"<>])*)>""", re.I)
@@ -440,10 +440,14 @@ def _markdown_links(body: str):
             yield None, None, f"body:line={number}", "malformed_markdown_link"
 
 
-def adapt_support_catalog(package: SiteContentPackage) -> SupportCatalogResult:
+def adapt_support_catalog(
+    package: SiteContentPackage, *, catalog_version: str = CATALOG_VERSION,
+) -> SupportCatalogResult:
     """Derive a complete fresh catalog from one existing SiteContentPackage."""
     if not isinstance(package, SiteContentPackage):
         raise TypeError("SiteContentPackage is required")
+    if catalog_version not in (CATALOG_VERSION, "saturn-support-catalog/0.1.0"):
+        raise ValueError("Unsupported catalog policy revision")
     revisions = {revision.revision_id: revision for revision in package.source_revisions}
     owners = {entity.entity_id for entity in package.entities if not entity.draft}
     public_origin = _origin(package.entities)
@@ -571,8 +575,12 @@ def adapt_support_catalog(package: SiteContentPackage) -> SupportCatalogResult:
                     f"{x.source_path}#{x.field_path}={getattr(x, key)!r}"
                     for x in linked if getattr(x, key) is not None
                 )
+                # Descriptive title/kind may differ by owner/context, while
+                # version/date can denote a different source revision.
                 problem(linked[0].source_path, "conflicting_document_metadata",
-                        f"{url}: {key} conflicts: {provenance}")
+                        f"{url}: {key} conflicts: {provenance}",
+                        severity=("warning" if catalog_version == CATALOG_VERSION and
+                                  key in ("title", "kind") else "error"))
             chosen[key] = values[0] if values else None
         # Source fields may omit metadata. Fallbacks are presentation labels,
         # not evidence claims (see occurrence.title / kind = None).
@@ -596,4 +604,5 @@ def adapt_support_catalog(package: SiteContentPackage) -> SupportCatalogResult:
             x.document_id, x.source_path, x.field_path, x.owner_entity_id))),
         issues=tuple(sorted(issues, key=lambda x: (x.path, x.code, x.message))),
         upstream_ready=package.ready_for_promotion,
+        catalog_version=catalog_version,
     )

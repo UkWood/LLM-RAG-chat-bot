@@ -302,8 +302,17 @@ def _document_records(snapshot):
         ids.add(doc.document_id)
         if any(owner not in entities for owner in doc.owner_entity_ids):
             raise ValueError("Dangling document owner")
+        # Keep every source-declared contextual title/kind searchable using
+        # the existing single document record, not synthetic document IDs.
+        other_titles = tuple(sorted({
+            o.title for o in match.occurrences if o.title and o.title != doc.title
+        }))
+        other_kinds = tuple(sorted({
+            o.kind for o in match.occurrences if o.kind and o.kind != doc.kind
+        }))
         text = "\n".join(filter(None, (
-            doc.title, doc.kind, doc.version, doc.date, doc.url,
+            doc.title, *other_titles, doc.kind, *other_kinds,
+            doc.version, doc.date, doc.url,
             *[entities[i].title for i in doc.owner_entity_ids],
             *[entities[i].slug for i in doc.owner_entity_ids],
         )))

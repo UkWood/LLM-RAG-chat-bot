@@ -128,17 +128,73 @@ class SupportCatalogTests(unittest.TestCase):
         self.assertEqual(len(set(result.documents[0].source_locators)), 4)
         self.assertEqual(len(result.pdf_candidates[0].source_revision_ids), 3)
 
-    def test_conflicting_metadata_is_visible_and_blocks_promotion(self):
+    def test_conflicting_metadata_title_warning_but_version_blocks_promotion(self):
         result = catalog({
             PRODUCT: source(fields="documents:\n - " + doc(title="First", version="v1") + "\n"),
             SECOND: source("Catalog B", fields="documents:\n - " + doc(title="Second", version="v2") + "\n"),
         })
         self.assertEqual(len(result.documents), 1)
         self.assertEqual(len(result.occurrences), 2)
-        self.assertFalse(result.ready_for_promotion)
-        self.assertGreaterEqual(len([x for x in result.issues if x.code == "conflicting_document_metadata"]), 2)
+        self.assertFalse(result.ready_for_promotion)  # version ambiguity persists
+        conflicts = [x for x in result.issues if x.code == "conflicting_document_metadata"]
+        self.assertEqual(len(conflicts), 2)
+        self.assertEqual({x.severity for x in conflicts}, {"warning", "error"})
+        self.assertTrue(any("title conflicts:" in x.message and x.severity == "warning" for x in conflicts))
+        self.assertTrue(any("version conflicts:" in x.message and x.severity == "error" for x in conflicts))
         self.assertEqual({x.title for x in result.occurrences}, {"First", "Second"})
         self.assertEqual({x.version for x in result.occurrences}, {"v1", "v2"})
+
+    def test_contextual_title_and_kind_variants_are_nonblocking_and_lossless(self):
+        sources = {
+            PRODUCT: source(fields="documents:\n - " + doc(title="First", kind="manual") + "\n"),
+            SECOND: source("Catalog B", fields="documents:\n - " +
+                           doc(title="Second", kind="reference") + "\n"),
+        }
+        result = catalog(sources)
+        self.assertTrue(result.ready_for_promotion, result.issues)
+        self.assertEqual(result.error_count, 0)
+        self.assertEqual(result.catalog_version, "saturn-support-catalog/0.2.0")
+        self.assertEqual(len(result.documents), 1)
+        self.assertEqual(len(result.pdf_candidates), 1)
+        self.assertEqual(len(result.occurrences), 2)
+        self.assertEqual({x.title for x in result.occurrences}, {"First", "Second"})
+        self.assertEqual({x.kind for x in result.occurrences}, {"manual", "reference"})
+        self.assertEqual(len({x.document_id for x in result.occurrences}), 1)
+        self.assertEqual(result.documents[0].title, "First")  # deterministic display
+        self.assertEqual({x.owner_entity_id for x in result.occurrences},
+                         set(result.documents[0].owner_entity_ids))
+        self.assertEqual({x.source_locator for x in result.occurrences},
+                         set(result.documents[0].source_locators))
+        self.assertTrue(all(x.source_path and x.field_path and x.source_revision_id
+                            for x in result.occurrences))
+        self.assertEqual({x.severity for x in result.issues}, {"warning"})
+        self.assertEqual(len(result.issues), 2)
+        self.assertTrue(all(x.code == "conflicting_document_metadata" for x in result.issues))
+        self.assertEqual(result, catalog(dict(reversed(list(sources.items())))))
+
+    def test_contextual_title_variants_do_not_change_document_url_identity(self):
+        first = catalog({PRODUCT: source(fields="documents:\n - " +
+                                         doc(title="First") + "\n")})
+        second = catalog({
+            PRODUCT: source(fields="documents:\n - " + doc(title="First") + "\n"),
+            SECOND: source("Catalog B", fields="documents:\n - " +
+                           doc(title="Second") + "\n"),
+        })
+        self.assertEqual(first.documents[0].document_id, second.documents[0].document_id)
+        self.assertEqual(first.documents[0].url, second.documents[0].url)
+        self.assertEqual(len(second.documents), 1)
+        self.assertEqual({x.title for x in second.occurrences}, {"First", "Second"})
+
+    def test_date_conflict_stays_blocking(self):
+        result = catalog({
+            PRODUCT: source(fields="documents:\n - " + doc(date="2025-01-01") + "\n"),
+            SECOND: source("Catalog B", fields="documents:\n - " +
+                           doc(date="2026-01-01") + "\n"),
+        })
+        self.assertFalse(result.ready_for_promotion)
+        self.assertEqual(result.error_count, 1)
+        self.assertTrue(any("date conflicts:" in i.message and i.severity == "error"
+                            for i in result.issues))
 
     def test_absolute_root_and_relative_links(self):
         result = catalog({PRODUCT: source(
