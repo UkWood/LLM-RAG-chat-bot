@@ -259,6 +259,43 @@ class MarkdownFeedbackJournal:
         # Sanity check the final path against both Git and symlink indirection.
         _raw_path_checked(self.root)
         _outside_all_git_worktrees(self.root)
+        self._probe_filesystem()
+
+    def _probe_filesystem(self) -> None:
+        """Fail startup if local filesystem cannot enforce 0600/fsync/link."""
+        temporary = self.root / ("." + uuid.uuid4().hex + ".probe")
+        linked = temporary.with_name(temporary.name + ".link")
+        fd = None
+        directory_fd = None
+        try:
+            fd = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL |
+                         os.O_NOFOLLOW, 0o600)
+            info = os.fstat(fd)
+            if (not stat.S_ISREG(info.st_mode) or
+                    info.st_uid != os.geteuid() or
+                    stat.S_IMODE(info.st_mode) != 0o600):
+                raise JournalError("secure_filesystem_unavailable")
+            os.write(fd, b"journal-fs-probe\n")
+            os.fsync(fd)
+            os.link(temporary, linked, follow_symlinks=False)
+            peer = linked.lstat()
+            if (not stat.S_ISREG(peer.st_mode) or
+                    peer.st_uid != os.geteuid() or
+                    stat.S_IMODE(peer.st_mode) != 0o600 or
+                    (peer.st_dev, peer.st_ino) != (info.st_dev, info.st_ino)):
+                raise JournalError("secure_filesystem_unavailable")
+            directory_fd = os.open(self.root, os.O_RDONLY |
+                                   os.O_DIRECTORY | os.O_NOFOLLOW)
+            os.fsync(directory_fd)
+        except (OSError, NotImplementedError):
+            raise JournalError("secure_filesystem_unavailable") from None
+        finally:
+            if fd is not None:
+                os.close(fd)
+            if directory_fd is not None:
+                os.close(directory_fd)
+            linked.unlink(missing_ok=True)
+            temporary.unlink(missing_ok=True)
 
     def _checked(self, path: Path) -> Path:
         if path != self.root and self.root not in path.parents:
