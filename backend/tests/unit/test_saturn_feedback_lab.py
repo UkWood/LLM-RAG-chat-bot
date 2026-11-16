@@ -4,7 +4,9 @@ import csv
 from io import StringIO
 import http.client
 import json
+import os
 from pathlib import Path
+import subprocess
 import socket
 import tempfile
 from threading import Thread
@@ -208,6 +210,158 @@ class JournalTests(unittest.TestCase):
         self.assertEqual(json.loads(csv_rows[0]["reviews"])[0]["comment"], review["comment"])
         self.assertEqual(_csv_safe("\t=1"), "'\t=1")
         self.assertEqual(_csv_safe("-12"), "'-12")
+
+
+    def test_cr01_new_and_existing_safe_directory_linux(self):
+        """Fresh owner-only 0700 tree and pre-existing safe tree both start."""
+        fresh = Path(self.temp.name) / "new-secure-journal"
+        j = MarkdownFeedbackJournal(fresh)
+        for item in (fresh, fresh / "lab", fresh / "production"):
+            self.assertEqual(item.stat().st_mode & 0o777, 0o700)
+            self.assertEqual(item.stat().st_uid, os.geteuid())
+        self.assertEqual(MarkdownFeedbackJournal(fresh).root, j.root)
+        existing = Path(self.temp.name) / "existing-secure-journal"
+        existing.mkdir(mode=0o700)
+        for channel in ("lab", "production"):
+            (existing / channel).mkdir(mode=0o700)
+        self.assertEqual(MarkdownFeedbackJournal(existing).root, existing)
+
+    def test_cr01_existing_root_is_not_chmodded_and_files_unmodified(self):
+        existing = Path(self.temp.name) / "insecure-root"
+        existing.mkdir(mode=0o700)
+        marker = existing / "original.md"
+        marker.write_text("untouched", encoding="utf-8")
+        os.chmod(marker, 0o600)
+        before = (marker.read_bytes(), marker.stat().st_mtime_ns,
+                  marker.stat().st_mode & 0o777)
+        os.chmod(existing, 0o777)
+        with self.assertRaises(JournalError):
+            MarkdownFeedbackJournal(existing)
+        self.assertEqual(existing.stat().st_mode & 0o777, 0o777)
+        self.assertEqual((marker.read_bytes(), marker.stat().st_mtime_ns,
+                          marker.stat().st_mode & 0o777), before)
+
+    def test_cr01_insecure_lab_and_production_are_rejected(self):
+        for channel in ("lab", "production"):
+            with self.subTest(channel=channel):
+                existing = Path(self.temp.name) / ("unsafe-" + channel)
+                existing.mkdir(mode=0o700)
+                for name in ("lab", "production"):
+                    (existing / name).mkdir(mode=0o700)
+                os.chmod(existing / channel, 0o755)
+                with self.assertRaises(JournalError):
+                    MarkdownFeedbackJournal(existing)
+                self.assertEqual((existing / channel).stat().st_mode & 0o777,
+                                 0o755)
+
+    def test_cr01_source_root_symlink_and_ancestor_symlink_are_rejected(self):
+        target = Path(self.temp.name) / "actual-target"
+        target.mkdir(mode=0o700)
+        alias = Path(self.temp.name) / "alias-target"
+        alias.symlink_to(target, target_is_directory=True)
+        with self.assertRaises(ValueError):
+            MarkdownFeedbackJournal(alias)
+        with self.assertRaises(ValueError):
+            MarkdownFeedbackJournal(alias / "journal")
+        self.assertFalse((target / "journal").exists())
+
+    def test_cr01_unsafe_intermediate_directory_is_rejected(self):
+        root = Path(self.temp.name) / "nested-journal"
+        journal = MarkdownFeedbackJournal(root)
+        year = root / "lab" / "2026"
+        year.mkdir(mode=0o700)
+        os.chmod(year, 0o775)
+        with self.assertRaises(JournalError):
+            MarkdownFeedbackJournal(root)
+        with self.assertRaises(JournalError):
+            journal.start_request("question", channel="lab", run_id=RUN)
+        self.assertFalse(list(root.glob("lab/2026/**/*.md")))
+        self.assertEqual(year.stat().st_mode & 0o777, 0o775)
+
+    def test_cr01_nested_symlink_rejected_and_does_not_follow(self):
+        root = Path(self.temp.name) / "links-journal"
+        MarkdownFeedbackJournal(root)
+        outside = Path(self.temp.name) / "outside-data"
+        outside.mkdir(mode=0o700)
+        (root / "lab" / "2026").symlink_to(outside, target_is_directory=True)
+        with self.assertRaises(JournalError):
+            MarkdownFeedbackJournal(root)
+        self.assertFalse(list(outside.iterdir()))
+
+    def test_cr01_separate_temp_git_checkout_is_rejected(self):
+        git_root = Path(self.temp.name) / "other-git-checkout"
+        git_root.mkdir(mode=0o700)
+        subprocess.run(["git", "init", "-q", str(git_root)],
+                       check=True, capture_output=True)
+        with self.assertRaises(ValueError):
+            MarkdownFeedbackJournal(git_root / "journal")
+        self.assertFalse((git_root / "journal").exists())
+
+    def test_cr01_new_rag_and_trusted_site_checkout_rejected(self):
+        repo = Path(__file__).resolve().parents[3]
+        with self.assertRaises(ValueError):
+            MarkdownFeedbackJournal(repo / "feedback-journal")
+        trusted = Path(self.temp.name) / "Saturn-Main-Site"
+        trusted.mkdir(mode=0o700)
+        with self.assertRaises(ValueError):
+            MarkdownFeedbackJournal(trusted / "journal")
+        self.assertFalse((trusted / "journal").exists())
+
+    def test_cr01_symlinked_existing_file_fails_on_restart(self):
+        root = Path(self.temp.name) / "file-links"
+        MarkdownFeedbackJournal(root)
+        protected = Path(self.temp.name) / "original"
+        protected.write_text("private", encoding="utf-8")
+        (root / "lab" / "linked.md").symlink_to(protected)
+        with self.assertRaises(JournalError):
+            MarkdownFeedbackJournal(root)
+        self.assertEqual(protected.read_text(), "private")
+
+    def test_cr02_csv_and_json_export_all_rows_above_10000(self):
+        """Synthetic source enumeration: no creation of 10k journal files."""
+        entries = []
+        for i in range(10023):
+            entries.append({
+                "request": {
+                    "request_id": f"{i:032x}",
+                    "received_at_utc": "2026-11-16T00:00:00Z",
+                    "channel": "lab",
+                    "question": "Вопрос 你好 " + str(i),
+                    "run_id": RUN,
+                },
+                "answer": {
+                    "finished_at_utc": "2026-11-16T00:00:01Z",
+                    "duration_ms": 7,
+                    "status": "answered",
+                    "reason_code": None,
+                    "answer_text": "Ответ " + str(i),
+                    "snapshot_id": "synthetic",
+                    "bundle_id": "synthetic",
+                    "code_revision": SHA,
+                    "policy_revision": "synthetic",
+                    "model_id": "synthetic",
+                    "declared_model_sha256": MODEL_SHA,
+                    "citations": [],
+                    "diagnostics": [],
+                },
+                "reviews": [],
+                "review_status": "accepted",
+            })
+        with patch.object(self.journal, "list_entries", return_value=entries) as listing:
+            csv_result = self.journal.export_csv(channel="lab", status="accepted")
+            json_result = self.journal.export_json(channel="lab", status="accepted")
+        self.assertEqual(listing.call_count, 2)
+        for call in listing.call_args_list:
+            self.assertEqual(call.kwargs,
+                             {"channel": "lab", "status": "accepted", "limit": None})
+        csv_rows = list(csv.DictReader(StringIO(csv_result)))
+        json_rows = json.loads(json_result)
+        self.assertEqual(len(csv_rows), 10023)
+        self.assertEqual(len(json_rows), 10023)
+        self.assertEqual({r["request_id"] for r in csv_rows},
+                         {r["request"]["request_id"] for r in json_rows})
+        self.assertEqual(csv_rows[-1]["question"], entries[-1]["request"]["question"])
+        self.assertEqual(csv_rows[-1]["answer_text"], entries[-1]["answer"]["answer_text"])
 
     def test_no_path_traversal_secrets_and_repository_root(self):
         with self.assertRaises(ValueError):
