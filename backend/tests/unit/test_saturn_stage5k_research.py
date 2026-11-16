@@ -158,6 +158,14 @@ class PlanValidationTests(unittest.TestCase):
                 with self.assertRaises(ExperimentError):
                     validate_plan(changed, question)
 
+    def test_numeric_qualifier_400_cannot_be_replaced_with_300(self):
+        question = "Сколько БКД-UPS нужно для 400 датчиков?"
+        plan = synthetic_offline_plan(question)
+        plan["suggested_search_queries"] = ["БКД-UPS 300 датчиков"]
+        with self.assertRaisesRegex(ExperimentError,
+                                    "query_invents_numeric_qualifier"):
+            validate_plan(plan, question)
+
     def test_json_duplicate_unknown_fields_fake_ids_and_unsafe_instructions(self):
         question = "Масса БКД-ПК-RF.2?"
         plan = synthetic_offline_plan(question)
