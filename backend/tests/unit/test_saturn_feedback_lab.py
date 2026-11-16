@@ -226,6 +226,28 @@ class JournalTests(unittest.TestCase):
             (existing / channel).mkdir(mode=0o700)
         self.assertEqual(MarkdownFeedbackJournal(existing).root, existing)
 
+    def test_cr01_foreign_owner_rejected_without_permissions_change(self):
+        existing = Path(self.temp.name) / "foreign-owner"
+        existing.mkdir(mode=0o700)
+        before = existing.stat().st_mode & 0o777
+        with patch("saturn_ai.feedback_journal.os.geteuid",
+                   return_value=os.geteuid() + 1000):
+            with self.assertRaises(JournalError):
+                MarkdownFeedbackJournal(existing)
+        self.assertEqual(existing.stat().st_mode & 0o777, before)
+        self.assertFalse((existing / "lab").exists())
+
+    def test_cr01_unsupported_filesystem_atomic_link_fails_closed(self):
+        root = Path(self.temp.name) / "no-hardlinks"
+        with patch("saturn_ai.feedback_journal.os.link",
+                   side_effect=OSError("hardlinks disabled")):
+            with self.assertRaisesRegex(JournalError,
+                                        "secure_filesystem_unavailable"):
+                MarkdownFeedbackJournal(root)
+        self.assertFalse(list(root.glob("*.probe")))
+        self.assertFalse(list(root.glob("*.link")))
+        self.assertEqual(len(list(root.rglob("request.md"))), 0)
+
     def test_cr01_existing_root_is_not_chmodded_and_files_unmodified(self):
         existing = Path(self.temp.name) / "insecure-root"
         existing.mkdir(mode=0o700)
