@@ -257,13 +257,14 @@ PROMPT_SYSTEM = (
 )
 
 
-def design_freeze() -> dict:
+def design_freeze(*, policy_revision: str = "initial") -> dict:
     frozen = {
         "comparator_revision": COMPARATOR_REVISION,
         "dataset_sha256": DATASET_SHA256,
         "source_commit": SOURCE_COMMIT,
         "snapshot_id": SNAPSHOT_ID,
         "corpus_hash": CORPUS_HASH,
+        "policy_revision": policy_revision,
         "baseline_bundle_id": BASELINE_BUNDLE_ID,
         "router_revision": ROUTER_REVISION,
         "prompt_revision": PROMPT_REVISION,
