@@ -388,6 +388,18 @@ class ResearchComparator:
             })
         return ranked, docs
 
+    def _planned(self, question: str, report: dict) -> dict:
+        if self.planner is None:
+            raise ExperimentError("planner_not_available")
+        report["model_calls"] = 1
+        try:
+            proposed = self.planner.plan(question)
+            return validate_plan(proposed, question)
+        finally:
+            report["model_usage"] = getattr(self.planner, "last_usage", None)
+            report["prompt_ms"] = getattr(self.planner, "last_prompt_ms", None)
+            report["inference_ms"] = getattr(self.planner, "last_inference_ms", None)
+
     def run_arm(self, case: dict, variant: str, *, synthetic: bool = False) -> dict:
         if variant not in VARIANTS:
             raise ValueError("invalid_variant")
@@ -430,7 +442,19 @@ class ResearchComparator:
             report["end_to_end_ms"] = round((perf_counter() - started) * 1000, 3)
             return report
         elapsed_retrieval = 0.
+        phase = "retrieval"
         try:
+            preplanned = None
+            if variant == "B":
+                report["route"] = {
+                    "route": "plan", "reason": "always_plan", "formal_needs": [],
+                }
+                # The B control arm MUST plan BEFORE retrieval; a failed
+                # model does not silently trigger a lexical fallback.
+                phase = "planning"
+                preplanned = self._planned(question, report)
+                report["intent_plan"] = preplanned
+            phase = "retrieval"
             t0 = perf_counter()
             original, original_docs = self._search(question, policy)
             elapsed_retrieval += (perf_counter() - t0) * 1000
@@ -463,27 +487,22 @@ class ResearchComparator:
                 report["inference_provenance"] = "NO_LLM"
             else:
                 if variant == "C":
+                    phase = "routing"
                     decision = select_fast_path(question, original, self.stand.snapshot)
                     report["route"] = decision
-                else:
-                    report["route"] = {"route": "plan", "reason": "always_plan",
-                                       "formal_needs": []}
+                    phase = "retrieval"
                 if report["route"]["route"] == "fast":
                     report["candidates"] = original
                     report["status"] = "CANDIDATES_RETRIEVED"
                     report["inference_provenance"] = "NO_LLM_PROVEN_FAST_PATH"
                 else:
-                    if self.planner is None:
-                        raise ExperimentError("planner_not_available")
-                    report["model_calls"] = 1
-                    try:
-                        proposed = self.planner.plan(question)
-                        plan = validate_plan(proposed, question)
-                    finally:
-                        report["model_usage"] = getattr(self.planner, "last_usage", None)
-                        report["prompt_ms"] = getattr(self.planner, "last_prompt_ms", None)
-                        report["inference_ms"] = getattr(self.planner, "last_inference_ms", None)
-                    report["intent_plan"] = plan
+                    if variant == "B":
+                        plan = preplanned
+                    else:
+                        phase = "planning"
+                        plan = self._planned(question, report)
+                        report["intent_plan"] = plan
+                    phase = "retrieval"
                     groups = [original]
                     for expansion in plan["suggested_search_queries"]:
                         t0 = perf_counter()
@@ -503,12 +522,19 @@ class ResearchComparator:
             if after != policy:
                 raise ExperimentError("policy_revision_changed")
             report["retrieval_ms"] = round(elapsed_retrieval, 3)
-        except (ExperimentError, LocalModelError) as exc:
-            report["status"] = "PLANNING_FAILED" if variant in ("B", "C") and (
-                report["model_calls"] == 1) else "EXPERIMENT_FAILED"
-            report["error_code"] = str(exc)[:120]
+        except Exception as exc:
+            # A technical search/policy failure after successful planning is
+            # NOT a planning failure. Never publish partial/policy-drifted hits.
+            report["status"] = ("PLANNING_FAILED" if phase == "planning"
+                                else "EXPERIMENT_FAILED")
+            report["error_code"] = (
+                str(exc)[:120] if type(exc) is ExperimentError
+                else "experiment_runtime_" + type(exc).__name__
+            )
             report["candidates"] = []
             report["documents"] = []
+            report["per_query"] = []
+            report["search_queries"] = []
             report["excluded"] = []
             report["retrieval_ms"] = round(elapsed_retrieval, 3)
         report["end_to_end_ms"] = round((perf_counter() - started) * 1000, 3)
