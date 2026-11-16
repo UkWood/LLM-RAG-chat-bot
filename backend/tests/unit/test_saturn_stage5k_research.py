@@ -192,6 +192,13 @@ class PlanValidationTests(unittest.TestCase):
                      "run_shell", "invoke_tool")
         self.assertTrue(all(text not in PROMPT_SYSTEM for text in forbidden))
 
+    def test_prompt_budget_rejected_before_actual_model_call(self):
+        planner = LocalIntentPlanner()
+        with patch("saturn_ai.stage5k_comparator.MAX_PROMPT_BYTES", 1):
+            with self.assertRaisesRegex(ExperimentError, "prompt_bytes_limit"):
+                planner.plan("Масса БКД-ПК-RF.2?")
+        self.assertEqual(planner.calls, 0)
+
     def test_unavailable_model_is_technical_failure_not_no_evidence(self):
         planner = LocalIntentPlanner()
         with patch("saturn_ai.stage5k_comparator._post_loopback",
