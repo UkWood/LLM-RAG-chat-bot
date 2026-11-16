@@ -346,6 +346,9 @@ class ResearchComparator:
                 raise ExperimentError("real_pinned_d_index_required")
         self.stand = stand
         self.policy_provider = policy_provider or SaturnPolicyProvider()
+        self.frozen_policy = self.policy_provider.capture()
+        if type(self.frozen_policy) is not SaturnOperationalPolicy:
+            raise ExperimentError("policy_unavailable")
         self.service = test_only_service or SaturnRetrievalService(self.policy_provider)
         if test_only_service is None:
             self.service.publish(stand.bundle)
@@ -357,6 +360,8 @@ class ResearchComparator:
         p = self.policy_provider.capture()
         if type(p) is not SaturnOperationalPolicy:
             raise ExperimentError("policy_unavailable")
+        if p != self.frozen_policy:
+            raise ExperimentError("policy_revision_changed")
         return p
 
     def _search(self, question: str, policy) -> tuple[list[dict], list[dict]]:
@@ -463,17 +468,20 @@ class ResearchComparator:
             phase = "retrieval"
             t0 = perf_counter()
             original, original_docs = self._search(question, policy)
-            elapsed_retrieval += (perf_counter() - t0) * 1000
+            original_ms = (perf_counter() - t0) * 1000
+            elapsed_retrieval += original_ms
             report["search_queries"].append(question)
             report["per_query"].append({
                 "query_index": 0, "query": question,
+                "retrieval_ms": round(original_ms, 3),
                 "candidates": original, "documents": original_docs,
             })
             report["documents"] = original_docs
             if variant == "D":
                 t0 = perf_counter()
                 dense = self.d_index.search(question, policy)
-                elapsed_retrieval += (perf_counter() - t0) * 1000
+                dense_ms = (perf_counter() - t0) * 1000
+                elapsed_retrieval += dense_ms
                 if len(dense) > TOP_K or any(
                     d["evidence_id"] not in self.records or
                     not _allowed_record(self.records[d["evidence_id"]], policy)
@@ -482,7 +490,7 @@ class ResearchComparator:
                     raise ExperimentError("d_policy_violation")
                 report["per_query"].append({
                     "query_index": 1, "query": question, "channel": "dense",
-                    "candidates": dense,
+                    "retrieval_ms": round(dense_ms, 3), "candidates": dense,
                 })
                 report["candidates"], report["excluded"] = fuse_ranked([original, dense])
                 report["status"] = "CANDIDATES_RETRIEVED" if report["candidates"] else "NO_ELIGIBLE_EVIDENCE"
@@ -515,10 +523,12 @@ class ResearchComparator:
                     for expansion in plan["suggested_search_queries"]:
                         t0 = perf_counter()
                         candidates, documents = self._search(expansion, policy)
-                        elapsed_retrieval += (perf_counter() - t0) * 1000
+                        expansion_ms = (perf_counter() - t0) * 1000
+                        elapsed_retrieval += expansion_ms
                         report["search_queries"].append(expansion)
                         report["per_query"].append({
                             "query_index": len(groups), "query": expansion,
+                            "retrieval_ms": round(expansion_ms, 3),
                             "candidates": candidates, "documents": documents,
                         })
                         groups.append(candidates)
@@ -585,7 +595,8 @@ class ResearchComparator:
             "all_intents_require_independent_human_labels": True,
         }
         return {
-            "design_freeze": design_freeze(),
+            "design_freeze": design_freeze(
+                policy_revision=self.frozen_policy.revision),
             "stand_manifest": self.stand.manifest,
             "D_index_identity": self.d_index.identity if self.d_index else None,
             "quality_gate": "QUALITY_NOT_MEASURED_UNREVIEWED_DATASET",
