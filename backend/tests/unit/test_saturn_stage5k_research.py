@@ -46,7 +46,7 @@ def fake_env():
         snapshot_id=SNAPSHOT_ID, manifest=N(corpus_hash=CORPUS_HASH),
         entities=(N(entity_id="E", title="БКД-ПК-RF.2", slug="bkd"),),
         facts=(N(fact_id="F", entity_id="E", field_path="mass"),),
-        evidence_pointers=(N(canonical_id="F", canonical_kind="fact",
+        evidence_pointers=(N(canonical_id="F", canonical_kind="SiteFact",
                              evidence_id="ev1"),),
         document_matches=(),
     )
@@ -223,6 +223,43 @@ class ComparisonTests(unittest.TestCase):
         self.assertEqual(report["search_queries"][0], question)
         self.assertEqual(report["intent_plan"]["question_sha256"], sha_text(question))
         self.assertEqual(report["route"]["reason"], "always_plan")
+
+    def test_b_planning_precedes_search_on_every_valid_question(self):
+        sequence = []
+        class TracedPlanner(OfflinePlanner):
+            def plan(self, question):
+                sequence.append("plan")
+                return super().plan(question)
+        self.service.search_saturn = lambda query, **kwargs: (
+            sequence.append("search"),
+            N(query=query, snapshot_id=SNAPSHOT_ID,
+              bundle_id=BASELINE_BUNDLE_ID,
+              answer_evidence=(self.candidate,), document_matches=())
+        )[1]
+        planner = TracedPlanner()
+        comparator = ResearchComparator(
+            self.stand, planner=planner, test_only_service=self.service)
+        report = comparator.run_arm(
+            {"case_id": "T", "question": "Масса БКД-ПК-RF.2?"}, "B")
+        self.assertEqual(sequence, ["plan", "search"])
+        self.assertEqual(report["status"], "CANDIDATES_RETRIEVED")
+
+    def test_b_invalid_plan_does_not_retrieve_or_fallback(self):
+        class InvalidPlanner(OfflinePlanner):
+            def plan(self, question):
+                self.calls.append(question)
+                bad = synthetic_offline_plan(question)
+                bad["model_id"] = "not-approved-model"
+                return bad
+        self.service.calls.clear()
+        comparator = ResearchComparator(
+            self.stand, planner=InvalidPlanner(),
+            test_only_service=self.service)
+        report = comparator.run_arm(
+            {"case_id": "T", "question": "Масса БКД-ПК-RF.2?"}, "B")
+        self.assertEqual(report["status"], "PLANNING_FAILED")
+        self.assertEqual(self.service.calls, [])
+        self.assertEqual(report["candidates"], [])
 
     def test_c_complex_forces_same_planner(self):
         question = "Вес и размеры БКД-UPS?"
