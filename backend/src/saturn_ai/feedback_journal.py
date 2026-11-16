@@ -142,7 +142,7 @@ def _private_entry(path: Path, *, require_directory: bool) -> None:
     if require_directory:
         if not stat.S_ISDIR(info.st_mode) or (info.st_mode & 0o700) != 0o700:
             raise JournalError("journal_unsafe_directory")
-    elif not stat.S_ISREG(info.st_mode) or info.st_nlink != 1 or not (
+    elif not stat.S_ISREG(info.st_mode) or not (
             info.st_mode & stat.S_IRUSR):
         raise JournalError("journal_unsafe_file")
 
@@ -485,8 +485,7 @@ class MarkdownFeedbackJournal:
             try:
                 info = os.fstat(fd)
                 if (not stat.S_ISREG(info.st_mode) or
-                        info.st_uid != os.geteuid() or info.st_mode & 0o077 or
-                        info.st_nlink != 1):
+                        info.st_uid != os.geteuid() or info.st_mode & 0o077):
                     raise JournalError("journal_unsafe_file")
                 with os.fdopen(fd, "rb", closefd=False) as stream:
                     raw = stream.read(MAX_RECORD_BYTES + 1)
