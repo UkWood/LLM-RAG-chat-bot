@@ -359,7 +359,7 @@ class ResearchJournalTests(unittest.TestCase):
             self.assertEqual(len(runs), 1)
             self.assertEqual(len(list(runs[0].glob("cases/*/*.json"))), 240)
             self.assertTrue((runs[0] / "summary.md").is_file())
-            with self.assertRaises(ExperimentError):
+            with self.assertRaisesRegex(ValueError, "journal_root_inside_git_worktree"):
                 ResearchJournal(Path(__file__).resolve().parents[3])
 
     def test_reject_external_network_optin_in_offline_mode(self):
