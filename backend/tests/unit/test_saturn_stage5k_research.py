@@ -355,6 +355,22 @@ class ComparisonTests(unittest.TestCase):
         with self.assertRaises(ExperimentError):
             fuse_ranked([[first], [dict(first, source_revision_id="forged")]])
 
+    def test_policy_revision_drift_fails_closed_between_arms(self):
+        before = self.study.policy_provider.capture().revision
+        self.assertEqual(before, "initial")
+        self.study.policy_provider.activate(SaturnOperationalPolicy("modified"))
+        with self.assertRaisesRegex(ExperimentError, "policy_revision_changed"):
+            self.study.run_arm({"case_id": "T", "question": "Масса?"}, "A")
+
+    def test_a_only_never_claims_live_qwen_inference(self):
+        result = self.study.run(
+            ({"case_id": "T", "question": "Масса?"},), ("A",),
+            synthetic=False,
+        )
+        self.assertIs(result["real_model_inference"], False)
+        self.assertEqual(result["model_inference_evidence"], "NOT_CONFIRMED")
+        self.assertEqual(result["E5B"]["B_plan_attempts"], 0)
+
     def test_full_sixty_case_paired_ids_two_separate_sections(self):
         comparison = self.study.run(load_seeds(), ("A", "B", "C", "D"),
                                     synthetic=True)
