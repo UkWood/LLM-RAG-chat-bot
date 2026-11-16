@@ -340,6 +340,10 @@ class ResearchComparator:
                  d_index=None, test_only_service=None):
         if test_only_service is None:
             verify_stand(stand)
+            if planner is not None and type(planner) is not LocalIntentPlanner:
+                raise ExperimentError("real_planner_type_required")
+            if d_index is not None and type(d_index) is not EphemeralDIndex:
+                raise ExperimentError("real_pinned_d_index_required")
         self.stand = stand
         self.policy_provider = policy_provider or SaturnPolicyProvider()
         self.service = test_only_service or SaturnRetrievalService(self.policy_provider)
@@ -434,7 +438,7 @@ class ResearchComparator:
             "model_calls": 0, "model_usage": None,
             "prompt_ms": None, "inference_ms": None,
             "retrieval_ms": None, "end_to_end_ms": None,
-            "inference_provenance": "OFFLINE_SYNTHETIC" if synthetic else "REAL_LOCAL_QWEN",
+            "inference_provenance": "OFFLINE_SYNTHETIC" if synthetic else "NO_LLM",
         }
         if variant == "D" and self.d_index is None:
             report["status"] = D_NOT_RUN
@@ -454,6 +458,8 @@ class ResearchComparator:
                 phase = "planning"
                 preplanned = self._planned(question, report)
                 report["intent_plan"] = preplanned
+                report["inference_provenance"] = (
+                    "OFFLINE_SYNTHETIC" if synthetic else "LOCAL_QWEN_RESPONSE_VALIDATED")
             phase = "retrieval"
             t0 = perf_counter()
             original, original_docs = self._search(question, policy)
@@ -502,6 +508,8 @@ class ResearchComparator:
                         phase = "planning"
                         plan = self._planned(question, report)
                         report["intent_plan"] = plan
+                        report["inference_provenance"] = (
+                            "OFFLINE_SYNTHETIC" if synthetic else "LOCAL_QWEN_RESPONSE_VALIDATED")
                     phase = "retrieval"
                     groups = [original]
                     for expansion in plan["suggested_search_queries"]:
@@ -581,7 +589,14 @@ class ResearchComparator:
             "stand_manifest": self.stand.manifest,
             "D_index_identity": self.d_index.identity if self.d_index else None,
             "quality_gate": "QUALITY_NOT_MEASURED_UNREVIEWED_DATASET",
-            "real_model_inference": not synthetic,
+            "real_model_inference": (
+                not synthetic and any(
+                    r["inference_provenance"] == "LOCAL_QWEN_RESPONSE_VALIDATED"
+                    for r in results)),
+            "model_inference_evidence": (
+                "VALIDATED_LOCAL_QWEN_RESPONSE" if not synthetic and any(
+                    r["inference_provenance"] == "LOCAL_QWEN_RESPONSE_VALIDATED"
+                    for r in results) else "NOT_CONFIRMED"),
             "E4B": e4b, "E5B": e5b,
             "results": results,
         }
