@@ -205,7 +205,7 @@ class JournalTests(unittest.TestCase):
         self.assertEqual(len(csv_rows), 1)
         self.assertEqual(csv_rows[0]["question"], "'" + question)
         self.assertEqual(csv_rows[0]["answer_text"], "'@SUM(A1:A2)")
-        self.assertIn("'+CMD", csv_rows[0]["reviews"])
+        self.assertEqual(json.loads(csv_rows[0]["reviews"])[0]["comment"], review["comment"])
         self.assertEqual(_csv_safe("\t=1"), "'\t=1")
         self.assertEqual(_csv_safe("-12"), "'-12")
 
