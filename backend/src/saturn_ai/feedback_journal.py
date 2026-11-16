@@ -14,6 +14,9 @@ import json
 import os
 from pathlib import Path
 import re
+import stat
+import subprocess
+import sys
 import time
 import uuid
 
@@ -125,6 +128,77 @@ def _csv_safe(value: object) -> str:
     return text
 
 
+
+def _private_entry(path: Path, *, require_directory: bool) -> None:
+    """Fail closed on unexpected ownership, type, symlink or POSIX modes."""
+    try:
+        info = path.lstat()
+    except OSError:
+        raise JournalError("journal_path_unavailable") from None
+    if stat.S_ISLNK(info.st_mode):
+        raise JournalError("journal_symlink_forbidden")
+    if info.st_uid != os.geteuid() or (info.st_mode & 0o077):
+        raise JournalError("journal_unsafe_ownership_or_mode")
+    if require_directory:
+        if not stat.S_ISDIR(info.st_mode) or (info.st_mode & 0o700) != 0o700:
+            raise JournalError("journal_unsafe_directory")
+    elif not stat.S_ISREG(info.st_mode) or info.st_nlink != 1 or not (
+            info.st_mode & stat.S_IRUSR):
+        raise JournalError("journal_unsafe_file")
+
+
+def _raw_path_checked(path: Path) -> Path:
+    """Inspect input components with lstat BEFORE lexical normalization."""
+    if not path.is_absolute() or ".." in path.parts:
+        raise ValueError("journal_root_must_be_absolute_without_parent_segments")
+    current = Path(path.anchor)
+    for name in path.parts[1:]:
+        current = current / name
+        try:
+            info = current.lstat()
+        except FileNotFoundError:
+            continue
+        except OSError:
+            raise JournalError("journal_path_unavailable") from None
+        if stat.S_ISLNK(info.st_mode):
+            raise ValueError("journal_symlink_forbidden")
+        if not stat.S_ISDIR(info.st_mode):
+            raise ValueError("journal_non_directory_ancestor")
+    return path
+
+
+def _outside_all_git_worktrees(path: Path) -> None:
+    """Check Git worktrees (also linked .git files) with sanitized git env."""
+    if any(p.name.lower() == "saturn-main-site" for p in (path, *path.parents)):
+        raise ValueError("journal_root_inside_trusted_site_checkout")
+    for p in (path, *path.parents):
+        marker = p / ".git"
+        if p.name == ".git" or marker.is_symlink() or marker.exists():
+            raise ValueError("journal_root_inside_git_worktree")
+    anchor = path
+    while not anchor.exists():
+        if anchor == anchor.parent:
+            raise JournalError("journal_path_unavailable")
+        anchor = anchor.parent
+    environment = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
+    environment["LC_ALL"] = "C"
+    try:
+        run = subprocess.run(
+            ["git", "-C", str(anchor), "rev-parse", "--is-inside-work-tree"],
+            capture_output=True, text=True, timeout=5, env=environment,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        raise JournalError("git_worktree_check_unavailable") from None
+    if run.returncode == 0:
+        if run.stdout.strip() == "true":
+            raise ValueError("journal_root_inside_git_worktree")
+        if run.stdout.strip() != "false":
+            raise JournalError("git_worktree_check_unavailable")
+    elif run.returncode != 128 or "not a git repository" not in run.stderr.lower():
+        raise JournalError("git_worktree_check_unavailable")
+
+
 class MarkdownFeedbackJournal:
     """Standalone filesystem component; append-only even across process restarts.
 
@@ -136,46 +210,91 @@ class MarkdownFeedbackJournal:
     def __init__(self, root: Path | str, *,
                  production_retention_days: int | None = None,
                  production_deletion_policy: str = "manual"):
-        root = Path(root).expanduser()
-        if not root.is_absolute():
-            raise ValueError("journal_root_must_be_absolute")
-        repo = Path(__file__).resolve().parents[3]
-        absolute = root.resolve()
-        if absolute == repo or repo in absolute.parents:
-            raise ValueError("journal_root_inside_git_worktree")
+        if (sys.platform != "linux" or not hasattr(os, "geteuid")
+                or not hasattr(os, "O_NOFOLLOW") or
+                not hasattr(os, "O_DIRECTORY")):
+            raise JournalError("secure_linux_filesystem_required")
+        source = Path(root).expanduser()
+        _raw_path_checked(source)
+        _outside_all_git_worktrees(source)
         if (production_retention_days is not None and
                 (type(production_retention_days) is not int or
                  not 1 <= production_retention_days <= 36500)):
             raise ValueError("invalid_production_retention")
         if production_deletion_policy not in ("manual", "explicit_future_job"):
             raise ValueError("invalid_production_deletion_policy")
-        self.root = absolute
+        self.root = source
         self.production_retention_days = production_retention_days
         self.production_deletion_policy = production_deletion_policy
-        # No cleanup job, especially not for laboratory observations.
+
+        # Validate existing locations BEFORE any mkdir. Never chmod an existing
+        # directory: unsafe ownership or mode is an operator-visible error.
+        if self.root.exists():
+            _private_entry(self.root, require_directory=True)
+        for name in ("lab", "production"):
+            sub = self.root / name
+            if sub.is_symlink():
+                raise JournalError("journal_symlink_forbidden")
+            if sub.exists():
+                _private_entry(sub, require_directory=True)
         try:
             self.root.mkdir(mode=0o700, parents=True, exist_ok=True)
-            for channel in CHANNELS:
-                (self.root / channel).mkdir(mode=0o700, exist_ok=True)
         except OSError:
             raise JournalWriteError("journal_directory_unavailable") from None
-        for base in (self.root, self.root / "lab", self.root / "production"):
-            if base.is_symlink():
-                raise ValueError("journal_symlink_forbidden")
+        _private_entry(self.root, require_directory=True)
+        for name in ("lab", "production"):
+            self._mkdir_secure(self.root / name)
+
+        # Validate existing intermediate date/request/review directories, not
+        # just the three top-level directories. Do not follow symlinks.
+        for directory, names, files in os.walk(self.root, topdown=True,
+                                                followlinks=False):
+            parent = Path(directory)
+            _private_entry(parent, require_directory=True)
+            for name in names:
+                _private_entry(parent / name, require_directory=True)
+            for name in files:
+                _private_entry(parent / name, require_directory=False)
+
+        # Sanity check the final path against both Git and symlink indirection.
+        _raw_path_checked(self.root)
+        _outside_all_git_worktrees(self.root)
 
     def _checked(self, path: Path) -> Path:
-        if not path.is_relative_to(self.root):
+        if path != self.root and self.root not in path.parents:
             raise ValueError("unsafe_journal_path")
-        # Disallow all symlinks, including intermediate components. Identity is
-        # still checked after resolution for defense in depth.
-        current = path
-        while current != self.root:
-            if current.is_symlink():
-                raise JournalError("journal_symlink_forbidden")
-            current = current.parent
+        _private_entry(self.root, require_directory=True)
+        current = self.root
+        parts = path.relative_to(self.root).parts
+        for index, name in enumerate(parts):
+            if name in ("", ".", ".."):
+                raise ValueError("unsafe_journal_path")
+            current /= name
+            try:
+                current.lstat()
+            except FileNotFoundError:
+                # Remaining components do not exist; the caller must create
+                # them only through _mkdir_secure or exclusive _atomic_new.
+                break
+            except OSError:
+                raise JournalError("journal_path_unavailable") from None
+            _private_entry(current, require_directory=index < len(parts) - 1
+                           or current.is_dir())
         if not path.resolve().is_relative_to(self.root):
             raise JournalError("journal_path_escape")
         return path
+
+    def _mkdir_secure(self, path: Path) -> None:
+        self._checked(path)
+        current = self.root
+        for name in path.relative_to(self.root).parts:
+            current = current / name
+            self._checked(current)
+            try:
+                current.mkdir(mode=0o700, exist_ok=True)
+            except OSError:
+                raise JournalWriteError("journal_directory_unavailable") from None
+            _private_entry(current, require_directory=True)
 
     @staticmethod
     def _channel(channel: str) -> str:
@@ -230,12 +349,13 @@ class MarkdownFeedbackJournal:
                         request_id=request_id, channel=channel,
                         received_at_utc=now, run_id=run_id,
                         question=question)
+        self._mkdir_secure(directory.parent)
+        self._checked(directory)
         try:
-            directory.parent.mkdir(parents=True, mode=0o700, exist_ok=True)
-            self._checked(directory.parent)
             directory.mkdir(mode=0o700, exist_ok=False)
         except OSError:
             raise JournalWriteError("request_directory_failed") from None
+        _private_entry(directory, require_directory=True)
         self._atomic_new(directory / "request.md",
                          _document(metadata, (("Оригинальный вопрос", question),)))
         return RequestRef(request_id, channel, now)
@@ -316,10 +436,7 @@ class MarkdownFeedbackJournal:
                      channel=channel, reviewed_at_utc=_utc_now(),
                      expert=expert, decision=decision, comment=comment)
         reviews = self._checked(directory / "reviews")
-        try:
-            reviews.mkdir(mode=0o700, exist_ok=True)
-        except OSError:
-            raise JournalWriteError("reviews_directory_failed") from None
+        self._mkdir_secure(reviews)
         self._atomic_new(reviews / (review_id + ".md"),
                          _document(event, (("Комментарий эксперта", comment),)))
         return event
@@ -327,7 +444,18 @@ class MarkdownFeedbackJournal:
     def _read(self, path: Path) -> dict:
         self._checked(path)
         try:
-            return _parse_document(path.read_bytes())
+            fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
+            try:
+                info = os.fstat(fd)
+                if (not stat.S_ISREG(info.st_mode) or
+                        info.st_uid != os.geteuid() or info.st_mode & 0o077 or
+                        info.st_nlink != 1):
+                    raise JournalError("journal_unsafe_file")
+                with os.fdopen(fd, "rb", closefd=False) as stream:
+                    raw = stream.read(MAX_RECORD_BYTES + 1)
+                return _parse_document(raw)
+            finally:
+                os.close(fd)
         except OSError:
             raise JournalError("journal_read_failed") from None
 
@@ -391,7 +519,7 @@ class MarkdownFeedbackJournal:
                   "declared_model_sha256", "citations", "diagnostics",
                   "review_status", "reviews")
         writer.writerow(fields)
-        for item in self.list_entries(channel=channel, status=status, limit=10000):
+        for item in self.list_entries(channel=channel, status=status, limit=None):
             r, a = item["request"], item["answer"] or {}
             row = (r["request_id"], r["received_at_utc"], r["channel"],
                    r["question"], r["run_id"], a.get("finished_at_utc", ""),
