@@ -180,24 +180,6 @@ def _candidate_info(candidate, record) -> dict:
     }
 
 
-def _docs_info(result, snapshot, policy) -> list[dict]:
-    entities = {e.entity_id: e for e in snapshot.entities}
-    matches = {d.document.document_id: d for d in snapshot.document_matches}
-    out = []
-    for ranked in result.document_matches:
-        d = ranked.match.document
-        if (d.document_id not in matches or
-                matches[d.document_id] != ranked.match or
-                not _allowed_doc(
-                    next(x for x in result.index_manifest._documents
-                         if x.match.document.document_id == d.document_id),
-                    policy, entities)):
-            raise ExperimentError("document_provenance_mismatch")
-        out.append({"document_id": d.document_id, "rank": ranked.rank,
-                    "source_url": d.url})
-    return out
-
-
 def fuse_ranked(groups: list[list[dict]], *, budget: int = TOP_K) -> tuple[list[dict], list[dict]]:
     """Stable rank-only reciprocal rank fusion, never BM25+cosine raw mixing."""
     if type(groups) is not list or not 1 <= budget <= TOP_K:
@@ -254,7 +236,7 @@ def select_fast_path(question: str, lexical_candidates: list[dict], snapshot) ->
                 "formal_needs": []}
     source = {candidate["evidence_id"] for candidate in lexical_candidates}
     pointers = {p.canonical_id: p.evidence_id for p in snapshot.evidence_pointers
-                if p.canonical_kind == "fact"}
+                if p.canonical_kind == "SiteFact"}
     formal = []
     for need in needs:
         match = next((
