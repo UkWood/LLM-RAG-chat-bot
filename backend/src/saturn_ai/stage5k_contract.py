@@ -56,6 +56,7 @@ _LITERAL_ID = re.compile(
     re.UNICODE,
 )
 _NEGATION = re.compile(r"(?<![\w])(?:не|нет|без|ни|нельзя)(?![\w])", re.I)
+_NUMERIC_LITERAL = re.compile(r"(?<![\\w])[+\\-−]?\\d+(?:[.,]\\d+)*(?![\\w])")
 _DANGEROUS = re.compile(
     r"(?i)(?:ignore\s+(?:all\s+)?(?:previous|system)|"
     r"system\s+prompt|developer\s+message|"
@@ -211,9 +212,15 @@ def validate_plan(payload: bytes | dict, question: str, *,
     if "по умолчанию" in question.casefold() and not any(
             "по умолчанию" in word.casefold() for word in plan["qualifiers"]):
         raise ExperimentError("default_qualifier_dropped")
+    original_numbers = set(_NUMERIC_LITERAL.findall(question))
     for expansion in plan["suggested_search_queries"]:
         if any(identifier not in expansion for identifier in identifiers):
             raise ExperimentError("query_changes_exact_identifier")
+        # Do not silently change quantities (400 -> 300), version numbers,
+        # signed temperatures, addresses or port numbers in proposed searches.
+        if any(number not in original_numbers for number in
+               _NUMERIC_LITERAL.findall(expansion)):
+            raise ExperimentError("query_invents_numeric_qualifier")
         if not expansion or len(expansion) > 300:
             raise ExperimentError("query_budget")
     return plan
