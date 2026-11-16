@@ -97,7 +97,6 @@ class LocalIntentPlanner:
         self.last_inference_ms = None
 
     def plan(self, question: str) -> dict:
-        self.calls += 1  # attempted calls, even on timeout or malformed reply
         self.last_usage = None
         self.last_prompt_ms = None
         self.last_inference_ms = None
@@ -123,6 +122,8 @@ class LocalIntentPlanner:
         if len(serialized) > MAX_PROMPT_BYTES:
             raise ExperimentError("prompt_bytes_limit")
         self.last_prompt_ms = round((perf_counter() - start) * 1000, 3)
+        # Count only attempts actually sent to the loopback transport.
+        self.calls += 1
         started = perf_counter()
         try:
             received = _post_loopback(self.config, serialized)
@@ -400,11 +401,16 @@ class ResearchComparator:
     def _planned(self, question: str, report: dict) -> dict:
         if self.planner is None:
             raise ExperimentError("planner_not_available")
-        report["model_calls"] = 1
+        report["planning_attempts"] = 1
+        is_real = type(self.planner) is LocalIntentPlanner
+        before_calls = self.planner.calls if is_real else None
+        report["model_calls"] = 1 if not is_real else 0
         try:
             proposed = self.planner.plan(question)
             return validate_plan(proposed, question)
         finally:
+            if is_real:
+                report["model_calls"] = self.planner.calls - before_calls
             report["model_usage"] = getattr(self.planner, "last_usage", None)
             report["prompt_ms"] = getattr(self.planner, "last_prompt_ms", None)
             report["inference_ms"] = getattr(self.planner, "last_inference_ms", None)
@@ -440,7 +446,7 @@ class ResearchComparator:
             "original_question_preserved": True,
             "search_queries": [], "per_query": [], "candidates": [],
             "documents": [], "excluded": [],
-            "model_calls": 0, "model_usage": None,
+            "model_calls": 0, "planning_attempts": 0, "model_usage": None,
             "prompt_ms": None, "inference_ms": None,
             "retrieval_ms": None, "end_to_end_ms": None,
             "inference_provenance": "OFFLINE_SYNTHETIC" if synthetic else "NO_LLM",
