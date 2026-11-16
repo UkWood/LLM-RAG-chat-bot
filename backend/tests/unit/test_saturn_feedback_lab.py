@@ -237,6 +237,20 @@ class JournalTests(unittest.TestCase):
         self.assertEqual(existing.stat().st_mode & 0o777, before)
         self.assertFalse((existing / "lab").exists())
 
+    def test_cr01_restart_recovers_completed_hardlink_with_orphan_temp(self):
+        ref = self.start("Crash after atomic hardlink")
+        directory = self.journal._entry_dir(ref.request_id, "lab")
+        original = directory / "request.md"
+        temporary = directory / ".orphan.tmp"
+        os.link(original, temporary)
+        self.assertEqual(original.stat().st_nlink, 2)
+        restored = MarkdownFeedbackJournal(self.root)
+        item = restored.get_entry(ref.request_id)
+        self.assertEqual(item["request"]["question"],
+                         "Crash after atomic hardlink")
+        self.assertIsNone(item["answer"])
+        self.assertTrue(temporary.exists())
+
     def test_cr01_unsupported_filesystem_atomic_link_fails_closed(self):
         root = Path(self.temp.name) / "no-hardlinks"
         with patch("saturn_ai.feedback_journal.os.link",
