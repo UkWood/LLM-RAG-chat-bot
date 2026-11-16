@@ -1,7 +1,7 @@
 # Stage 5J — Expert Feedback Lab & Markdown Journal v0.1
 
 **Status:** Coding Session B implementation for independent Architecture Session A review. **NOT PRODUCTION. NO MERGE.**
-**Decision:** A-5J-01, 2026-11-16.
+**Decisions:** A-5J-01 (implementation), A-5J-02 (acceptance corrections), 2026-11-16.
 **Dependency:** Experimental PR #32, pinned starting commit 28d49256020722d737fd6097e2778af4c55926e8. A stacked PR targets branch feat/saturn-real-corpus-llm-validation-v0.1; PR #32 remains untouched.
 
 ## Purpose and implementation
@@ -13,9 +13,10 @@ No database or ORM, no extra LLM review analysis, no automatic correction, no fa
 ## Linux startup (separate validation)
 
 1. Check reviewed Stage 5J stacked branch, pinned source revision and locked requirements (backend/requirements.lock). Configure the existing GitHub Snapshot Provider environment as for Stage 5F.
-2. Run the existing llama.cpp Qwen3-4B Q4_K_M model on Windows. Use the previously accepted SSH reverse forwarding so Linux can reach it **only** at http://127.0.0.1:11435/v1/chat/completions. Model SHA-256 must be the real local weight digest, NOT a guessed hash; it is declared, not server-verified.
-3. Select an **absolute**, writable root outside Git (example: /home/uk/feedback-journal). Do not use a directory below the repository.
-4. Start with all three explicit opt-ins (code revision is taken from Git HEAD):
+2. **Start Windows llama-server first**, using the already pinned Qwen3-4B GGUF Q4_K_M model. The verified model ID is `qwen3-4b-q4km` and the declared local GGUF SHA-256 is `7485fe6f11af29433bc51cab58009521f205840f5b4ae3a32fa7f92e8534fdf5`. Do not change the existing generation parameters or `SaturnLocalClaimProvider` configuration.
+3. **Establish the previously approved SSH reverse forwarding** before launching the Linux lab. Its model endpoint must be reachable exclusively on Linux loopback: `http://127.0.0.1:11435/v1/chat/completions`. Do not open a LAN listener or expose the Windows model service.
+4. Select an **absolute** journal root outside **every Git worktree**, including NEW RAG and the trusted site checkout. Use a dedicated owner-only POSIX directory; for a new directory, run `umask 077; mkdir -m 700 /home/uk/feedback-journal` and verify `stat -c '%a %U' /home/uk/feedback-journal` reports mode `700` and the lab process owner. Existing root, channel, date/request and review directories must also be owned by that user with private permissions. The component **rejects** unsafe existing directories and never chmods them automatically. Avoid network filesystems that do not provide POSIX owner, permission and atomic-link guarantees.
+5. Start with all three explicit opt-ins (Git code revision is taken from HEAD). Stage 5F pinned Knowledge Snapshot and the four pinned PDF documents are loaded/verified **once during laboratory startup**, before HTTP begins serving:
 
 ~~~bash
 PYTHONPATH=backend/src python -m saturn_ai.feedback_lab \
@@ -23,8 +24,8 @@ PYTHONPATH=backend/src python -m saturn_ai.feedback_lab \
   --allow-development-pdf-worker \
   --allow-local-inference \
   --journal-root /home/uk/feedback-journal \
-  --local-model-id Qwen3-4B \
-  --local-model-sha256 ACTUAL_64_HEX_DIGEST
+  --local-model-id qwen3-4b-q4km \
+  --local-model-sha256 7485fe6f11af29433bc51cab58009521f205840f5b4ae3a32fa7f92e8534fdf5
 ~~~
 
 Open http://127.0.0.1:8765/ locally. HTTP port may be changed with --port but bind address cannot change. Do not open to LAN, modify Windows Firewall or add public endpoints.
@@ -39,7 +40,7 @@ PYTHONPATH=backend/src python -m unittest discover -s backend/tests -v
 python scripts/verify_offline.py
 ~~~
 
-Unit tests inject a deterministic question runner to test boundaries offline. They are not evidence of live Qwen inference or model quality; this requires Linux Validation Session tests.
+Unit tests inject a deterministic question runner to test boundaries offline. **Coding Session B did not run or verify real Qwen inference**; Linux Validation Session must independently check live-model operation and quality. The configured `declared_model_sha256` is a digest of the named local GGUF file supplied by the operator, **not** a cryptographic server attestation that llama-server loaded those weights.
 
 ## Append-only Markdown format v1
 
@@ -64,7 +65,7 @@ Each file has UTF-8 Markdown front matter using one JSON-encoded value per line 
 
 Reviews are separate immutable events. Derived state is unreviewed until explicit Save Assessment, accepted only after explicit save with empty/whitespace comment, commented after explicit save with nonempty comment. Commented does not mean incorrect. Production reviews are unavailable in v0.1 and production requests always stay unreviewed.
 
-The implementation writes a new exclusive temporary file in the same directory, flushes and fsyncs, atomically creates the final name via a hard link that never overwrites an existing file, fsyncs the directory and removes the temporary file. It durably writes request.md **before** inference. If processing ends abruptly, request.md remains and answer.md is missing. The interface marks this incomplete, not successful. Failed writes return explicit errors. UUID-based ID isolation supports simultaneous requests without filename collisions.
+The journal root is preflight-checked before creating a record: original path components (pre-resolution) must not be symlinks, and neither a normal nor a linked Git worktree is permitted. The trusted-site checkout is excluded. Journal directories (root, lab, production, year/month/day, request and reviews) must belong to the process owner and have owner-only `0700` access; existing Markdown files must be owner-only regular files. Unsafe existing paths cause startup or per-operation rejection, **without automatic chmod**. The implementation writes a new exclusive `0600` temporary file in the same directory, flushes and fsyncs, atomically creates the final name via a hard link that never overwrites an existing file, fsyncs the directory and removes the temporary file. It durably writes request.md **before** inference. If processing ends abruptly, request.md remains and answer.md is missing. The interface marks this incomplete, not successful. Failed writes return explicit errors. UUID-based ID isolation supports simultaneous requests without filename collisions.
 
 ### Synthetic example — NOT real Saturn corpus/model evidence
 
@@ -92,11 +93,12 @@ A synthetic matching answer.md would include status "needs_support", answer_text
 
 - IPv4 listener always bound to 127.0.0.1. Exact HTTP Host check, exact Origin and process-random X-Lab-CSRF token on mutating endpoints, Sec-Fetch-Site validation when present, content-type and body-size limits. No CORS, auth provider, cookies or production API.
 - The browser uses textContent (never innerHTML) to show all user and RAG text. Source links are restricted to HTTP(S), rel=noopener noreferrer. CSP, no-store, no-referrer, anti-framing, nosniff headers apply.
-- UUID and channel validation, path containment, symlink refusal, exclusive writes, strict sizes and structured parsing. Suspected credential strings are rejected (not journaled). Screening cannot guarantee full discovery of secrets: **never submit tokens, passwords, private keys, SSH configuration or HTTP Authorization headers**.
+- UUID and channel validation, Git-worktree exclusion, owner/private-permission checks on all journal components, path containment, symlink refusal, exclusive writes, strict sizes and structured parsing. Suspected credential strings are rejected (not journaled). Screening cannot guarantee full discovery of secrets: **never submit tokens, passwords, private keys, SSH configuration or HTTP Authorization headers**.
 - Incoming IP, cookies, User-Agent and authorization values are not persisted. HTTP raw requests are not logged. Only chosen expert pseudonyms are stored in lab review events. Runtime exception messages are not retained; error codes only.
-- JSON export reconstructs exact metadata from Markdown; CSV prefix-escapes formulas when cells may start (after leading whitespace) with =, +, - or @, or control characters. CSV escaping is for export only.
+- JSON and CSV export both use **full enumeration** of the same channel and review-status filter (no silent 10,000-row cap). Each reconstructs data from immutable Markdown, not a secondary database. CSV prefix-escapes formulas when cells may start (after leading whitespace) with =, +, - or @, or control characters. CSV escaping is for export only.
 - Production retention days and deletion-policy configuration live in the journal component; no deletion job runs in v0.1, no automatic lab cleanup. Production HTTP, LAN, multiuser authentication, HTTPS, privacy/consent and deletion scheduling need separate approval.
-- The single-user prototype assumes OS permissions protect its journal directory. It is not a hardened multiuser application.
+- Stage 5J is designed for a **small number of laboratory requests**. Startup performs a full on-disk security scan. Browsing/listing and full JSON/CSV exports enumerate and parse all journal records, with O(number of files) filesystem work plus sort and memory costs; larger journals will have increasing latency and memory usage. Before production, independently design bounded/lazy enumeration and scalable privacy-preserving storage access. **No index database, cache service, search server, or new storage subsystem is introduced in PR #34.**
+- The single-user prototype assumes the Linux filesystem and OS permissions protect its journal directory. It is not a hardened multiuser application.
 
 ## Linux Validation Session — independent evidence required
 
@@ -107,7 +109,7 @@ A synthetic matching answer.md would include status "needs_support", answer_text
 5. Run **real** Qwen through the approved SSH reverse tunnel. Ask representative supported/unsupported questions; inspect exact answer status, citations, provenance, declared model SHA and local inference diagnostics. No Fake provider/cloud fallback.
 6. Deliberately stop the tunnel/model and observe technical failure as error, not a false success. Interrupt a request; check orphan request.md is retained.
 7. Save explicit blank and nonblank reviews; check accepted/commented/unreviewed transitions and preservation of all review events.
-8. Restart the lab; reconstruct history solely from Markdown. Check restrictive filesystem modes and path outside Git.
+8. Restart the lab; reconstruct history solely from Markdown. Verify owner/private modes (directories 0700, journal files 0600), raw-symlink rejection, and path outside **all** Git worktrees (including trusted-site checkout).
 9. Export JSON/CSV and compare back to source records, including formula-like input. Confirm no authorization headers or visitor identifiers are stored.
 10. Submit Linux report with source and model identities, true inference evidence, sanitized journal examples, failures, measured durations, HEAD and CI. Offline tests alone do **not** mean Stage 5J is accepted.
 
