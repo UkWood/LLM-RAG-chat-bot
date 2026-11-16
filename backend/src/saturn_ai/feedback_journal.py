@@ -14,6 +14,7 @@ import json
 import os
 from pathlib import Path
 import re
+import time
 import uuid
 
 SCHEMA_VERSION = 1
@@ -51,7 +52,11 @@ class RequestRef:
 
 
 def _utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+    # Nanosecond timestamp reduces accidental ties between immutable review
+    # events created within a single millisecond.
+    seconds, nanoseconds = divmod(time.time_ns(), 1_000_000_000)
+    date = datetime.fromtimestamp(seconds, timezone.utc)
+    return date.strftime("%Y-%m-%dT%H:%M:%S") + f".{nanoseconds:09d}Z"
 
 
 def _valid_text(value, *, label: str, limit: int, nonempty=False) -> str:
@@ -280,6 +285,8 @@ class MarkdownFeedbackJournal:
             code_revision=code_revision, policy_revision=answer.get("policy_revision"),
             model_id=model_id, declared_model_sha256=model_sha256,
             model_digest_server_verified=False, citations=citations,
+            statements=answer.get("statements", []),
+            question_sha256=answer.get("question_sha256"),
             diagnostics=diagnostics, unresolved_need_ids=answer.get("unresolved_need_ids", []),
             answer_text=text, technical_error=error_code,
             stage_trace=outcome.get("stage_trace", {}),
@@ -299,6 +306,9 @@ class MarkdownFeedbackJournal:
         directory = self._entry_dir(request_id, channel)
         if not (directory / "answer.md").is_file():
             raise JournalError("answer_not_ready")
+        answer = self._read(directory / "answer.md")
+        if answer.get("request_id") != request_id or answer.get("record_type") != "answer":
+            raise JournalError("answer_identity_mismatch")
         decision = "commented" if comment.strip() else "accepted"
         review_id = uuid.uuid4().hex
         event = dict(schema_version=SCHEMA_VERSION, record_type="review",
@@ -326,6 +336,14 @@ class MarkdownFeedbackJournal:
         request = self._read(directory / "request.md")
         answer_file = directory / "answer.md"
         answer = self._read(answer_file) if answer_file.is_file() else None
+        if (request.get("record_type") != "request" or
+                request.get("request_id") != request_id or
+                request.get("channel") != channel):
+            raise JournalError("request_identity_mismatch")
+        if answer is not None and (answer.get("record_type") != "answer" or
+                                   answer.get("request_id") != request_id or
+                                   answer.get("channel") != channel):
+            raise JournalError("answer_identity_mismatch")
         reviews = []
         if channel == "lab":
             for path in (directory / "reviews").glob("*.md"):
