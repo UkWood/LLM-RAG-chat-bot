@@ -268,7 +268,8 @@ class JournalTests(unittest.TestCase):
     def test_cr01_unsafe_intermediate_directory_is_rejected(self):
         root = Path(self.temp.name) / "nested-journal"
         journal = MarkdownFeedbackJournal(root)
-        year = root / "lab" / "2026"
+        from datetime import datetime, timezone
+        year = root / "lab" / datetime.now(timezone.utc).strftime("%Y")
         year.mkdir(mode=0o700)
         os.chmod(year, 0o775)
         with self.assertRaises(JournalError):
