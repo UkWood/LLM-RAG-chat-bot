@@ -359,11 +359,11 @@ class MarkdownFeedbackJournal:
                     review_status=(reviews[-1]["decision"] if reviews else "unreviewed"))
 
     def list_entries(self, *, channel: str = "lab",
-                     status: str | None = None, limit: int = 100) -> list[dict]:
+                     status: str | None = None, limit: int | None = 100) -> list[dict]:
         channel = self._channel(channel)
         if status is not None and status not in ("accepted", "commented", "unreviewed"):
             raise ValueError("invalid_review_filter")
-        if type(limit) is not int or not 1 <= limit <= 10000:
+        if limit is not None and (type(limit) is not int or not 1 <= limit <= 10000):
             raise ValueError("invalid_limit")
         paths = list((self.root / channel).glob("*/*/*/*/request.md"))
         entries = []
@@ -373,11 +373,11 @@ class MarkdownFeedbackJournal:
                 entries.append(item)
         entries.sort(key=lambda x: (x["request"]["received_at_utc"],
                                     x["request"]["request_id"]), reverse=True)
-        return entries[:limit]
+        return entries if limit is None else entries[:limit]
 
     def export_json(self, *, channel: str = "lab",
                     status: str | None = None) -> str:
-        return json.dumps(self.list_entries(channel=channel, status=status, limit=10000),
+        return json.dumps(self.list_entries(channel=channel, status=status, limit=None),
                           ensure_ascii=False, indent=2, sort_keys=True) + "\n"
 
     def export_csv(self, *, channel: str = "lab",
