@@ -708,16 +708,26 @@ class ResearchComparator:
         report["end_to_end_ms"] = round((perf_counter() - started) * 1000, 3)
         return report
 
-    def run(self, cases: tuple[dict, ...], variants=("A", "B", "C", "D"),
-            *, synthetic: bool = False) -> dict:
+    def iter_arms(self, cases: tuple[dict, ...],
+                  variants=("A", "B", "C", "D"), *, synthetic: bool = False):
+        """Yield each completed arm immediately; CLI must persist before next."""
         if len(cases) > 60 or len({c["case_id"] for c in cases}) != len(cases):
             raise ExperimentError("case_budget_or_identity")
-        if not variants or any(v not in VARIANTS for v in variants):
+        if not variants or len(set(variants)) != len(variants) or any(
+                v not in VARIANTS for v in variants):
             raise ExperimentError("invalid_variants")
-        results = [self.run_arm(case, variant, synthetic=synthetic)
-                   for case in cases for variant in variants]
-        expected = {(case["case_id"], variant) for case in cases for variant in variants}
-        if {(r["case_id"], r["variant"]) for r in results} != expected:
+        for case in cases:
+            for variant in variants:
+                yield self.run_arm(case, variant, synthetic=synthetic)
+
+    def summarize_results(self, cases, variants, results, *, synthetic=False):
+        """No inference or retrieval; summarize only already durable rows."""
+        results = tuple(results)
+        expected = {(case["case_id"], variant)
+                    for case in cases for variant in variants}
+        actual = [(r["case_id"], r["variant"]) for r in results]
+        if len(actual) != len(expected) or len(set(actual)) != len(actual) or (
+                set(actual) != expected):
             raise ExperimentError("incomplete_paired_comparison")
         e4b = {
             "kind": "search_only",
@@ -767,5 +777,13 @@ class ResearchComparator:
                     r["inference_provenance"] == "LOCAL_QWEN_RESPONSE_VALIDATED"
                     for r in results) else "NOT_CONFIRMED"),
             "E4B": e4b, "E5B": e5b,
-            "results": results,
+            "results": list(results),
         }
+
+    def run(self, cases: tuple[dict, ...], variants=("A", "B", "C", "D"),
+            *, synthetic: bool = False) -> dict:
+        # Compatibility for offline unit tests. Live CLI uses iter_arms().
+        return self.summarize_results(
+            cases, variants, self.iter_arms(cases, variants, synthetic=synthetic),
+            synthetic=synthetic,
+        )
