@@ -16,6 +16,7 @@ from .stage5k_contract import (
     BASELINE_BUNDLE_ID, COMPARATOR_REVISION, CORPUS_HASH, DATASET_SHA256,
     D_PREREQUISITE_REVISION, ENDPOINT, ExperimentError, FUSION_REVISION,
     MAX_PROMPT_BYTES, MAX_QUERY_EXPANSIONS, MAX_QUERY_CHARS, MAX_RESPONSE_BYTES,
+    MAX_NEEDS,
     MAX_TOKENS, MODEL_ID, MODEL_SHA256, MODEL_TIMEOUT_SECONDS, PLAN_KEYS,
     PROMPT_REVISION, PROMPT_SYSTEM, ROUTER_REVISION, RRF_K, SNAPSHOT_ID,
     SOURCE_COMMIT, TOP_K, canonical, design_freeze, literal_identifiers,
@@ -95,11 +96,13 @@ class LocalIntentPlanner:
         self.last_usage = None
         self.last_prompt_ms = None
         self.last_inference_ms = None
+        self.last_outcome = None
 
     def plan(self, question: str) -> dict:
         self.last_usage = None
         self.last_prompt_ms = None
         self.last_inference_ms = None
+        self.last_outcome = "pre_transport"
         start = perf_counter()
         body = {
             "model": MODEL_ID,
@@ -124,6 +127,7 @@ class LocalIntentPlanner:
         self.last_prompt_ms = round((perf_counter() - start) * 1000, 3)
         # Count only attempts actually sent to the loopback transport.
         self.calls += 1
+        self.last_outcome = "provider_failure"
         started = perf_counter()
         try:
             received = _post_loopback(self.config, serialized)
@@ -131,6 +135,9 @@ class LocalIntentPlanner:
             raise ExperimentError("planner_provider_" + exc.code) from None
         finally:
             self.last_inference_ms = round((perf_counter() - started) * 1000, 3)
+        # From here on response/schema errors count as rejected plans,
+        # not transport failures (no validated plan was returned).
+        self.last_outcome = "plan_rejected"
         if len(received) > MAX_RESPONSE_BYTES:
             raise ExperimentError("planner_response_limit")
         response = strict_json(received)
@@ -153,6 +160,7 @@ class LocalIntentPlanner:
                         and type(value) is int and value >= 0
                         for key, value in usage.items())):
             self.last_usage = dict(usage)
+        self.last_outcome = "validated"
         return plan
 
 
@@ -440,7 +448,8 @@ class EphemeralDIndex:
 
 class ResearchComparator:
     def __init__(self, stand, *, planner=None, policy_provider=None,
-                 d_index=None, test_only_service=None):
+                 d_index=None, test_only_service=None,
+                 d_preparation_reason="encoder_not_provided"):
         if test_only_service is None:
             verify_stand(stand)
             if planner is not None and type(planner) is not LocalIntentPlanner:
@@ -458,6 +467,7 @@ class ResearchComparator:
         self.records = {r.evidence_id: r for r in stand.bundle.records}
         self.planner = planner
         self.d_index = d_index
+        self.d_preparation_reason = d_preparation_reason
 
     def _policy(self):
         p = self.policy_provider.capture()
@@ -503,16 +513,34 @@ class ResearchComparator:
     def _planned(self, question: str, report: dict) -> dict:
         if self.planner is None:
             raise ExperimentError("planner_not_available")
-        report["planning_attempts"] = 1
+        report["planning_attempts"] += 1
         is_real = type(self.planner) is LocalIntentPlanner
         before_calls = self.planner.calls if is_real else None
-        report["model_calls"] = 1 if not is_real else 0
+        # Test-injected deterministic planners are not real HTTP requests.
+        # Keep legacy model_calls for backwards-compatible test diagnostics.
+        report["model_calls"] = 0 if is_real else 1
         try:
             proposed = self.planner.plan(question)
-            return validate_plan(proposed, question)
+            verified = validate_plan(proposed, question)
+            report["validated_plans"] += 1
+            return verified
+        except Exception:
+            if is_real:
+                kind = self.planner.last_outcome
+                if kind == "provider_failure":
+                    report["provider_failures"] += 1
+                elif kind in ("plan_rejected", "validated"):
+                    report["rejected_plans"] += 1
+                else:
+                    report["pre_transport_failures"] += 1
+            else:
+                report["rejected_plans"] += 1
+            raise
         finally:
             if is_real:
-                report["model_calls"] = self.planner.calls - before_calls
+                actual = self.planner.calls - before_calls
+                report["model_requests_sent"] += actual
+                report["model_calls"] = actual
             report["model_usage"] = getattr(self.planner, "last_usage", None)
             report["prompt_ms"] = getattr(self.planner, "last_prompt_ms", None)
             report["inference_ms"] = getattr(self.planner, "last_inference_ms", None)
@@ -547,14 +575,19 @@ class ResearchComparator:
             "final_answer_accuracy": NOT_MEASURED,
             "original_question_preserved": True,
             "search_queries": [], "per_query": [], "candidates": [],
-            "documents": [], "excluded": [],
-            "model_calls": 0, "planning_attempts": 0, "model_usage": None,
+            "documents": [], "excluded": [], "excluded_documents": [],
+            "entity_resolution": [],
+            "model_calls": 0, "planning_attempts": 0,
+            "model_requests_sent": 0, "validated_plans": 0,
+            "rejected_plans": 0, "provider_failures": 0,
+            "pre_transport_failures": 0, "model_usage": None,
             "prompt_ms": None, "inference_ms": None,
             "retrieval_ms": None, "end_to_end_ms": None,
             "inference_provenance": "OFFLINE_SYNTHETIC" if synthetic else "NO_LLM",
         }
         if variant == "D" and self.d_index is None:
             report["status"] = D_NOT_RUN
+            report["d_prerequisite_reason"] = self.d_preparation_reason
             report["inference_provenance"] = "NO_EMBEDDING_RUN"
             report["end_to_end_ms"] = round((perf_counter() - started) * 1000, 3)
             return report
@@ -571,6 +604,8 @@ class ResearchComparator:
                 phase = "planning"
                 preplanned = self._planned(question, report)
                 report["intent_plan"] = preplanned
+                report["entity_resolution"] = resolve_entity_mentions(
+                    preplanned["entity_mentions"], self.stand.snapshot, policy)
                 report["inference_provenance"] = (
                     "OFFLINE_SYNTHETIC" if synthetic else "LOCAL_QWEN_RESPONSE_VALIDATED")
             phase = "retrieval"
@@ -624,10 +659,13 @@ class ResearchComparator:
                         phase = "planning"
                         plan = self._planned(question, report)
                         report["intent_plan"] = plan
+                        report["entity_resolution"] = resolve_entity_mentions(
+                            plan["entity_mentions"], self.stand.snapshot, policy)
                         report["inference_provenance"] = (
                             "OFFLINE_SYNTHETIC" if synthetic else "LOCAL_QWEN_RESPONSE_VALIDATED")
                     phase = "retrieval"
                     groups = [original]
+                    doc_groups = [original_docs]
                     for expansion in plan["suggested_search_queries"]:
                         t0 = perf_counter()
                         candidates, documents = self._search(expansion, policy)
@@ -640,7 +678,10 @@ class ResearchComparator:
                             "candidates": candidates, "documents": documents,
                         })
                         groups.append(candidates)
+                        doc_groups.append(documents)
                     report["candidates"], report["excluded"] = fuse_ranked(groups)
+                    report["documents"], report["excluded_documents"] = (
+                        fuse_documents(doc_groups))
                     report["status"] = (
                         "CANDIDATES_RETRIEVED" if report["candidates"]
                         else "NO_ELIGIBLE_EVIDENCE")
@@ -662,6 +703,7 @@ class ResearchComparator:
             report["per_query"] = []
             report["search_queries"] = []
             report["excluded"] = []
+            report["excluded_documents"] = []
             report["retrieval_ms"] = round(elapsed_retrieval, 3)
         report["end_to_end_ms"] = round((perf_counter() - started) * 1000, 3)
         return report
@@ -692,8 +734,16 @@ class ResearchComparator:
             "kind": "intent_understanding",
             "A": NOT_MEASURED, "D": NOT_MEASURED,
             "intent_accuracy": NOT_MEASURED,
-            "B_plan_attempts": sum(r["model_calls"] for r in results if r["variant"] == "B"),
-            "C_plan_attempts": sum(r["model_calls"] for r in c_reports),
+            "B_plan_attempts": sum(r["planning_attempts"] for r in results if r["variant"] == "B"),
+            "C_plan_attempts": sum(r["planning_attempts"] for r in c_reports),
+            "model_request_counts": {
+                variant: {
+                    key: sum(r[key] for r in results if r["variant"] == variant)
+                    for key in (
+                        "planning_attempts", "model_requests_sent", "validated_plans",
+                        "rejected_plans", "provider_failures", "pre_transport_failures")
+                } for variant in VARIANTS if variant in variants
+            },
             "C_fast_path_count": sum(
                 (r["route"] or {}).get("route") == "fast" for r in c_reports),
             "C_route_observation": (
