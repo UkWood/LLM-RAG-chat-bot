@@ -108,7 +108,11 @@ def question_parts(question: str) -> tuple[str, ...]:
         bit.strip() for bit in re.split(r"(?:[?;]|\s+и\s+)", question)
         if bit.strip()
     ]
-    return tuple(parts[:MAX_NEEDS]) if len(parts) <= MAX_NEEDS else (question,)
+    if len(parts) > MAX_NEEDS:
+        # Fail closed. Packing seven independent demands into one full-length
+        # need would incorrectly report a valid six-need planner result.
+        raise ExperimentError("question_parts_budget_exceeded")
+    return tuple(parts)
 
 
 def literal_identifiers(question: str) -> tuple[str, ...]:
