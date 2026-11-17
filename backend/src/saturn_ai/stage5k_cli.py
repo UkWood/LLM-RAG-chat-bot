@@ -237,17 +237,93 @@ def _read_license(path: Path | None):
     return strict_json(raw, maximum=16000)
 
 
+def _d_review_is_approved(review) -> bool:
+    keys = {"approval_status", "reviewer", "license", "source_url",
+            "model_sha256", "tokenizer_sha256"}
+    if type(review) is not dict or set(review) != keys:
+        return False
+    if review.get("approval_status") != "APPROVED":
+        return False
+    if any(type(review.get(k)) is not str or not review[k].strip()
+           or len(review[k]) > 1000
+           for k in ("reviewer", "license", "source_url")):
+        return False
+    if not review["source_url"].startswith("https://"):
+        return False
+    return all(type(review.get(k)) is str and
+               re.fullmatch(r"[0-9a-f]{64}", review[k])
+               for k in ("model_sha256", "tokenizer_sha256"))
+
+
+def _d_artifact_identity(directory: Path, review: dict) -> str:
+    """Read-only, bounded preflight; never download or fix model artifacts."""
+    import hashlib
+    from .stage5k_contract import strict_json
+    try:
+        raw = (directory / "manifest.json").read_bytes()
+        if len(raw) > 16000:
+            return "encoder_contract_invalid"
+        manifest = strict_json(raw, maximum=16000)
+    except (OSError, ExperimentError):
+        return "encoder_contract_invalid"
+    if type(manifest) is not dict or any(
+            type(manifest.get(k)) is not str or
+            not re.fullmatch(r"[0-9a-f]{64}", manifest[k])
+            for k in ("model_sha256", "tokenizer_sha256")):
+        return "encoder_contract_invalid"
+    for filename, field, maximum in (
+            ("model.onnx", "model_sha256", 2_000_000_000),
+            ("tokenizer.json", "tokenizer_sha256", 20_000_000)):
+        if manifest[field] != review[field]:
+            return "encoder_identity_mismatch"
+        try:
+            p = directory / filename
+            if p.is_symlink() or not p.is_file() or p.stat().st_size > maximum:
+                return "encoder_identity_mismatch"
+            digest = hashlib.sha256()
+            size = 0
+            with p.open("rb") as stream:
+                for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                    size += len(chunk)
+                    if size > maximum:
+                        return "encoder_identity_mismatch"
+                    digest.update(chunk)
+            if digest.hexdigest() != manifest[field]:
+                return "encoder_identity_mismatch"
+        except OSError:
+            return "encoder_identity_mismatch"
+    return "identity_verified"
+
+
 def _prepare_d(stand, *, encoder_dir, license_review, allow_onnx):
-    if not allow_onnx or encoder_dir is None or license_review is None:
-        return None, D_NOT_RUN
+    """Fail-closed, safe reason codes. No fabricated semantic D results."""
+    if not allow_onnx or encoder_dir is None:
+        return None, D_NOT_RUN, "encoder_not_provided"
+    if license_review is None:
+        return None, D_NOT_RUN, "license_not_approved"
     try:
         review = _read_license(license_review)
+    except (ExperimentError, OSError):
+        return None, D_NOT_RUN, "license_not_approved"
+    if not _d_review_is_approved(review):
+        return None, D_NOT_RUN, "license_not_approved"
+    identity = _d_artifact_identity(Path(encoder_dir), review)
+    if identity != "identity_verified":
+        return None, D_NOT_RUN, identity
+    try:
         from .retrieval.embeddings import LocalONNXEncoder
         encoder = LocalONNXEncoder(Path(encoder_dir))
+        if (type(encoder) is not LocalONNXEncoder or
+                encoder.identity.get("model_sha256") != review["model_sha256"]
+                or encoder.identity.get("tokenizer_sha256") != review["tokenizer_sha256"]):
+            return None, D_NOT_RUN, "encoder_contract_invalid"
+    except (ValueError, TypeError, ImportError, OSError):
+        return None, D_NOT_RUN, "encoder_contract_invalid"
+    try:
         index = EphemeralDIndex(stand, encoder, review)
-        return index, "D_READY_IN_MEMORY"
-    except (ExperimentError, ValueError, OSError, ImportError):
-        return None, D_NOT_RUN
+    except (ExperimentError, ValueError, TypeError, RuntimeError, OSError):
+        return None, D_NOT_RUN, "index_build_failed"
+    return index, "D_READY_IN_MEMORY", "identity_and_license_verified"
 
 
 def _iter_offline_arms(cases, variants):
