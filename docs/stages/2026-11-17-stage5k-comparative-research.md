@@ -100,3 +100,78 @@ A separate versioned independent specialist annotation file must contain dataset
 Until independent labels exist, **intent accuracy, evidence hit@5/@10, recall, final-answer accuracy and architecture ranking = NOT_MEASURED**. Current Stage 5B supports a limited structured grammar; Stage 5C/5D do not entail arbitrary natural-language statements from PDF text. The experiment does NOT repair those production contracts. Stage 4B real semantic retrieval remains an open architecture issue until real D comparison or a separately approved evidence-based rejection.
 
 **Gate R0: independent code/CI acceptance. Gate R1: Linux evidence. Gate R2: human validation. Gate R3: separate future architecture decisions and production PRs. NO MERGE.**
+
+## A-5K-06 — R0 corrections and precise run semantics
+
+**CR-01: incremental durability.** The local/offline CLI uses the per-arm
+iterators and persists EACH terminal (case_id, variant) observation
+BEFORE invoking the next arm. Markdown sidecar is created first and an
+atomic canonical JSON file is the commit marker. An immutable run manifest
+is recorded before execution with status INCOMPLETE and the full ordered
+expected case/variant/question-SHA256 set. Final summary is appended with
+status COMPLETE only when all pairs have both files and restart inspection
+confirms no partial, corrupt, unexpected or missing records. A crash after
+the last arm but before final summary STILL means INCOMPLETE. Write
+failures are explicit, without overwrite or silent truncation.
+
+Read-only restart inspection (no Qwen, no source fetch, no retry):
+
+    PYTHONPATH=backend/src python -m saturn_ai.stage5k_cli \
+      --inspect-run RUN_UUID \
+      --output-root "$HOME/stage5k-research"
+
+It returns expected/completed counts, missing/partial/corrupt/unknown
+pair lists, summary state and INCOMPLETE until fully proven. Exit status
+3 means incomplete. New executions always allocate NEW run UUIDs;
+there is NO automatic resume or inference retry and no mutation of
+previous run files. A forced-interruption-after-three-arms regression
+starts a second Python process to inspect immutable survivors.
+
+**CR-02: multipart budget.** Seven or more separate question parts fail
+closed with question_parts_budget_exceeded rather than being packed into
+one nominal need. The verbatim question/hash remain unchanged.
+
+**CR-03: document metadata.** B/C independently fuse original and
+additional-query document results by deterministic rank-only RRF.
+Final document records retain document_id, source_url, metadata content
+hash, PDF revision identity, original query index/rank and fused rank.
+The independent top-10 document budget has excluded_documents with
+reason. Metadata is navigation, NEVER verified engineering fact evidence.
+
+**CR-04: counters.** Record separately planning_attempts,
+model_requests_sent, validated_plans, rejected_plans, provider_failures
+and pre_transport_failures. Requests count actual invocations of the
+loopback transport function (including connection failure), not
+pre-transport plan rejections. A too-large prompt contributes one
+planning attempt but ZERO model transport requests. Invalid returned
+plan contributes rejected_plans; transport failure contributes
+provider_failures. The prior model_calls key remains for compatibility.
+Token usage unavailable from server stays null, and quality stays
+NOT_MEASURED; zeros are reserved for actually measured counters.
+Injected test planners do not attest live Qwen.
+
+**CR-05: D categories.** The overarching D status remains
+D_NOT_RUN_PREREQUISITES_MISSING when no real pinned index was built.
+D_prerequisite_reason (run summary) and d_prerequisite_reason (D arm)
+distinguish encoder_not_provided, license_not_approved,
+encoder_identity_mismatch (review, artifact or hashes),
+encoder_contract_invalid (ONNX/manifest/runtime), and
+index_build_failed (index execution). Only a truly valid local
+encoder+approved license+in-memory index yields D_READY_IN_MEMORY.
+Errors never include full exception text, secret data or paths.
+Not-ready D cannot be judged as defeated or as zero recall.
+
+**CR-06: deterministic entity identity.** Keep LLM entity_mentions as
+untrusted literal proposals; separately check exact source-declared
+entity_id/title/slug/designation/model/aliases in pinned Snapshot with
+the frozen operational policy. Diagnostics are resolved (unique eligible
+exact identity), ambiguous (multiple exact), not_in_scope (blocked
+entity or unknown model designation in bounded Stage 5F), or
+unresolved (unmatched unstructured text). There is no fuzzy winner,
+fake entity ID, or claim that absence from 5F means absence from the
+entire Saturn website. Scope explicitly recorded as
+bounded_stage5f_snapshot_not_full_site.
+
+The original 60-question JSON and its original SHA-256 remain
+UNCHANGED; R0 code/CI acceptance is distinct from not-yet-run R1
+Linux/Qwen and independent R2 human annotations.
