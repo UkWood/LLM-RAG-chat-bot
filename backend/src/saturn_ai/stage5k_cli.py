@@ -103,19 +103,125 @@ class ResearchJournal:
         finally:
             temp.unlink(missing_ok=True)
 
+    @staticmethod
+    def _render_markdown(value: dict) -> bytes:
+        # Render deterministic sidecar. Tilde fence cannot be ended by data.
+        body = json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True)
+        max_run = max((len(m.group()) for m in re.finditer(r"~+", body)),
+                      default=0)
+        fence = "~" * max(4, max_run + 1)
+        return ("# Stage 5K research observation\n\n" + fence + "json\n"
+                + body + "\n" + fence + "\n").encode("utf-8")
+
     def record(self, name: str, value: dict, *, markdown: bool = True) -> None:
+        # Sidecar first, canonical JSON LAST as an atomic per-arm commit marker.
+        # A crash between them remains detectably INCOMPLETE on restart.
         raw = (canonical(value) + "\n").encode("utf-8")
-        self.write(name + ".json", raw)
         if markdown:
-            # Human-readable Markdown without interpreting user-supplied fences.
-            body = json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True)
-            max_run = max((len(m.group()) for m in re.finditer(r"~+", body)),
-                          default=0)
-            fence = "~" * max(4, max_run + 1)
-            self.write(name + ".md", (
-                "# Stage 5K research observation\n\n"
-                + fence + "json\n" + body + "\n" + fence + "\n"
-            ).encode("utf-8"))
+            self.write(name + ".md", self._render_markdown(value))
+        self.write(name + ".json", raw)
+
+    @classmethod
+    def inspect_run(cls, root: Path, run_id: str) -> dict:
+        """Read-only restart reconstruction. NEVER resumes/retries inference."""
+        if not re.fullmatch(r"[0-9a-f]{32}", run_id):
+            raise ExperimentError("invalid_run_id")
+        path = Path(root).expanduser()
+        _raw_path_checked(path)
+        _outside_all_git_worktrees(path)
+        _private_entry(path, require_directory=True)
+        run_root = path / ("run-" + run_id)
+        _private_entry(run_root, require_directory=True)
+
+        def read_record(prefix):
+            j = run_root / (prefix + ".json")
+            m = run_root / (prefix + ".md")
+            if not j.exists() and not m.exists():
+                return None, "missing"
+            if not j.exists() or not m.exists():
+                return None, "partial"
+            for folder in (j.parent,):
+                _private_entry(folder, require_directory=True)
+            _private_entry(j, require_directory=False)
+            _private_entry(m, require_directory=False)
+            try:
+                from .stage5k_contract import strict_json
+                obj = strict_json(j.read_bytes(), maximum=2_000_000)
+                if type(obj) is not dict or m.read_bytes() != cls._render_markdown(obj):
+                    return None, "corrupt"
+                return obj, "committed"
+            except (OSError, ValueError, ExperimentError, UnicodeError):
+                return None, "corrupt"
+
+        run, run_state = read_record("run")
+        if (run_state != "committed" or run.get("run_id") != run_id or
+                run.get("dataset_sha256") != DATASET_SHA256 or
+                run.get("status") != "INCOMPLETE"):
+            raise ExperimentError("journal_run_manifest_invalid")
+        pairs = run.get("expected_pairs")
+        if type(pairs) is not list or not 1 <= len(pairs) <= 240:
+            raise ExperimentError("journal_expected_pairs_invalid")
+        expected = {}
+        for item in pairs:
+            if (type(item) is not dict or set(item) != {
+                    "case_id", "variant", "question_sha256"} or
+                    not re.fullmatch(r"KQ[0-9]{2}", str(item["case_id"])) or
+                    item["variant"] not in ("A", "B", "C", "D") or
+                    not re.fullmatch(r"[0-9a-f]{64}", str(item["question_sha256"]))):
+                raise ExperimentError("journal_expected_pairs_invalid")
+            key = (item["case_id"], item["variant"])
+            if key in expected:
+                raise ExperimentError("journal_duplicate_expected_pair")
+            expected[key] = item["question_sha256"]
+        completed, partial, missing, corrupt = [], [], [], []
+        for (case_id, variant), digest in expected.items():
+            record, state = read_record("cases/" + case_id + "/" + variant)
+            key = {"case_id": case_id, "variant": variant}
+            if state == "missing":
+                missing.append(key)
+            elif state == "partial":
+                partial.append(key)
+            elif state != "committed" or (
+                    record.get("case_id") != case_id or
+                    record.get("variant") != variant or
+                    record.get("question_sha256") != digest or
+                    sha_text(record.get("question", "")) != digest):
+                corrupt.append(key)
+            else:
+                completed.append(key)
+
+        existing = {
+            (p.parent.name, p.stem)
+            for ext in ("*.json", "*.md")
+            for p in (run_root / "cases").glob("*/" + ext)
+        }
+        unexpected = [
+            {"case_id": key[0], "variant": key[1]}
+            for key in sorted(existing - set(expected))
+        ]
+        summary, summary_state = read_record("summary")
+        whole = not (missing or partial or corrupt or unexpected)
+        correct_summary = (
+            summary_state == "committed" and
+            summary.get("status") == "COMPLETE" and
+            summary.get("run_id") == run_id and
+            summary.get("dataset_sha256") == DATASET_SHA256 and
+            summary.get("expected_case_arm_count") == len(expected) and
+            summary.get("completed_case_arm_count") == len(expected)
+        )
+        return {
+            "run_id": run_id,
+            "status": ("COMPLETE" if whole and correct_summary
+                       else "INCOMPLETE"),
+            "expected_case_arm_count": len(expected),
+            "completed_case_arm_count": len(completed),
+            "missing_pairs": missing, "partial_pairs": partial,
+            "corrupt_pairs": corrupt, "unexpected_pairs": unexpected,
+            "summary_state": summary_state,
+            "reason": ("all_pairs_and_summary_verified" if whole and correct_summary
+                       else "incomplete_or_unverified_records"),
+            "automatic_resume": False,
+        }
 
 
 def _read_license(path: Path | None):
