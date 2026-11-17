@@ -607,7 +607,9 @@ class ResearchComparator:
                 report["entity_resolution"] = resolve_entity_mentions(
                     preplanned["entity_mentions"], self.stand.snapshot, policy)
                 report["inference_provenance"] = (
-                    "OFFLINE_SYNTHETIC" if synthetic else "LOCAL_QWEN_RESPONSE_VALIDATED")
+                    ("LOCAL_QWEN_RESPONSE_VALIDATED"
+                     if not synthetic and type(self.planner) is LocalIntentPlanner
+                     else "OFFLINE_SYNTHETIC"))
             phase = "retrieval"
             t0 = perf_counter()
             original, original_docs = self._search(question, policy)
@@ -662,7 +664,9 @@ class ResearchComparator:
                         report["entity_resolution"] = resolve_entity_mentions(
                             plan["entity_mentions"], self.stand.snapshot, policy)
                         report["inference_provenance"] = (
-                            "OFFLINE_SYNTHETIC" if synthetic else "LOCAL_QWEN_RESPONSE_VALIDATED")
+                            ("LOCAL_QWEN_RESPONSE_VALIDATED"
+                     if not synthetic and type(self.planner) is LocalIntentPlanner
+                     else "OFFLINE_SYNTHETIC"))
                     phase = "retrieval"
                     groups = [original]
                     doc_groups = [original_docs]
