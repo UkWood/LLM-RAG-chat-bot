@@ -185,7 +185,8 @@ class ResearchJournal:
                     record.get("case_id") != case_id or
                     record.get("variant") != variant or
                     record.get("question_sha256") != digest or
-                    sha_text(record.get("question", "")) != digest):
+                    type(record.get("question")) is not str or
+                    sha_text(record["question"]) != digest):
                 corrupt.append(key)
             else:
                 completed.append(key)
