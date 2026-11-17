@@ -220,6 +220,108 @@ def fuse_ranked(groups: list[list[dict]], *, budget: int = TOP_K) -> tuple[list[
     return result, omitted
 
 
+def fuse_documents(groups: list[list[dict]], *, budget: int = TOP_K):
+    """Independent metadata RRF, never technical-answer evidence.
+
+    A later expanded query can discover a document absent in original search.
+    Do not blend document and answer-evidence budgets.
+    """
+    if type(groups) is not list or not 1 <= budget <= TOP_K:
+        raise ExperimentError("invalid_document_fusion")
+    scores = {}
+    originals = {}
+    traces = {}
+    for query_index, group in enumerate(groups):
+        if type(group) is not list or len(group) > TOP_K:
+            raise ExperimentError("invalid_document_fusion")
+        seen = set()
+        for rank, document in enumerate(group, 1):
+            if (type(document) is not dict or
+                    type(document.get("document_id")) is not str or
+                    not document["document_id"] or document.get("rank") != rank or
+                    document["document_id"] in seen):
+                raise ExperimentError("invalid_document_fusion")
+            document_id = document["document_id"]
+            seen.add(document_id)
+            identity = {k: document.get(k) for k in (
+                "document_id", "source_url", "content_sha256", "pdf_revision_id")}
+            if document_id in originals and identity != originals[document_id]:
+                raise ExperimentError("document_fusion_source_drift")
+            originals.setdefault(document_id, identity)
+            scores[document_id] = scores.get(document_id, 0.0) + 1.0 / (RRF_K + rank)
+            traces.setdefault(document_id, []).append({
+                "query_index": query_index, "source_rank": rank,
+                "channel": "document_metadata",
+            })
+    ordered = sorted(scores, key=lambda doc_id: (-scores[doc_id], doc_id))
+    output = [{
+        **originals[doc_id], "rank": new_rank,
+        "rrf_score": round(scores[doc_id], 12),
+        "query_provenance": traces[doc_id],
+        "evidence_role": "document_metadata_only",
+    } for new_rank, doc_id in enumerate(ordered[:budget], 1)]
+    omitted = [{
+        "document_id": doc_id, "reason": "document_top_k_budget",
+        "query_provenance": traces[doc_id],
+    } for doc_id in ordered[budget:]]
+    return output, omitted
+
+
+def resolve_entity_mentions(mentions: list[str], snapshot, policy) -> list[dict]:
+    """Source-declared exact names only; unknown in 5F != absent globally.
+
+    Never promote LLM-proposed IDs, fuzzy similarity or a blocked entity.
+    Stage 5F is deliberately limited and cannot prove site-wide absence.
+    """
+    if type(mentions) is not list or len(mentions) > MAX_NEEDS:
+        raise ExperimentError("entity_mentions_budget")
+    names = {}
+    for entity in snapshot.entities:
+        declared = {entity.entity_id, entity.title, entity.slug}
+        try:
+            front = json.loads(getattr(entity, "raw_frontmatter_json", "{}"))
+        except (ValueError, TypeError):
+            front = {}
+        if type(front) is dict:
+            for key in ("designation", "model", "alias", "aliases"):
+                item = front.get(key)
+                if type(item) is str:
+                    declared.add(item)
+                elif type(item) is list and len(item) <= 64:
+                    declared.update(v for v in item if type(v) is str)
+        for name in declared:
+            if type(name) is str and 0 < len(name) <= 256:
+                names.setdefault(name.strip().casefold(), set()).add(entity.entity_id)
+    entities = {item.entity_id: item for item in snapshot.entities}
+    result = []
+    for mention in mentions:
+        if type(mention) is not str or not mention.strip() or len(mention) > 500:
+            raise ExperimentError("invalid_entity_mention")
+        all_ids = sorted(names.get(mention.strip().casefold(), ()))
+        eligible = [
+            entity_id for entity_id in all_ids
+            if entity_id not in policy.blocked_entity_ids
+            and getattr(entities[entity_id], "source_revision_id", None)
+            not in policy.blocked_source_revision_ids
+        ]
+        if len(eligible) > 1:
+            status, reason, entity_id = "ambiguous", "multiple_exact_source_identifiers", None
+        elif len(eligible) == 1:
+            status, reason, entity_id = "resolved", "unique_exact_source_identity", eligible[0]
+        elif all_ids:
+            status, reason, entity_id = "not_in_scope", "source_identity_blocked_by_policy", None
+        elif literal_identifiers(mention) or any(ch.isdigit() for ch in mention):
+            status, reason, entity_id = "not_in_scope", "no_exact_identity_in_pinned_scope", None
+        else:
+            status, reason, entity_id = "unresolved", "unresolved_textual_mention", None
+        result.append({
+            "mention": mention, "status": status, "reason": reason,
+            "entity_id": entity_id, "eligible_exact_candidate_count": len(eligible),
+            "scope": "bounded_stage5f_snapshot_not_full_site",
+        })
+    return result
+
+
 def select_fast_path(question: str, lexical_candidates: list[dict], snapshot) -> dict:
     """ONLY a source-verified Stage 5B structured-field exact hit is fast."""
     if not lexical_candidates:
