@@ -249,7 +249,14 @@ def _d_review_is_approved(review) -> bool:
            or len(review[k]) > 1000
            for k in ("reviewer", "license", "source_url")):
         return False
-    if not review["source_url"].startswith("https://"):
+    from urllib.parse import urlsplit
+    try:
+        url = urlsplit(review["source_url"])
+        if (url.scheme != "https" or not url.hostname or
+                url.username is not None or url.password is not None or
+                url.query or url.fragment):
+            return False
+    except ValueError:
         return False
     return all(type(review.get(k)) is str and
                re.fullmatch(r"[0-9a-f]{64}", review[k])
