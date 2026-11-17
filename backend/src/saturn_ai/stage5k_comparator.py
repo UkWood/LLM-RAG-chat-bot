@@ -411,17 +411,21 @@ class EphemeralDIndex:
         self.records = records
         self.encoder = encoder
         self.vectors = tuple(_normalize(v, encoder.dimensions) for v in raw)
+        review_digest = sha_text(canonical(license_record))
         self.index_id = sha_text(canonical({
             "revision": D_PREREQUISITE_REVISION,
             "snapshot_id": stand.snapshot.snapshot_id,
             "corpus_hash": stand.snapshot.manifest.corpus_hash,
             "encoder": identity,
-            "license_review": license_record,
+            "license_review_sha256": review_digest,
             "record_ids": [r.evidence_id for r in records],
             "record_hashes": [r.text_hash for r in records],
         }))
+        # Never publish arbitrary reviewer/license fields or source URLs
+        # from the local file in exported research observations.
         self.identity = {"index_id": self.index_id, "encoder_identity": identity,
-                         "license_review": license_record,
+                         "license_review_sha256": review_digest,
+                         "license_review_status": "APPROVED",
                          "backend": "process_memory_only_cpu_cosine"}
 
     def search(self, question: str, policy) -> list[dict]:
