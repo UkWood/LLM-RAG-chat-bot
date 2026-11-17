@@ -250,38 +250,137 @@ def _prepare_d(stand, *, encoder_dir, license_review, allow_onnx):
         return None, D_NOT_RUN
 
 
-def _offline_report(cases, variants):
-    """Not a comparison; avoid silently replacing real stand with a fake."""
-    records = []
+def _iter_offline_arms(cases, variants):
+    """Offline contract-only records; not a fake retrieval benchmark."""
     for case in cases:
         for variant in variants:
-            records.append({
+            yield {
                 "case_id": case["case_id"], "question": case["question"],
                 "question_sha256": sha_text(case["question"]),
                 "dataset_sha256": DATASET_SHA256, "variant": variant,
                 "status": (D_NOT_RUN if variant == "D"
                            else "NOT_RUN_OFFLINE_STAND_NOT_PREPARED"),
+                "d_prerequisite_reason": (
+                    "encoder_not_provided" if variant == "D" else None),
                 "evidence_recall": NOT_MEASURED,
                 "intent_accuracy": NOT_MEASURED,
                 "final_answer_accuracy": NOT_MEASURED,
                 "model_calls": None,
                 "reason": "offline_does_not_prepare_a_real_source_snapshot",
-            })
-    return {"design_freeze": design_freeze(), "quality_gate":
-            "QUALITY_NOT_MEASURED_UNREVIEWED_DATASET",
-            "E4B": {"status": NOT_MEASURED, "D": D_NOT_RUN},
-            "E5B": {"status": NOT_MEASURED},
-            "real_model_inference": False, "results": records}
+            }
+
+
+def _offline_summary(results):
+    return {
+        "design_freeze": design_freeze(),
+        "quality_gate": "QUALITY_NOT_MEASURED_UNREVIEWED_DATASET",
+        "E4B": {"status": NOT_MEASURED, "D": D_NOT_RUN},
+        "E5B": {"status": NOT_MEASURED},
+        "real_model_inference": False,
+        "results": list(results),
+    }
+
+
+def _offline_report(cases, variants):
+    """Backwards-compatible unit-test API; live CLI uses streaming iterator."""
+    return _offline_summary(tuple(_iter_offline_arms(cases, variants)))
+
+
+def execute_incrementally(journal: ResearchJournal, cases: tuple,
+                          variants: tuple, arm_stream, summarize, *,
+                          mode: str, d_status: str = D_NOT_RUN,
+                          d_reason: str = "encoder_not_provided") -> dict:
+    """Append each completed case/arm before evaluating the next one.
+
+    No continuation, rollback, overwrite or inference retry on interruption.
+    All completeness assertions are reconstructed FROM durable files.
+    """
+    expected = [{
+        "case_id": case["case_id"], "variant": variant,
+        "question_sha256": sha_text(case["question"]),
+    } for case in cases for variant in variants]
+    if (not expected or len(expected) > 240 or
+            len({(p["case_id"], p["variant"]) for p in expected}) != len(expected)):
+        raise ExperimentError("invalid_expected_pairs")
+    expected_map = {
+        (item["case_id"], item["variant"]): item["question_sha256"]
+        for item in expected
+    }
+    journal.record("run", {
+        "run_id": journal.run_id,
+        "status": "INCOMPLETE",
+        "recovery_policy": "READ_ONLY_INSPECTION_NO_AUTOMATIC_RETRY",
+        "mode": mode, "variants": list(variants),
+        "dataset_sha256": DATASET_SHA256,
+        "design_freeze": design_freeze(),
+        "started_at_utc": datetime.now(timezone.utc).isoformat(),
+        "source_scope": "stage5f-pinned-10-markdown-4-pdf",
+        "gold_status": "UNREVIEWED",
+        "runtime": ("OFFLINE_NOT_RUN" if mode == "offline"
+                    else "REAL_SOURCE_PREPARED"),
+        "expected_pairs": expected,
+        "expected_case_arm_count": len(expected),
+        "D_prerequisite_status": d_status,
+        "D_prerequisite_reason": d_reason,
+    })
+    seen = set()
+    committed = []
+    for row in arm_stream:
+        if type(row) is not dict:
+            raise ExperimentError("invalid_case_arm_record")
+        key = (row.get("case_id"), row.get("variant"))
+        if (key not in expected_map or key in seen or
+                row.get("question_sha256") != expected_map[key] or
+                type(row.get("question")) is not str or
+                sha_text(row["question"]) != expected_map[key]):
+            raise ExperimentError("unexpected_case_arm_or_question_drift")
+        # Atomic JSON marker is created only after its Markdown sidecar.
+        journal.record("cases/" + key[0] + "/" + key[1], row)
+        seen.add(key)
+        committed.append(row)
+    if seen != set(expected_map):
+        raise ExperimentError("incomplete_paired_comparison")
+    checkpoint = ResearchJournal.inspect_run(journal.root, journal.run_id)
+    if (checkpoint["completed_case_arm_count"] != len(expected) or
+            checkpoint["missing_pairs"] or checkpoint["partial_pairs"] or
+            checkpoint["corrupt_pairs"] or checkpoint["unexpected_pairs"] or
+            checkpoint["summary_state"] != "missing"):
+        raise ExperimentError("journal_incomplete_or_inconsistent")
+    result = summarize(tuple(committed))
+    if (type(result) is not dict or
+            result.get("quality_gate") != "QUALITY_NOT_MEASURED_UNREVIEWED_DATASET"):
+        raise ExperimentError("summary_quality_gate_invalid")
+    summary = {key: value for key, value in result.items()
+               if key != "results"}
+    summary.update({
+        "status": "COMPLETE",
+        "run_id": journal.run_id,
+        "dataset_sha256": DATASET_SHA256,
+        "expected_case_arm_count": len(expected),
+        "completed_case_arm_count": checkpoint["completed_case_arm_count"],
+        "completed_at_utc": datetime.now(timezone.utc).isoformat(),
+        "completion_verified_from_files": True,
+        "D_prerequisite_status": d_status,
+        "D_prerequisite_reason": d_reason,
+    })
+    # Completion is not declared before every JSON+Markdown pair is durable.
+    journal.record("summary", summary)
+    final = ResearchJournal.inspect_run(journal.root, journal.run_id)
+    if final["status"] != "COMPLETE":
+        raise ExperimentError("summary_completion_integrity_failed")
+    return summary
 
 
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(
         description="Stage 5K isolated research; no production answers")
     parser.add_argument("--variant", choices=("A", "B", "C", "D", "all"), default="all")
-    parser.add_argument("--mode", choices=("offline", "local"), required=True)
+    parser.add_argument("--mode", choices=("offline", "local"))
     parser.add_argument("--questions", type=Path,
-                        help="Original 60-case JSON; if omitted, use exact bundled compressed copy")
+                        help="Exact original 60-case JSON; or pinned bundled copy")
     parser.add_argument("--output-root", required=True, type=Path)
+    parser.add_argument("--inspect-run",
+                        help="Read-only inspection of an existing run UUID; no inference")
     parser.add_argument("--allow-real-network", action="store_true")
     parser.add_argument("--allow-development-pdf-worker", action="store_true")
     parser.add_argument("--allow-local-inference", action="store_true")
@@ -291,8 +390,18 @@ def main(argv=None) -> int:
     args = parser.parse_args(argv)
     variants = ("A", "B", "C", "D") if args.variant == "all" else (args.variant,)
     try:
+        if args.inspect_run is not None:
+            if (args.mode is not None or args.allow_real_network or
+                    args.allow_development_pdf_worker or args.allow_local_inference or
+                    args.allow_d_onnx or args.d_encoder_dir or args.d_license_review):
+                raise ExperimentError("inspect_run_must_not_start_sources")
+            inspection = ResearchJournal.inspect_run(
+                args.output_root, args.inspect_run)
+            print(canonical(inspection))
+            return 0 if inspection["status"] == "COMPLETE" else 3
+        if args.mode is None:
+            raise ExperimentError("execution_mode_required")
         cases = load_seeds(args.questions)
-        # Fail fast on offline/source safety before writing any observation.
         if args.mode == "local":
             if not (args.allow_real_network and args.allow_development_pdf_worker):
                 raise ExperimentError("real_source_opt_ins_required")
@@ -311,47 +420,38 @@ def main(argv=None) -> int:
                 raise ExperimentError("offline_mode_opt_in_conflict")
             stand = None
         journal = ResearchJournal(args.output_root)
-        journal.record("run", {
-            "run_id": journal.run_id,
-            "mode": args.mode, "variants": variants,
-            "dataset_sha256": DATASET_SHA256,
-            "design_freeze": design_freeze(),
-            "started_at_utc": datetime.now(timezone.utc).isoformat(),
-            "source_scope": "stage5f-pinned-10-markdown-4-pdf",
-            "gold_status": "UNREVIEWED",
-            "runtime": "OFFLINE_NOT_RUN" if stand is None else "REAL_SOURCE_PREPARED",
-        })
         if stand is None:
-            result = _offline_report(cases, variants)
+            d_status, d_reason = D_NOT_RUN, "encoder_not_provided"
+            stream = _iter_offline_arms(cases, variants)
+            summarize = _offline_summary
         else:
-            d_index, d_status = _prepare_d(
+            d_index, d_status, d_reason = _prepare_d(
                 stand, encoder_dir=args.d_encoder_dir,
                 license_review=args.d_license_review,
                 allow_onnx=args.allow_d_onnx,
             )
-            planner = LocalIntentPlanner() if any(v in ("B", "C") for v in variants) else None
+            planner = LocalIntentPlanner() if any(
+                v in ("B", "C") for v in variants) else None
             comparator = ResearchComparator(
                 stand, planner=planner, d_index=d_index,
+                d_preparation_reason=d_reason,
             )
-            result = comparator.run(cases, variants)
-            result["D_prerequisite_status"] = d_status
-        for row in result["results"]:
-            journal.record("cases/" + row["case_id"] + "/" + row["variant"], row)
-        # This is an append-only report, never a gold/scored dataset.
-        summary = {key: value for key, value in result.items() if key != "results"}
-        summary["case_arm_count"] = len(result["results"])
-        summary["expected_case_arm_count"] = len(cases) * len(variants)
-        summary["completed_at_utc"] = datetime.now(timezone.utc).isoformat()
-        journal.record("summary", summary)
+            stream = comparator.iter_arms(cases, variants)
+            summarize = lambda completed: comparator.summarize_results(
+                cases, variants, completed)
+        summary = execute_incrementally(
+            journal, cases, variants, stream, summarize, mode=args.mode,
+            d_status=d_status, d_reason=d_reason)
         print(canonical({
-            "status": "REPORT_WRITTEN", "journal_root": str(journal.run_root),
-            "case_arm_count": len(result["results"]),
+            "status": summary["status"], "journal_root": str(journal.run_root),
+            "case_arm_count": summary["completed_case_arm_count"],
             "quality": "NOT_MEASURED",
-            "D": result.get("D_prerequisite_status", D_NOT_RUN),
+            "D": summary["D_prerequisite_status"],
+            "D_reason": summary["D_prerequisite_reason"],
         }))
         return 0
     except (ExperimentError, ValueError, OSError) as exc:
-        # Prevent leaking full paths, question content or model responses.
+        # Do not echo raw question, exception text, credentials or full paths.
         code = str(exc) if type(exc) is ExperimentError else type(exc).__name__
         print("STAGE5K_FAILED: " + code[:120], file=sys.stderr)
         return 2
